@@ -111,7 +111,7 @@ Evidence:
 | R1 clock | **complete** — immutable validated state carries fractional remainder; pure transitions added; legacy facade delegates; scaled/time overflow rejected before unsafe conversion | coordinator consumes pure clock transitions |
 | R2 I/O | **complete** — typed `DigitalIoAddress`, immutable sparse `IoState`, pure reducers, trimmed/blank-label normalization; configured-range facade retained | tasks return same IoState |
 | R3 task reconciliation | **complete** — READY/load/start, ordered immutable state, typed actions, canonical task+I/O evaluation, exact waits, strict pause/resume/halt/stop/step/breakpoint rules | coordinator consumes both atomically |
-| R4 coordinator + SharedRuntime | command wrappers copy all three canonical fields once, notify once | acceptance tests and app defaults |
+| R4 coordinator + SharedRuntime | **complete** — deterministic coordinator plus canonical clock/I-O/task fields and atomic SharedRuntime publication | final docs/review consume canonical state |
 | R5 docs + final gates | reference plan ledger path superseded above; final CI must match final file-changing SHA | whole-branch review; keep Draft, no merge |
 
 **Files modified at reconciliation:** this ledger; approved reference spec and plan copied unchanged.
@@ -141,6 +141,24 @@ Evidence:
 - Verified READY does not auto-run, start accepts READY only, canonical evaluation uses explicit load order, WaitForInput reads the same IoState, Delay releases exactly at its deadline, pause-WAITING preserves context, satisfied wait resumes RUNNING without pre-advancing, halt/resume preserves action index, stop rejects terminal repetition, and step executes at most one action then returns HALTED when nonterminal.
 - Existing mutable compatibility APIs remain available while the canonical pure contracts are now ready for the coordinator.
 
-**Open findings:** R4–R5 above.
-**Current implementation HEAD before this ledger commit:** `b8e3109e62699434d6017fa86fe3a8642bcffbf4`.
-**Exact next action:** TDD R4 — add `SimulationDomainState` and deterministic `SimulationCoordinator`, then integrate clock/I-O/task canonical fields into `SharedRuntime` with one atomic publication per command.
+**Open findings:** R5 final documentation/review only.
+**R4 TDD evidence:**
+- Coordinator RED: `a9f4baf654fd8e43ee23a9ebfab10293657ca602`; Android CI #179 failed on missing `SimulationDomainState` / `SimulationCoordinator`.
+- Coordinator GREEN: `3f3ee6c171453539bece71c87914daa3a957cf96`; Android CI #180 succeeded.
+- SharedRuntime integration RED: `c57aa922377dd6111cb72975bd09e44463843ec1`; Android CI #181 failed on missing canonical Phase 3 state/commands.
+- SharedRuntime integration GREEN: `93111f85aaa27b428aafe33ed6abd06adcc8c530`; Android CI #182 succeeded (unit tests, debug APK, artifact upload).
+- Verified canonical input mutation releases a WAITING task and publishes input/output/task state together in one subscriber update.
+- Verified Delay releases exactly at 99/100 ms through the canonical SharedRuntime clock.
+- Verified pause/resume/stop/breakpoint/step commands mutate the same canonical task/I-O state.
+- `SharedRuntimeState` now owns `clockState`, `ioState`, and `taskState`; app factory defaults initialize all three without a parallel Phase 3 truth.
+- Existing C4 joint/teach-point/connection behavior remains in the same SharedRuntime reducer.
+
+**Current implementation HEAD before this ledger commit:** `93111f85aaa27b428aafe33ed6abd06adcc8c530`.
+**Exact next action:** R5 — update architecture/roadmap, run whole-branch scope review and final verification; keep PR #9 Draft and do not merge.
+
+## Inline resume checkpoint — R4 complete
+- Codex was detected active during R3/R4 and inline execution deliberately did not race it.
+- Codex stopped after publishing the R4 SharedRuntime RED at `c57aa922377dd6111cb72975bd09e44463843ec1`.
+- Inline resumed from that exact RED, published GREEN `93111f85aaa27b428aafe33ed6abd06adcc8c530`, and verified Android CI #182 success.
+- If Codex resumes now, it must read this ledger first and proceed only with R5/final review; do not redo R1–R4.
+- C4 self-collision remains Issue #7 and is still separate.
