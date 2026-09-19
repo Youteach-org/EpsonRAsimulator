@@ -68,6 +68,139 @@ class SharedRuntime(
                 }
                 current.copy(connectionMode = command.mode)
             }
+
+            RuntimeCommand.StartClock ->
+                current.withSimulation(
+                    SimulationCoordinator.startClock(current.simulationDomain())
+                )
+
+            RuntimeCommand.PauseClock ->
+                current.withSimulation(
+                    SimulationCoordinator.pauseClock(current.simulationDomain())
+                )
+
+            RuntimeCommand.ResetClock ->
+                current.withSimulation(
+                    SimulationCoordinator.resetClock(current.simulationDomain())
+                )
+
+            is RuntimeCommand.SetClockSpeedScale ->
+                current.withSimulation(
+                    SimulationCoordinator.setClockSpeedScale(
+                        current.simulationDomain(),
+                        command.value
+                    )
+                )
+
+            is RuntimeCommand.AdvanceSimulation ->
+                current.withSimulation(
+                    SimulationCoordinator.advance(
+                        current.simulationDomain(),
+                        command.deltaMillis
+                    )
+                )
+
+            is RuntimeCommand.SetDigitalInput ->
+                current.withSimulation(
+                    SimulationCoordinator.setInput(
+                        current.simulationDomain(),
+                        command.address,
+                        command.value
+                    )
+                )
+
+            is RuntimeCommand.SetDigitalOutput ->
+                current.withSimulation(
+                    SimulationCoordinator.setOutput(
+                        current.simulationDomain(),
+                        command.address,
+                        command.value
+                    )
+                )
+
+            is RuntimeCommand.SetInputLabel ->
+                current.withSimulation(
+                    SimulationCoordinator.setInputLabel(
+                        current.simulationDomain(),
+                        command.address,
+                        command.label
+                    )
+                )
+
+            is RuntimeCommand.SetOutputLabel ->
+                current.withSimulation(
+                    SimulationCoordinator.setOutputLabel(
+                        current.simulationDomain(),
+                        command.address,
+                        command.label
+                    )
+                )
+
+            is RuntimeCommand.LoadTask ->
+                current.withSimulation(
+                    SimulationCoordinator.loadTask(
+                        current.simulationDomain(),
+                        command.program
+                    )
+                )
+
+            is RuntimeCommand.StartTask ->
+                current.withSimulation(
+                    SimulationCoordinator.startTask(
+                        current.simulationDomain(),
+                        command.id
+                    )
+                )
+
+            is RuntimeCommand.PauseTask ->
+                current.withSimulation(
+                    SimulationCoordinator.pauseTask(
+                        current.simulationDomain(),
+                        command.id
+                    )
+                )
+
+            is RuntimeCommand.ResumeTask ->
+                current.withSimulation(
+                    SimulationCoordinator.resumeTask(
+                        current.simulationDomain(),
+                        command.id
+                    )
+                )
+
+            is RuntimeCommand.HaltTask ->
+                current.withSimulation(
+                    SimulationCoordinator.haltTask(
+                        current.simulationDomain(),
+                        command.id
+                    )
+                )
+
+            is RuntimeCommand.StepTask ->
+                current.withSimulation(
+                    SimulationCoordinator.stepTask(
+                        current.simulationDomain(),
+                        command.id
+                    )
+                )
+
+            is RuntimeCommand.StopTask ->
+                current.withSimulation(
+                    SimulationCoordinator.stopTask(
+                        current.simulationDomain(),
+                        command.id
+                    )
+                )
+
+            is RuntimeCommand.SetTaskBreakpoint ->
+                current.withSimulation(
+                    SimulationCoordinator.setTaskBreakpoint(
+                        current.simulationDomain(),
+                        command.id,
+                        command.instructionIndex,
+                        command.enabled
+                    )
+                )
         }
 
         if (next != current) {
@@ -83,6 +216,22 @@ class SharedRuntime(
         listener(state)
         return RuntimeSubscription { listeners -= listener }
     }
+
+    private fun SharedRuntimeState.simulationDomain(): SimulationDomainState =
+        SimulationDomainState(
+            clockState = clockState,
+            ioState = ioState,
+            taskState = taskState
+        )
+
+    private fun SharedRuntimeState.withSimulation(
+        domain: SimulationDomainState
+    ): SharedRuntimeState =
+        copy(
+            clockState = domain.clockState,
+            ioState = domain.ioState,
+            taskState = domain.taskState
+        )
 
     private fun validateInitialJointState(
         robot: RobotDefinition,
