@@ -109,7 +109,7 @@ Evidence:
 | Correction task | Interface / self-consistency review | Next dependent task |
 | --- | --- | --- |
 | R1 clock | **complete** — immutable validated state carries fractional remainder; pure transitions added; legacy facade delegates; scaled/time overflow rejected before unsafe conversion | coordinator consumes pure clock transitions |
-| R2 I/O | typed immutable state; explicit configured layouts retained as compatibility, canonical default sparse | tasks return same IoState |
+| R2 I/O | **complete** — typed `DigitalIoAddress`, immutable sparse `IoState`, pure reducers, trimmed/blank-label normalization; configured-range facade retained | tasks return same IoState |
 | R3 task reconciliation | retain wait logic; load READY separate from start; ordered state; validated transitions; evaluate returns task + I/O | coordinator consumes both atomically |
 | R4 coordinator + SharedRuntime | command wrappers copy all three canonical fields once, notify once | acceptance tests and app defaults |
 | R5 docs + final gates | reference plan ledger path superseded above; final CI must match final file-changing SHA | whole-branch review; keep Draft, no merge |
@@ -123,6 +123,14 @@ Evidence:
 - Verified fractional scale accumulation across calls (0.5 + 0.5 => 1 ms), paused no-op identity, reset semantics, negative-state rejection, fractional-remainder validation, scaled-delta overflow rejection, and total-time overflow rejection.
 - Backward-compatible mutable `SimulationClock` instance methods now delegate to the same pure companion transitions consumed by the future coordinator.
 
-**Open findings:** R2–R5 above.
-**Current implementation HEAD before this ledger commit:** `be320246dad56b2f4af326dc545cd02f0935894f`.
-**Exact next action:** TDD R2 — add typed `DigitalIoAddress`, immutable sparse `IoState`, blank-label normalization, and pure I/O transitions while preserving configured-range convenience APIs. Never restart Phase 3 or redo correct work.
+**R2 TDD evidence:**
+- RED commit: `0dda70dd4ab2b22be4c812cf4c7740d5c4130948` (`test: add failing typed immutable io tests`).
+- RED CI: Android CI run #169 failed in Unit tests on missing `IoState`, `DigitalIoAddress`, and pure I/O reducers.
+- GREEN commit: `2cb8b636544b4817250aedcb2c3bd22774c64fe1` (`feat: reconcile canonical digital io state`).
+- GREEN CI: Android CI run #170 succeeded; Unit tests, debug APK build, and debug APK upload all passed.
+- Verified absent typed signals default false, distinct input/output namespaces, typed negative-address rejection, previous-state immutability, trimmed labels, and blank-label removal.
+- Existing configured-range `IoRuntime` APIs now delegate to the same canonical `IoState`, preserving existing TaskRuntime callers while avoiding a second I/O truth.
+
+**Open findings:** R3–R5 above.
+**Current implementation HEAD before this ledger commit:** `2cb8b636544b4817250aedcb2c3bd22774c64fe1`.
+**Exact next action:** TDD R3 — reconcile TaskRuntime with typed addresses, READY/load/start lifecycle, strict transitions, ordered immutable TaskRuntimeState, pause-while-waiting semantics, exact delay boundary, and task+I/O evaluation results.
