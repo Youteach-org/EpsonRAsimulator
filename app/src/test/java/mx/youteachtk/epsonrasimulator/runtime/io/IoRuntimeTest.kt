@@ -2,6 +2,7 @@ package mx.youteachtk.epsonrasimulator.runtime.io
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -65,6 +66,63 @@ class IoRuntimeTest {
 
         assertTrue(io.snapshot().inputs.isEmpty())
         assertTrue(io.snapshot().outputs.isEmpty())
+    }
+
+    @Test
+    fun absentTypedSignalsReadFalse() {
+        val state = IoState()
+        val address = DigitalIoAddress(3)
+
+        assertFalse(IoRuntime.input(state, address))
+        assertFalse(IoRuntime.output(state, address))
+    }
+
+    @Test
+    fun typedInputAndOutputNamespacesAreDistinct() {
+        val address = DigitalIoAddress(3)
+        var state = IoState()
+
+        state = IoRuntime.setInput(state, address, true)
+
+        assertTrue(IoRuntime.input(state, address))
+        assertFalse(IoRuntime.output(state, address))
+
+        state = IoRuntime.setOutput(state, address, true)
+
+        assertTrue(IoRuntime.input(state, address))
+        assertTrue(IoRuntime.output(state, address))
+    }
+
+    @Test
+    fun blankTypedLabelClearsLabelAndNonblankLabelIsTrimmed() {
+        val address = DigitalIoAddress(3)
+        var state = IoRuntime.setInputLabel(
+            IoState(),
+            address,
+            "  Part Present  "
+        )
+
+        assertEquals("Part Present", state.inputLabels[address])
+
+        state = IoRuntime.setInputLabel(state, address, "   ")
+
+        assertNull(state.inputLabels[address])
+    }
+
+    @Test
+    fun pureIoTransitionDoesNotMutatePreviousState() {
+        val address = DigitalIoAddress(5)
+        val before = IoState()
+
+        val after = IoRuntime.setOutput(before, address, true)
+
+        assertFalse(IoRuntime.output(before, address))
+        assertTrue(IoRuntime.output(after, address))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun typedAddressRejectsNegativeValue() {
+        DigitalIoAddress(-1)
     }
 
     @Test(expected = IllegalArgumentException::class)
