@@ -35,6 +35,20 @@ The SPEL+ lexer preserves every original character. The initial semantic subset 
 
 This foundation does not execute SPEL+, emulate native RC+ compilation/build semantics, parse `.sprj` internals, semantically rewrite `.pts`, or add bridge/physical-robot behavior.
 
+## Implemented deterministic task / I-O / simulation-clock foundation
+
+The Phase 3 feature branch adds the first canonical local-simulation execution state to `SharedRuntime`:
+
+- `runtime.clock` provides a deterministic `SimulationClockState` with start/pause/reset, validated speed scaling, fractional-millisecond accumulation, explicit stepping compatibility, and overflow checks;
+- `runtime.io` provides typed `DigitalIoAddress`, immutable sparse `IoState`, distinct input/output namespaces, labels, and compatibility facades for configured ranges;
+- `runtime.task` provides neutral task identity/state, `READY/RUNNING/WAITING/PAUSED/HALTED/FINISHED/ABORTED` lifecycle, breakpoints, step/resume/stop/halt, `WaitForInput`, `Delay`, and `SetOutput` actions;
+- `SimulationCoordinator` advances clock/I-O/task state deterministically;
+- `SharedRuntimeState` owns `clockState`, `ioState`, and `taskState` and publishes a coherent combined state once per runtime command.
+
+The executable model remains deliberately neutral. `ProgramDocument` and SPEL+ Direct Code are **not** executed automatically; a later verified mapper may translate supported semantic statements into neutral simulation actions.
+
+This foundation does not claim Epson-native task scheduling, RC+ Build/Run/compiler equivalence, Task Manager or I/O Monitor UI, workcell sensor/actuator bindings, bridge/network behavior, or physical robot control. C4 self-collision remains tracked separately in Issue #7.
+
 ## Layering
 
 ### UI

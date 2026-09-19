@@ -17,7 +17,19 @@
 - RC+ native resources are classified as editable, preserved or opaque without parsing undocumented contents;
 - untouched preserved/opaque resource bytes round-trip exactly through `NativeProjectResourceSet`.
 
-This foundation does **not** execute SPEL+, emulate RC+ Build/Run, parse `.sprj` internals, semantically rewrite `.pts`, implement TaskRuntime/I/O, bridge to RC+, or control physical hardware.
+Phase 2 itself does **not** execute SPEL+, emulate RC+ Build/Run, parse `.sprj` internals, semantically rewrite `.pts`, bridge to RC+, or control physical hardware. Phase 3 adds only the neutral deterministic TaskRuntime/I-O/clock foundation described below.
+
+## Task / I-O / Simulation Clock Foundation — implemented on Phase 3 feature branch
+- deterministic simulation time is canonical and independent of wall-clock time;
+- fractional speed scaling accumulates without silently losing sub-millisecond time;
+- digital inputs, outputs and labels are canonical shared state with typed neutral addresses;
+- neutral simulated tasks support READY/RUNNING/WAITING/PAUSED/HALTED/FINISHED/ABORTED state;
+- tasks can wait on canonical input state or simulation-time delays and can set canonical outputs;
+- pause/resume/halt/stop/step/breakpoint behavior is covered by deterministic unit tests;
+- `SimulationCoordinator` combines clock, I/O and task transitions;
+- `SharedRuntimeState` publishes clock/I-O/task changes atomically to observers.
+
+This foundation does **not** execute arbitrary SPEL+/`ProgramDocument`, emulate Epson-native scheduling or RC+ Build/Run, add Task Manager/I/O Monitor UI, bind 3D workcell actors, bridge to RC+, or control physical hardware. C4 self-collision remains Issue #7.
 
 ## Phase 0 — Foundation
 - repository;
