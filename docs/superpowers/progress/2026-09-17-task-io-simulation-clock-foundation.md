@@ -110,7 +110,7 @@ Evidence:
 | --- | --- | --- |
 | R1 clock | **complete** — immutable validated state carries fractional remainder; pure transitions added; legacy facade delegates; scaled/time overflow rejected before unsafe conversion | coordinator consumes pure clock transitions |
 | R2 I/O | **complete** — typed `DigitalIoAddress`, immutable sparse `IoState`, pure reducers, trimmed/blank-label normalization; configured-range facade retained | tasks return same IoState |
-| R3 task reconciliation | retain wait logic; load READY separate from start; ordered state; validated transitions; evaluate returns task + I/O | coordinator consumes both atomically |
+| R3 task reconciliation | **complete** — READY/load/start, ordered immutable state, typed actions, canonical task+I/O evaluation, exact waits, strict pause/resume/halt/stop/step/breakpoint rules | coordinator consumes both atomically |
 | R4 coordinator + SharedRuntime | command wrappers copy all three canonical fields once, notify once | acceptance tests and app defaults |
 | R5 docs + final gates | reference plan ledger path superseded above; final CI must match final file-changing SHA | whole-branch review; keep Draft, no merge |
 
@@ -131,6 +131,16 @@ Evidence:
 - Verified absent typed signals default false, distinct input/output namespaces, typed negative-address rejection, previous-state immutability, trimmed labels, and blank-label removal.
 - Existing configured-range `IoRuntime` APIs now delegate to the same canonical `IoState`, preserving existing TaskRuntime callers while avoiding a second I/O truth.
 
-**Open findings:** R3–R5 above.
-**Current implementation HEAD before this ledger commit:** `2cb8b636544b4817250aedcb2c3bd22774c64fe1`.
-**Exact next action:** TDD R3 — reconcile TaskRuntime with typed addresses, READY/load/start lifecycle, strict transitions, ordered immutable TaskRuntimeState, pause-while-waiting semantics, exact delay boundary, and task+I/O evaluation results.
+**R3 TDD evidence:**
+- R3a models RED: `693e369b74bab88eeea7507b7ecc975d80e0e602`; Android CI #172 failed on missing `READY`, `SimAction`, `SimTaskState`, and `TaskRuntimeState`.
+- R3a models GREEN: `ac47a1791c296cdfb30e5d9f363b8d0d849e501f`; Android CI #173 succeeded (tests/APK/upload).
+- R3b execution RED: `ba1051496cf283969f2d76d9242a08228aa76555`; Android CI #174 failed on missing canonical `load/start/evaluate`.
+- R3b execution GREEN: `f77342ab40692a81d2397f5f118bdf71cd65c0bb`; Android CI #175 succeeded (tests/APK/upload).
+- R3c lifecycle RED: `270207cc96e3e0690b7099c40ad22be3f18e952e`; Android CI #176 failed on missing canonical lifecycle/debug transitions.
+- R3c lifecycle GREEN: `b8e3109e62699434d6017fa86fe3a8642bcffbf4`; Android CI #177 succeeded (tests/APK/upload).
+- Verified READY does not auto-run, start accepts READY only, canonical evaluation uses explicit load order, WaitForInput reads the same IoState, Delay releases exactly at its deadline, pause-WAITING preserves context, satisfied wait resumes RUNNING without pre-advancing, halt/resume preserves action index, stop rejects terminal repetition, and step executes at most one action then returns HALTED when nonterminal.
+- Existing mutable compatibility APIs remain available while the canonical pure contracts are now ready for the coordinator.
+
+**Open findings:** R4–R5 above.
+**Current implementation HEAD before this ledger commit:** `b8e3109e62699434d6017fa86fe3a8642bcffbf4`.
+**Exact next action:** TDD R4 — add `SimulationDomainState` and deterministic `SimulationCoordinator`, then integrate clock/I-O/task canonical fields into `SharedRuntime` with one atomic publication per command.
