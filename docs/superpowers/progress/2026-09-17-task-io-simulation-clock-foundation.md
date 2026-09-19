@@ -64,13 +64,13 @@ Evidence:
 - Verified breakpoint halt-before-execution, one-instruction stepping, pause/resume, current-breakpoint suppression on resume, breakpoint removal, stop-to-ABORTED, source-location snapshots, empty-program completion, and invalid task IDs/breakpoints.
 
 ### Task 4 — Wait on shared I/O and simulation time
-**Status:** pending
+**Status:** complete through reconciled R3/R4 implementation
 
 ### Task 5 — AppRuntimeBundle wiring
-**Status:** pending
+**Status:** superseded by approved canonical-SharedRuntime design; R4 integration complete without a parallel Phase 3 service graph
 
 ### Task 6 — Documentation and final verification
-**Status:** pending
+**Status:** review complete; final CI pending on this final file-changing commit
 
 ## Current checkpoint
 
@@ -112,7 +112,7 @@ Evidence:
 | R2 I/O | **complete** — typed `DigitalIoAddress`, immutable sparse `IoState`, pure reducers, trimmed/blank-label normalization; configured-range facade retained | tasks return same IoState |
 | R3 task reconciliation | **complete** — READY/load/start, ordered immutable state, typed actions, canonical task+I/O evaluation, exact waits, strict pause/resume/halt/stop/step/breakpoint rules | coordinator consumes both atomically |
 | R4 coordinator + SharedRuntime | **complete** — deterministic coordinator plus canonical clock/I-O/task fields and atomic SharedRuntime publication | final docs/review consume canonical state |
-| R5 docs + final gates | reference plan ledger path superseded above; final CI must match final file-changing SHA | whole-branch review; keep Draft, no merge |
+| R5 docs + final gates | **review complete** — architecture/roadmap updated, whole-branch scope review clean, PR patch whitespace/conflict scan completed | final CI must match this final file-changing SHA; keep Draft, no merge |
 
 **Files modified at reconciliation:** this ledger; approved reference spec and plan copied unchanged.
 **R1 TDD evidence:**
@@ -162,3 +162,17 @@ Evidence:
 - Inline resumed from that exact RED, published GREEN `93111f85aaa27b428aafe33ed6abd06adcc8c530`, and verified Android CI #182 success.
 - If Codex resumes now, it must read this ledger first and proceed only with R5/final review; do not redo R1–R4.
 - C4 self-collision remains Issue #7 and is still separate.
+
+## R5 final review checkpoint
+- Documentation commit: `c876f4f9801ab7d3161097f433166eed18a8486d` updates `docs/ARCHITECTURE.md` and `docs/ROADMAP.md` with implemented Phase 3 facts only.
+- Whole-branch comparison from verified Phase 2 head `579c207dffa7541cd6d73319f73cc6dcec41d4ad` through the pre-final-ledger Phase 3 head found 33 commits limited to expected runtime clock/I-O/task/coordinator integration, tests, plans/spec/ledger, and architecture/roadmap.
+- Production-code scan found no `ProgramDocument`, Direct Code execution, `REAL_HARDWARE`, socket/network behavior, `.sprj` parsing, `.pts` rewriting, or physical-robot control.
+- No changes were made to 3D/C4 rendering, native project resources, or legacy `domain/ProgramModels.kt`.
+- PR patch scan found no conflict markers. The only trailing-whitespace findings were Markdown hard-break spaces in the approved Phase 3 spec/plan; this final commit removes them.
+- This inline environment is using the GitHub connector rather than a local checkout, so no claim is made that local `git diff --check` or `git status --short` ran. The PR patch-level whitespace/conflict scan is the recorded hygiene evidence.
+- R4 final automated evidence before documentation: Android CI #182 succeeded on `93111f85aaa27b428aafe33ed6abd06adcc8c530` with unit tests, debug APK build, and artifact upload.
+- Final acceptance now requires one fresh successful GitHub Actions run on the SHA created by this ledger/spec/plan cleanup commit.
+- After that run succeeds, do not create another commit. Add a PR #9 acceptance/handoff comment instead so the verified HEAD remains unchanged.
+- PR #9 must remain Draft and unmerged.
+- Phase 4 next: Functional Workcell + Tool Runtime. C4 self-collision Issue #7 remains separate and should be considered alongside the motion/workcell collision layer rather than folded into Phase 3.
+- If Codex resumes before final CI completes, it must not redo R1–R5; it should only verify the final HEAD/CI and leave the acceptance comment if green.

@@ -487,8 +487,8 @@ enum class TaskStatus {
 }
 ```
 
-`TaskProgram` contains TaskId/displayName/actions.  
-`TaskProgram` additionally exposes optional `sourceName: String? = null` and `functionName: String? = null` context. `SimTaskState` contains program/status/actionIndex/waitingReason/delayDeadlineMillis/breakpoints/statusBeforePause.  
+`TaskProgram` contains TaskId/displayName/actions.
+`TaskProgram` additionally exposes optional `sourceName: String? = null` and `functionName: String? = null` context. `SimTaskState` contains program/status/actionIndex/waitingReason/delayDeadlineMillis/breakpoints/statusBeforePause.
 `TaskRuntimeState` contains explicit `order: List<TaskId>` plus `tasks: Map<TaskId, SimTaskState>` so evaluation order is deterministic and not dependent on map implementation.
 
 - [ ] **Step 5: Add duplicate-state consistency test**

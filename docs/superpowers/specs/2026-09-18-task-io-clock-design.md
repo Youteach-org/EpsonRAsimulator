@@ -1,9 +1,9 @@
 # Phase 3 Design — TaskRuntime + I/O + SimulationClock Foundation
 
-**Date:** 2026-09-18  
-**Status:** approved by user; implementation planning authorized  
-**Base:** Phase 2 final verified head `579c207dffa7541cd6d73319f73cc6dcec41d4ad`  
-**Branch:** `feature/task-io-clock-foundation`  
+**Date:** 2026-09-18
+**Status:** approved by user; implementation planning authorized
+**Base:** Phase 2 final verified head `579c207dffa7541cd6d73319f73cc6dcec41d4ad`
+**Branch:** `feature/task-io-clock-foundation`
 **Parent architecture:** `docs/superpowers/specs/2026-09-16-rcplus-trainer-shared-runtime-design.md`
 **Approval:** user approved written spec on 2026-09-18 and authorized continuation
 
@@ -48,22 +48,22 @@ Phase 3 does **not** implement:
 
 ## 3. Design principles
 
-1. **Single source of truth**  
+1. **Single source of truth**
    Runtime state for time, I/O and tasks exists once.
 
-2. **Deterministic tests first**  
+2. **Deterministic tests first**
    Domain behavior must not depend on wall-clock time.
 
-3. **Neutral execution actions**  
+3. **Neutral execution actions**
    Phase 3 does not pretend the small Phase 2 SPEL+ parser is a complete executable language.
 
-4. **Explicit unsupported behavior**  
+4. **Explicit unsupported behavior**
    Only execution actions implemented by this phase may run.
 
-5. **No RC+-specific UI assumptions in core runtime**  
+5. **No RC+-specific UI assumptions in core runtime**
    RC+ windows later observe/control these same neutral services.
 
-6. **Transactional state publication**  
+6. **Transactional state publication**
    A simulation advance produces a coherent canonical state before notifying observers.
 
 ## 4. Top-level architecture
