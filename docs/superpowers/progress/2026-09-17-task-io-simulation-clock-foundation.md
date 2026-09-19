@@ -82,7 +82,7 @@ Evidence:
 
 ## 2026-09-19 reconciliation — approved design supersedes original architecture
 
-**Status:** reconciliation recorded; corrections pending, no new implementation started.
+**Status:** reconciliation recorded; R1 clock correction complete, R2–R5 pending.
 **Observed implementation HEAD:** `3785beaa0341edc3fd6a8d494f0a2931aedcf4f6` (PR #9 and remote rechecked).
 **Reference HEAD:** `950fa66d9cc767274639e0372f6a21fb07fa667f` on `feature/task-io-clock-foundation`.
 **Design authority:** approved `docs/superpowers/specs/2026-09-18-task-io-clock-design.md`, copied with its plan from reference HEAD for durable access. Original Tasks 1–3 are historically complete, not yet compliant with all revised requirements.
@@ -108,12 +108,21 @@ Evidence:
 
 | Correction task | Interface / self-consistency review | Next dependent task |
 | --- | --- | --- |
-| R1 clock | state must carry fraction; avoid Double-to-Long saturation at 2^63 boundary in illustrative plan | coordinator consumes pure clock transitions |
+| R1 clock | **complete** — immutable validated state carries fractional remainder; pure transitions added; legacy facade delegates; scaled/time overflow rejected before unsafe conversion | coordinator consumes pure clock transitions |
 | R2 I/O | typed immutable state; explicit configured layouts retained as compatibility, canonical default sparse | tasks return same IoState |
 | R3 task reconciliation | retain wait logic; load READY separate from start; ordered state; validated transitions; evaluate returns task + I/O | coordinator consumes both atomically |
 | R4 coordinator + SharedRuntime | command wrappers copy all three canonical fields once, notify once | acceptance tests and app defaults |
 | R5 docs + final gates | reference plan ledger path superseded above; final CI must match final file-changing SHA | whole-branch review; keep Draft, no merge |
 
 **Files modified at reconciliation:** this ledger; approved reference spec and plan copied unchanged.
-**Open findings:** R1–R5 above; independent review pending.
-**Exact next action:** finish independent reconciliation, establish baseline tests, commit this reconciliation, then TDD R1 clock corrections. Never restart Phase 3 or redo correct work.
+**R1 TDD evidence:**
+- RED commit: `1ae85ba3a9241b0f19d07848fdebeffb5ab6ecc9` (`test: add failing reconciled simulation clock tests`).
+- RED CI: Android CI run #166 failed in Unit tests on missing pure clock transitions and `fractionalMillisRemainder`.
+- GREEN commit: `be320246dad56b2f4af326dc545cd02f0935894f` (`feat: reconcile deterministic simulation clock`).
+- GREEN CI: Android CI run #167 succeeded; Unit tests, debug APK build, and debug APK upload all passed.
+- Verified fractional scale accumulation across calls (0.5 + 0.5 => 1 ms), paused no-op identity, reset semantics, negative-state rejection, fractional-remainder validation, scaled-delta overflow rejection, and total-time overflow rejection.
+- Backward-compatible mutable `SimulationClock` instance methods now delegate to the same pure companion transitions consumed by the future coordinator.
+
+**Open findings:** R2–R5 above.
+**Current implementation HEAD before this ledger commit:** `be320246dad56b2f4af326dc545cd02f0935894f`.
+**Exact next action:** TDD R2 — add typed `DigitalIoAddress`, immutable sparse `IoState`, blank-label normalization, and pure I/O transitions while preserving configured-range convenience APIs. Never restart Phase 3 or redo correct work.
