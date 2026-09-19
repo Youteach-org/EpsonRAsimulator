@@ -2,6 +2,7 @@ package mx.youteachtk.epsonrasimulator.runtime.task
 
 import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClock
 import mx.youteachtk.epsonrasimulator.runtime.io.IoRuntime
+import mx.youteachtk.epsonrasimulator.runtime.io.IoState
 
 class TaskRuntime(
     private val clock: SimulationClock,
@@ -222,4 +223,231 @@ class TaskRuntime(
 
     private fun TaskStatus.isTerminal(): Boolean =
         this == TaskStatus.FINISHED || this == TaskStatus.ABORTED
+
+    companion object {
+        fun load(
+            state: TaskRuntimeState,
+            program: TaskProgram
+        ): TaskRuntimeState {
+            require(program.id !in state.tasks) {
+                "Task id already exists: ${program.id.value}"
+            }
+
+            return TaskRuntimeState(
+                order = state.order + program.id,
+                tasks = state.tasks + (
+                    program.id to SimTaskState(program = program)
+                )
+            )
+        }
+
+        fun start(
+            state: TaskRuntimeState,
+            id: TaskId
+        ): TaskRuntimeState {
+            val task = requireCanonicalTask(state, id)
+            require(task.status == TaskStatus.READY) {
+                "Task must be READY to start: ${id.value}"
+            }
+
+            return replaceCanonicalTask(
+                state,
+                id,
+                task.copy(
+                    status = TaskStatus.RUNNING,
+                    waitingReason = null,
+                    delayDeadlineMillis = null,
+                    statusBeforePause = null
+                )
+            )
+        }
+
+        fun evaluate(
+            state: TaskRuntimeState,
+            ioState: IoState,
+            timeMillis: Long
+        ): TaskEvaluationResult {
+            require(timeMillis >= 0L) {
+                "Simulation time must be non-negative"
+            }
+
+            var nextState = state
+            var nextIo = ioState
+
+            state.order.forEach { id ->
+                val task = nextState.tasks.getValue(id)
+                val result = evaluateCanonicalTask(
+                    task = task,
+                    ioState = nextIo,
+                    timeMillis = timeMillis
+                )
+                nextState = replaceCanonicalTask(
+                    nextState,
+                    id,
+                    result.first
+                )
+                nextIo = result.second
+            }
+
+            return TaskEvaluationResult(
+                taskState = nextState,
+                ioState = nextIo
+            )
+        }
+
+        private fun evaluateCanonicalTask(
+            task: SimTaskState,
+            ioState: IoState,
+            timeMillis: Long
+        ): Pair<SimTaskState, IoState> {
+            if (
+                task.status != TaskStatus.RUNNING &&
+                task.status != TaskStatus.WAITING
+            ) {
+                return task to ioState
+            }
+
+            var current = task
+            var currentIo = ioState
+
+            while (
+                current.status == TaskStatus.RUNNING ||
+                current.status == TaskStatus.WAITING
+            ) {
+                if (current.actionIndex >= current.program.actions.size) {
+                    current = current.copy(
+                        status = TaskStatus.FINISHED,
+                        waitingReason = null,
+                        delayDeadlineMillis = null,
+                        statusBeforePause = null
+                    )
+                    break
+                }
+
+                if (
+                    current.status == TaskStatus.RUNNING &&
+                    current.actionIndex in current.breakpoints
+                ) {
+                    current = current.copy(
+                        status = TaskStatus.HALTED
+                    )
+                    break
+                }
+
+                when (
+                    val action =
+                        current.program.actions[current.actionIndex]
+                ) {
+                    is SimAction.SetOutput -> {
+                        currentIo = IoRuntime.setOutput(
+                            currentIo,
+                            action.address,
+                            action.value
+                        )
+                        current = current.copy(
+                            status = TaskStatus.RUNNING,
+                            actionIndex = current.actionIndex + 1,
+                            waitingReason = null,
+                            delayDeadlineMillis = null
+                        )
+                    }
+
+                    is SimAction.WaitForInput -> {
+                        if (
+                            IoRuntime.input(
+                                currentIo,
+                                action.address
+                            ) == action.expected
+                        ) {
+                            current = current.copy(
+                                status = TaskStatus.RUNNING,
+                                actionIndex = current.actionIndex + 1,
+                                waitingReason = null,
+                                delayDeadlineMillis = null
+                            )
+                        } else {
+                            current = current.copy(
+                                status = TaskStatus.WAITING,
+                                waitingReason =
+                                    TaskWaitingReason.Input(
+                                        address = action.address,
+                                        expected = action.expected
+                                    ),
+                                delayDeadlineMillis = null
+                            )
+                            break
+                        }
+                    }
+
+                    is SimAction.Delay -> {
+                        val deadline =
+                            current.delayDeadlineMillis
+                                ?: safeDeadline(
+                                    timeMillis,
+                                    action.durationMillis
+                                )
+
+                        if (timeMillis >= deadline) {
+                            current = current.copy(
+                                status = TaskStatus.RUNNING,
+                                actionIndex = current.actionIndex + 1,
+                                waitingReason = null,
+                                delayDeadlineMillis = null
+                            )
+                        } else {
+                            current = current.copy(
+                                status = TaskStatus.WAITING,
+                                waitingReason =
+                                    TaskWaitingReason.Delay(deadline),
+                                delayDeadlineMillis = deadline
+                            )
+                            break
+                        }
+                    }
+                }
+            }
+
+            if (
+                current.status == TaskStatus.RUNNING &&
+                current.actionIndex >= current.program.actions.size
+            ) {
+                current = current.copy(
+                    status = TaskStatus.FINISHED,
+                    waitingReason = null,
+                    delayDeadlineMillis = null,
+                    statusBeforePause = null
+                )
+            }
+
+            return current to currentIo
+        }
+
+        private fun safeDeadline(
+            timeMillis: Long,
+            durationMillis: Long
+        ): Long {
+            require(durationMillis <= Long.MAX_VALUE - timeMillis) {
+                "Task delay deadline overflow"
+            }
+            return timeMillis + durationMillis
+        }
+
+        private fun requireCanonicalTask(
+            state: TaskRuntimeState,
+            id: TaskId
+        ): SimTaskState =
+            requireNotNull(state.tasks[id]) {
+                "Unknown task: ${id.value}"
+            }
+
+        private fun replaceCanonicalTask(
+            state: TaskRuntimeState,
+            id: TaskId,
+            task: SimTaskState
+        ): TaskRuntimeState =
+            TaskRuntimeState(
+                order = state.order,
+                tasks = state.tasks + (id to task)
+            )
+    }
 }
