@@ -162,3 +162,10 @@ Read-only independent preflight checked Tasks 4–7 against existing runtime and
 - Ruling: keep ordinary immutable tool model classes with defensive snapshots and manual value equality/copy; illustrative data-class syntax is not needed by downstream contracts. Cost if wrong: add convenience copy/component API later without changing canonical behavior.
 - Deferred minor test gap: nonzero mount rotation/translation should explicitly pin local TCP and translated-only boxes in future focused coverage; implementation inspected and correct.
 - Task 4 accepted subject to final branch gates. Exact next action: Task 5 RED for deterministic grasp/release using the preflight rulings above. Codex active again; no merge.
+
+## Task 5 review and publication
+- RED remote commit `94326bdef9718b5548265c2c38d274d37fa72c70`; Android CI #200 / 35544324303 failed as expected on missing grasp APIs.
+- GREEN implementation remote commit `91bfb7be36e1f6ab34f2bebacbccb49ff0834ee3`, ledger checkpoint `12e427203ffeda089a1a199ab861362e675a1a90`. Local counterparts d725c52 / 3a4f781; publication content trees verified equal.
+- Independent reviewer: specification APPROVE, code quality APPROVE, no findings. 17 focused / 179 full JVM tests passed. Fresh Android CI #201 / 35544435714 checks the published checkpoint.
+- Task 4 final ledger CI #199 / 35522077625 succeeded. Existing minor coverage note remains deferred to final review.
+- Exact next action: Task 6 RED for five-field canonical coordinator/SharedRuntime integration. Do not redo Tasks 1–5. Codex active.
