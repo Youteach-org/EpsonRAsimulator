@@ -96,3 +96,40 @@ Evidence:
 
 Current implementation HEAD before this ledger commit: `ea5ae4019c6395323d4ea9a90ff332c76f832acd`.
 Exact next action: Task 4 RED — add failing functional two-finger tool register/select/TCP, timed gripper motion, clamp, and active-collision tests.
+
+## 2026-09-20 Codex resume and Task 4 GREEN
+
+- Incoming Phase 4 HEAD: `500f6609a8a243e756825da37326ee8d0b54e780`, existing Task 4 RED (Android CI #197 / 35491414123, unresolved tool types). Tasks 1–3 preserved.
+- Phase 3 is accepted at `3dae461b162735f6205b8b55742044f6e32d6521`, verified CI #185 / 35476695127 success. The previous session's unpublished local clock patch was left in its separate checkout and was not applied over accepted Phase 3.
+- Active implementation is now Phase 4 branch / Draft PR #10, as the current in-progress plan requires. PR #9 and other branches remain unchanged; no merge.
+- Task 4 GREEN published: `8ed241547f5d503a7ac0eac515eeecf181f4d149` (local equivalent `e464d190dee6b3c7b94b651a5f1b42e8da1d8d18`; content trees compared equal after GitHub connector publication).
+- TDD: existing missing-type RED reproduced locally. Additional RED cases demonstrated duplicate registration, inactive-tool movement and caller-mutated capabilities; corrected before GREEN.
+- Local focused verification: 20 ToolRuntime tests passed. Full pure Kotlin suite: 162 tests / 27 classes passed, Kotlin 2.2.10 targeting JVM17 via JDK23. Android Gradle9.6/AGP9.4 not cached locally; no build version changed. Fresh GitHub Android CI is the APK gate.
+- Task 4 files: ToolRuntimeModels.kt, ToolRuntime.kt, ToolRuntimeTest.kt. Immutable caller snapshots; validated widths/speed/state; selected-tool timing and exact clamps; local TCP and translated active collision boxes.
+- Reviewer verdict: independent Task 4 review in progress. CI on published GREEN pending. No current implementation blocker.
+
+### Remaining-plan preflight and rulings
+
+Read-only independent preflight checked Tasks 4–7 against existing runtime and CAD scene. The following resolves omissions without adding a new subsystem:
+
+| Producer / consumer | Finding and ruling | Cost if wrong |
+| --- | --- | --- |
+| Tool selection -> grasp | Only selected tool advances; inactive widths persist. Register rejects duplicate IDs. Switching selection releases prior tool's part at its last effective world pose, with no implicit transfer. | Selection policy/tests would need revision |
+| Workcell attachments -> aggregate state | Local constructor validates part/key/offset/one-part-per-tool invariants; a shared cross-state validator checks tool compatibility in attachment reducers and aggregate constructors. No duplicate registry. | Validation API rework |
+| Mount/setup -> sensors/tasks | Follow active attachments before sensors; then evaluate tasks once, reconcile grasp/release, follow and publish. This corrects the plan's omitted follow step for mount changes. | Coordinator ordering rework |
+| Task/direct output -> grasp | Every output-changing command reconciles grasp at zero elapsed time. Preserve Phase 3 single-step and manual-input semantics; do not introduce global task execution into step. | Command reconciliation tests/API rework |
+| Actuator + graspable -> follow | Offset uses effective part origin minus mount origin; following subtracts actuator displacement before writing base pose. Preserve rotations; boxes use mount XYZ only, without TCP addition. | Geometry correction if coordinate contract changes |
+| State -> publication | Attachments participate in copy/equality/hash; both aggregate states and conversion helpers carry all five fields; validation precedes the one assignment/notification. | None beyond required canonical contract |
+| Canonical pose -> scene | World poses/axes/AABBs use current CAD/SceneView Y-up millimetres, directly XYZ / 1000. Keep provisional RC+ TCP mapping and robot transforms unchanged. Render explicit workcell primitives and selected-tool collision boxes (full size = twice half-extents), no new editor/demo. | Future coordinate migration requires adapter |
+| Tick outputs -> motion | Integrate with interval-start outputs using elapsed simulation milliseconds; newly produced outputs affect the next interval. | Scheduler policy revision |
+
+- Mutation rules: upsert preserves existing order/appends new IDs and validates dependencies; attached parts cannot be manually repositioned; referenced removal rejects atomically.
+- Exact next action: finish Task 4 independent review and verify Android CI, then Task 5 RED for deterministic grasp/release. Codex active; do not duplicate work inline.
+
+## Quota handoff — 2026-09-20
+- Five-hour account usage reached 97%; no Task 5 implementation started.
+- Task 4 code is safely published at `8ed241547f5d503a7ac0eac515eeecf181f4d149`; local suite 162/162 passed. Android CI #198 / 35521997672 was in progress at last check.
+- Independent Task 4 review pending at this checkpoint; do not call Task 4 accepted until review verdict and fresh CI are verified. Any later verdict will be added to the PR handoff comment without moving the final verified HEAD.
+- Exact next action: inspect PR #10 HEAD/comments and CI, resolve any Task 4 review findings, then proceed with Task 5 RED using the plan and preflight rulings above. Do not redo Tasks 1–3 or Phase 3.
+- This ledger commit is documentation only; its exact final SHA and CI result are recorded in the PR handoff comment. GitHub connector publication remaps local commit timestamps; content trees are checked before alignment.
+- Codex is stopping at this safe boundary. Keep PR #10 Draft, no merge, keep Issue #7 separate.
