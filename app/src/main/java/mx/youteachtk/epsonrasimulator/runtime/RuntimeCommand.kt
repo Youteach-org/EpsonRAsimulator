@@ -1,9 +1,15 @@
 package mx.youteachtk.epsonrasimulator.runtime
 
+import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import mx.youteachtk.epsonrasimulator.domain.TeachPoint
 import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
 import mx.youteachtk.epsonrasimulator.runtime.task.TaskId
 import mx.youteachtk.epsonrasimulator.runtime.task.TaskProgram
+import mx.youteachtk.epsonrasimulator.runtime.tool.FunctionalToolDefinition
+import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeId
+import mx.youteachtk.epsonrasimulator.runtime.workcell.SignalBinding
+import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntity
+import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntityId
 
 sealed interface RuntimeCommand {
     data class SelectRobot(val robotId: String) : RuntimeCommand
@@ -52,5 +58,34 @@ sealed interface RuntimeCommand {
         val id: TaskId,
         val instructionIndex: Int,
         val enabled: Boolean = true
+    ) : RuntimeCommand
+
+    data class UpsertWorkcellEntity(
+        val entity: WorkcellEntity
+    ) : RuntimeCommand
+
+    data class RemoveWorkcellEntity(
+        val id: WorkcellEntityId
+    ) : RuntimeCommand
+
+    data class SetWorkcellEntityPose(
+        val id: WorkcellEntityId,
+        val pose: CartesianPose
+    ) : RuntimeCommand
+
+    data class SetSignalBindings(
+        val bindings: List<SignalBinding>
+    ) : RuntimeCommand
+
+    data class RegisterFunctionalTool(
+        val definition: FunctionalToolDefinition
+    ) : RuntimeCommand
+
+    data class SelectFunctionalTool(
+        val id: ToolRuntimeId
+    ) : RuntimeCommand
+
+    data class SetToolMountPose(
+        val pose: CartesianPose
     ) : RuntimeCommand
 }
