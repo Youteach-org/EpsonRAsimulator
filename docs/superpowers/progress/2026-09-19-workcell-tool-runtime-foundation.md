@@ -81,7 +81,29 @@ Evidence:
 **Status:** pending
 
 ### Task 5 — Deterministic grasp/release relationships
-**Status:** pending
+**Status:** implementation complete; independent review and published CI pending
+
+Evidence:
+- RED commit: `9c507772a47925e39a3a73979f47f07238955529`
+  (`test: add failing deterministic grasp runtime tests`).
+- RED command: `work/run-phase4-tests.ps1 -ClassFilter '*GraspRuntimeTest'`
+  failed during compilation for the intended missing `GraspAttachment`,
+  `WorkcellState.attachments`, `reconcileGrasp`, and `followAttachments`
+  APIs. The durable local log is `work/phase4-task-5-red.log`.
+- GREEN implementation commit:
+  `d725c5221b0816dcc906cb38b162273ce1878e91`
+  (`feat: add deterministic grasp relationships`).
+- Focused GREEN: the same filtered command passed 17 tests in one class.
+- Full pure Kotlin GREEN: `work/run-phase4-tests.ps1 -ClassFilter '*'`
+  passed 179 tests in 28 classes.
+- Verified deterministic first-candidate acquisition, inclusive boundary
+  overlap with a nonzero collision center, close-output and closed-width
+  gating, release at the last pose, active-only following, selection-change
+  release, actuator-displacement compensation, local and cross-state
+  attachment validation, and attachment copy/equality/hash semantics.
+- Remaining gates: controller publication to Draft PR #10, independent
+  review, and fresh Android CI. No push or PR mutation was performed by the
+  Task 5 worker.
 
 ### Task 6 — Shared runtime integration
 **Status:** pending
