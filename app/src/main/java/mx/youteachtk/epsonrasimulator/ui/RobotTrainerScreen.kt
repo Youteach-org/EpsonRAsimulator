@@ -40,6 +40,10 @@ fun RobotTrainerScreen(runtime: SharedRuntime) {
     val runtimeState = rememberRuntimeState(runtime)
     val robot = runtime.activeRobot()
     val jointValues = runtimeState.jointState.values.map(Double::toFloat)
+    val workcellBoxes = WorkcellSceneProjection.boxes(
+        runtimeState.workcellState,
+        runtimeState.toolState
+    )
 
     val tcpCandidate = C4Kinematics.tcpRcCandidateMm(
         jointValues.map(Float::toDouble)
@@ -67,7 +71,8 @@ fun RobotTrainerScreen(runtime: SharedRuntime) {
             ) {
                 C4RobotScene(
                     jointValues = jointValues,
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxSize(),
+                    workcellBoxes = workcellBoxes
                 )
 
                 Surface(
