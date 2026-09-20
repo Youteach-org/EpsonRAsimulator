@@ -112,7 +112,7 @@ Evidence:
 **Status:** complete
 
 ### Task 8 — Docs/final review/final CI
-**Status:** final CI pending
+**Status:** complete
 
 ## Current checkpoint
 
@@ -292,3 +292,34 @@ Read-only independent preflight checked Tasks 4–7 against existing runtime and
   success for Unit tests, debug APK, and upload on the exact docs/review HEAD;
   then record that CI in the ledger status checkpoint and add the final Draft
   PR acceptance/handoff comment. Do not merge.
+
+
+## Task 8 GREEN — documentation, whole-branch review, and CI gate
+
+- Documentation/review implementation commit:
+  `437119737288b4f86734406556c9dba0db939c4d`
+  (`docs: finalize Phase 4 workcell runtime architecture`).
+- Android CI #209 / run `35545884853`: SUCCESS. Unit tests, debug APK build,
+  and APK upload all passed on that documentation/review tree.
+- Exact Phase 3 -> Phase 4 scope comparison on the same tree contained 26
+  changed files, all limited to the expected runtime workcell/tool/shared-state
+  integration, current C4 presentation, Phase 4 tests, architecture/roadmap,
+  and Phase 4 plan/ledger.
+- No forbidden or deferred scope was introduced: no Gradle/dependency change,
+  no SceneView bump, no `.sprj`/`.pts` semantic edit, no SPEL+ Direct Code
+  execution, no native RC+ scheduler/build/run implementation, no bridge or
+  hardware path, and no C4 self-collision implementation.
+- The acceptance chain is covered by the Phase 4 integration, grasp, shared
+  runtime, and scene-projection tests described in the prior checkpoint.
+- Whole-branch review found no blocking or important finding. The existing
+  non-blocking Task 4 note about explicit nonzero mount-rotation/local-TCP test
+  coverage remains documented; automatic FK-to-tool-mount synchronization is
+  intentionally deferred.
+- This status-marker commit is documentation-only and must itself receive a
+  fresh final Android CI success before the Draft PR handoff comment is posted.
+  The exact final HEAD and final CI run are recorded in that PR comment so the
+  evidence refers to the actual branch tip without creating an infinite
+  documentation/CI loop.
+- Exact next action: verify final CI on this ledger-status HEAD, then post the
+  Phase 4 final Draft PR checkpoint. Keep PR #10 Draft; do not merge without
+  explicit user instruction. PR #9 and Issue #7 remain unchanged.
