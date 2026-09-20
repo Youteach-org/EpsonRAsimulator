@@ -826,7 +826,7 @@ Include final SHA, final CI run, completed Phase 4 capabilities, deliberate defe
 - Linear actuator uses scalar stroke state along a normalized axis.
 - Two-finger gripper is the only functional tool family in this phase.
 - SceneView displays state but does not own collision, physics, I/O, grasp, or tool truth.
-- Tool TCP is exposed from the existing `ToolDefinition`; automatic robot FK→tool mount synchronization may remain for the later shared Visual Lab migration if not required by the acceptance chain.
+- Tool TCP is exposed from the existing `ToolDefinition`; automatic robot FK→tool mount synchronization is explicitly deferred to Phase 7 Visual Lab migration.
 
 ### Type consistency
 - `WorkcellState` + `ToolRuntimeState` flow into `SimulationDomainState`.
