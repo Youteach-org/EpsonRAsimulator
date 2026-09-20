@@ -58,7 +58,14 @@ Evidence:
 - Verified inclusive AABB boundary overlap, separated boxes, translation, finite/positive geometry validation, explicit entity order, defensive collection copies, duplicate/missing order rejection, blank IDs, actuator state/stroke consistency, and sensor/actuator binding integrity.
 
 ### Task 2 — Sensor propagation into canonical IoState
-**Status:** pending
+**Status:** complete
+
+Evidence:
+- RED commit: `2317d94f3d7bfe5ec9115af275f678a430fed9b4` (`test: add failing workcell sensor propagation tests`).
+- RED CI: Android CI #191 failed in Unit tests with unresolved `WorkcellRuntime`; APK/upload skipped.
+- GREEN commit: `0de90d6acde308a7d2aa63575cb7bb4991bad155` (`feat: propagate workcell sensors to canonical io`).
+- GREEN CI: Android CI #192 completed successfully; Unit tests, debug APK build, and upload all passed.
+- Verified overlap sets canonical input, leaving zone clears the same input, boundary contact counts as presence, fixtures do not trigger presence, and unrelated entity order does not alter the boolean result.
 
 ### Task 3 — Deterministic linear actuators driven by outputs
 **Status:** pending
@@ -80,5 +87,5 @@ Evidence:
 
 ## Current checkpoint
 
-Current implementation HEAD before this ledger commit: `ce4369f2dff48925a02caef3d158e08747b685a9`.
-Exact next action: Task 2 RED — add failing presence-sensor → canonical IoState propagation and clear/boundary tests.
+Current implementation HEAD before this ledger commit: `0de90d6acde308a7d2aa63575cb7bb4991bad155`.
+Exact next action: Task 3 RED — add failing deterministic linear-actuator movement, clamp/retract, zero/negative-delta, and effective-pose tests.
