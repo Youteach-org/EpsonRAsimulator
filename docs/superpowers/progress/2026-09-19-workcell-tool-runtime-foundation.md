@@ -78,10 +78,10 @@ Evidence:
 - Verified output-driven extension/retraction, exact stroke clamp, zero-delta no-op, negative-delta rejection, normalized actuator axis, and effective entity pose/collision displacement.
 
 ### Task 4 — Functional two-finger tool runtime
-**Status:** pending
+**Status:** complete
 
 ### Task 5 — Deterministic grasp/release relationships
-**Status:** implementation complete; independent review and published CI pending
+**Status:** complete
 
 Evidence:
 - RED commit: `9c507772a47925e39a3a73979f47f07238955529`
@@ -112,7 +112,7 @@ Evidence:
 **Status:** complete
 
 ### Task 8 — Docs/final review/final CI
-**Status:** pending
+**Status:** final CI pending
 
 ## Current checkpoint
 
@@ -244,3 +244,51 @@ Read-only independent preflight checked Tasks 4–7 against existing runtime and
   this is not represented as a second-agent review.
 - Exact next action: Task 8 final documentation, whole-branch review, full CI,
   and Draft-PR checkpoint. Do not merge.
+
+
+## Task 8 documentation + whole-branch review checkpoint
+
+- Incoming Task 8 HEAD: `24525d92bfabe639438cc50741be0d004d439286`.
+  PR #10 remained Draft and no new PR comment changed the execution plan.
+- Whole-branch comparison from accepted Phase 3
+  `3dae461b162735f6205b8b55742044f6e32d6521` through the incoming Task 8
+  HEAD is strictly within the expected Phase 4 scope: runtime workcell/tool
+  files, four shared-runtime integration files, current C4 presentation,
+  Phase 4 tests, and the Phase 4 plan/ledger.
+- Scope review found no build/dependency file changes, no SceneView version
+  change, no SPEL+ Direct Code execution, no native RC+ scheduler/build/run
+  implementation, no bridge/hardware code, no `.sprj` or `.pts` semantic
+  changes, and no C4 self-collision implementation. Issue #7 remains separate.
+- Acceptance-chain coverage is present:
+  1. `Phase4RuntimeIntegrationTest` moves a part into a presence sensor and
+     proves canonical input propagation, waiting-task completion, and output
+     change at zero elapsed simulation time.
+  2. Timed integration cases prove output-bound cylinder movement and
+     two-finger gripper closure use deterministic simulation time.
+  3. `GraspRuntimeTest` covers deterministic attach/release and candidate
+     selection rules.
+  4. Integration coverage proves an attached part follows tool-mount state
+     before sensor evaluation.
+  5. `SharedRuntimeTest` proves one coherent subscriber publication spanning
+     workcell, I/O, task, and tool state and rollback/no-notification on
+     rejected commands.
+  6. `WorkcellSceneProjectionTest` proves canonical workcell/actuator
+     projection, mm-to-m conversion, selected-tool collision-box sizing, and
+     read-only projection.
+- Final review carried forward the already documented non-blocking Task 4
+  coverage note for nonzero mount rotation/local TCP. No Phase 4 behavior in
+  this branch performs automatic FK-to-tool-mount synchronization, so the
+  deferral remains explicit rather than being silently inferred.
+- `docs/ARCHITECTURE.md` and `docs/ROADMAP.md` now describe implemented
+  Phase 4 facts and explicit deferrals without claiming rigid-body physics,
+  general mesh collision, full auxiliary-axis motion, conveyor dynamics,
+  vacuum/welding/articulated-hand behavior, physical robot safety/control, or
+  Epson-native execution fidelity.
+- Review gate for Tasks 6-8 was performed as a separate inline pass because
+  this harness exposes no independent subagent runtime. Earlier Task 4/5
+  independent-review evidence remains preserved above; no second-agent review
+  is falsely claimed for Tasks 6-8.
+- Exact next action after this documentation commit: require fresh Android CI
+  success for Unit tests, debug APK, and upload on the exact docs/review HEAD;
+  then record that CI in the ledger status checkpoint and add the final Draft
+  PR acceptance/handoff comment. Do not merge.
