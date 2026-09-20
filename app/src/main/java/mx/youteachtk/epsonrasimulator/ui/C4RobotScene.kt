@@ -9,6 +9,8 @@ import androidx.compose.ui.Modifier
 import io.github.sceneview.SceneView
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
+import io.github.sceneview.math.Size
+import io.github.sceneview.node.CubeNode
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.rememberCameraManipulator
@@ -21,7 +23,8 @@ private const val MODEL_ROOT = "models/robots/c4-a601s"
 @Composable
 fun C4RobotScene(
     jointValues: List<Float>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    workcellBoxes: List<WorkcellSceneBox> = emptyList()
 ) {
     require(jointValues.size == 6) {
         "C4RobotScene requires exactly six joint values"
@@ -133,6 +136,21 @@ fun C4RobotScene(
                         }
                     }
                 }
+            }
+
+            workcellBoxes.forEach { box ->
+                CubeNode(
+                    size = Size(
+                        x = box.sizeMeters.x,
+                        y = box.sizeMeters.y,
+                        z = box.sizeMeters.z
+                    ),
+                    position = Position(
+                        x = box.centerMeters.x,
+                        y = box.centerMeters.y,
+                        z = box.centerMeters.z
+                    )
+                )
             }
         }
 

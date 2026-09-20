@@ -139,4 +139,63 @@ class SimulationCoordinatorTest {
             0.000001
         )
     }
+
+    @Test
+    fun steppingOneTaskDoesNotEvaluateOtherWaitingTasksGlobally() {
+        val steppedId = TaskId("stepped")
+        val waitingId = TaskId("waiting")
+        val trigger = DigitalIoAddress(9)
+        val steppedOutput = DigitalIoAddress(10)
+        val waitingOutput = DigitalIoAddress(11)
+        var state = SimulationDomainState()
+
+        state = SimulationCoordinator.loadTask(
+            state,
+            TaskProgram(
+                steppedId,
+                "stepped",
+                listOf(SimAction.SetOutput(steppedOutput, true))
+            )
+        )
+        state = SimulationCoordinator.setTaskBreakpoint(
+            state,
+            steppedId,
+            instructionIndex = 0
+        )
+        state = SimulationCoordinator.startTask(state, steppedId)
+        assertEquals(
+            TaskStatus.HALTED,
+            state.taskState.tasks.getValue(steppedId).status
+        )
+
+        state = SimulationCoordinator.loadTask(
+            state,
+            TaskProgram(
+                waitingId,
+                "waiting",
+                listOf(
+                    SimAction.WaitForInput(trigger, true),
+                    SimAction.SetOutput(waitingOutput, true)
+                )
+            )
+        )
+        state = SimulationCoordinator.startTask(state, waitingId)
+        assertEquals(
+            TaskStatus.WAITING,
+            state.taskState.tasks.getValue(waitingId).status
+        )
+
+        state = state.copy(
+            ioState = IoRuntime.setInput(state.ioState, trigger, true)
+        )
+        state = SimulationCoordinator.stepTask(state, steppedId)
+
+        assertTrue(IoRuntime.output(state.ioState, steppedOutput))
+        assertFalse(IoRuntime.output(state.ioState, waitingOutput))
+        assertEquals(
+            TaskStatus.WAITING,
+            state.taskState.tasks.getValue(waitingId).status
+        )
+    }
+
 }

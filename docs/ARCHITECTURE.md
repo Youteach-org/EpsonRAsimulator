@@ -47,7 +47,24 @@ The Phase 3 feature branch adds the first canonical local-simulation execution s
 
 The executable model remains deliberately neutral. `ProgramDocument` and SPEL+ Direct Code are **not** executed automatically; a later verified mapper may translate supported semantic statements into neutral simulation actions.
 
-This foundation does not claim Epson-native task scheduling, RC+ Build/Run/compiler equivalence, Task Manager or I/O Monitor UI, workcell sensor/actuator bindings, bridge/network behavior, or physical robot control. C4 self-collision remains tracked separately in Issue #7.
+Phase 3 alone does not claim Epson-native task scheduling, RC+ Build/Run/compiler equivalence, Task Manager or I/O Monitor UI, workcell sensor/actuator bindings, bridge/network behavior, or physical robot control. C4 self-collision remains tracked separately in Issue #7.
+
+## Implemented functional workcell + tool runtime foundation
+
+The Phase 4 feature branch extends the canonical local-simulation state without introducing a second simulation authority:
+
+- `SharedRuntimeState` and `SimulationDomainState` publish the same five canonical simulation fields: clock, I/O, task, workcell, and tool state;
+- `runtime.workcell` provides immutable component-based entities, AABB geometry, render primitives, graspable/fixture markers, presence sensors, deterministic linear actuators, signal bindings, attachment relationships, and an auxiliary-axis-ready component contract;
+- presence sensors write through the existing canonical `IoState`; signal bindings map sensors to digital inputs and outputs to linear actuators;
+- `runtime.tool` provides functional tool definitions, selected-tool TCP/collision data, and the first deterministic two-finger gripper driven by canonical digital outputs;
+- deterministic grasp/release is an explicit training approximation: a fully closed selected gripper may attach the first eligible overlapping graspable part, release follows the defined output/selection rules, and attached parts follow canonical tool-mount state;
+- `SimulationCoordinator` advances simulation time first, advances actuators/tools from interval-start outputs, follows attachments before sensor evaluation, evaluates sensors/tasks, reconciles grasp/release, and returns one coherent five-field state;
+- `SharedRuntime` remains the single subscriber boundary and emits at most one coherent publication for a successful changed command;
+- `WorkcellSceneProjection` converts canonical CAD/SceneView Y-up XYZ millimetres directly to metres and the current C4 scene renders explicit workcell primitives plus selected-tool collision boxes as presentation-only `CubeNode` geometry.
+
+The Phase 4 collision/grasp model is deliberately axis-aligned and deterministic; it is not rigid-body physics, a general mesh-collision engine, or a physical-safety model. The auxiliary-axis component is only an extension-ready contract; a full auxiliary-axis motion system is not implemented.
+
+Still deferred are rigid-body physics, general mesh collision, C4 robot self-collision (Issue #7), conveyor dynamics beyond future component extension, vacuum/welding/articulated-hand tool behavior, automatic robot-FK-to-tool-mount synchronization, Epson-native task/build/run semantics, bridge/network behavior, and physical robot safety/control.
 
 ## Layering
 

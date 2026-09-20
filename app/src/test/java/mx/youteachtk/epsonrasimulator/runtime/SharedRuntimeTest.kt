@@ -4,6 +4,27 @@ import mx.youteachtk.epsonrasimulator.adapters.SimulatorAdapterId
 import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import mx.youteachtk.epsonrasimulator.domain.JointState
 import mx.youteachtk.epsonrasimulator.domain.TeachPoint
+import mx.youteachtk.epsonrasimulator.domain.ToolCapability
+import mx.youteachtk.epsonrasimulator.domain.ToolDefinition
+import mx.youteachtk.epsonrasimulator.kinematics.Vector3
+import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
+import mx.youteachtk.epsonrasimulator.runtime.io.IoRuntime
+import mx.youteachtk.epsonrasimulator.runtime.task.SimAction
+import mx.youteachtk.epsonrasimulator.runtime.task.TaskId
+import mx.youteachtk.epsonrasimulator.runtime.task.TaskProgram
+import mx.youteachtk.epsonrasimulator.runtime.task.TaskStatus
+import mx.youteachtk.epsonrasimulator.runtime.tool.FunctionalToolDefinition
+import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeId
+import mx.youteachtk.epsonrasimulator.runtime.tool.TwoFingerGripperSpec
+import mx.youteachtk.epsonrasimulator.runtime.workcell.AxisAlignedBox
+import mx.youteachtk.epsonrasimulator.runtime.workcell.CollisionShapeComponent
+import mx.youteachtk.epsonrasimulator.runtime.workcell.GraspableComponent
+import mx.youteachtk.epsonrasimulator.runtime.workcell.LinearActuatorComponent
+import mx.youteachtk.epsonrasimulator.runtime.workcell.LinearActuatorState
+import mx.youteachtk.epsonrasimulator.runtime.workcell.PresenceSensorComponent
+import mx.youteachtk.epsonrasimulator.runtime.workcell.SignalBinding
+import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntity
+import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntityId
 import mx.youteachtk.epsonrasimulator.robot.EpsonRobotProvider
 import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
 import org.junit.Assert.assertEquals
@@ -118,4 +139,169 @@ class SharedRuntimeTest {
             )
         )
     }
+
+    @Test
+    fun workcellMutationPublishesOneAtomicCanonicalSnapshot() {
+        val runtime = runtime()
+        val input = DigitalIoAddress(3)
+        val output = DigitalIoAddress(5)
+        val taskId = TaskId("atomic")
+        val sensor = testSensor("sensor", 0.0)
+        val part = testPart("part", 50.0)
+        val cylinder = testCylinder("cylinder")
+
+        runtime.dispatch(RuntimeCommand.UpsertWorkcellEntity(sensor))
+        runtime.dispatch(RuntimeCommand.UpsertWorkcellEntity(part))
+        runtime.dispatch(RuntimeCommand.UpsertWorkcellEntity(cylinder))
+        runtime.dispatch(
+            RuntimeCommand.SetSignalBindings(
+                listOf(
+                    SignalBinding.SensorToInput(sensor.id, input),
+                    SignalBinding.OutputToActuator(output, cylinder.id)
+                )
+            )
+        )
+        runtime.dispatch(
+            RuntimeCommand.LoadTask(
+                TaskProgram(
+                    taskId,
+                    "atomic",
+                    listOf(
+                        SimAction.WaitForInput(input, true),
+                        SimAction.SetOutput(output, true)
+                    )
+                )
+            )
+        )
+        runtime.dispatch(RuntimeCommand.StartTask(taskId))
+
+        val observed = mutableListOf<SharedRuntimeState>()
+        val subscription = runtime.subscribe { observed += it }
+        val before = observed.size
+
+        runtime.dispatch(
+            RuntimeCommand.SetWorkcellEntityPose(
+                part.id,
+                CartesianPose(0.0, 0.0, 0.0)
+            )
+        )
+
+        assertEquals(before + 1, observed.size)
+        val published = observed.last()
+        assertEquals(runtime.state, published)
+        assertTrue(IoRuntime.input(published.ioState, input))
+        assertEquals(
+            TaskStatus.FINISHED,
+            published.taskState.tasks.getValue(taskId).status
+        )
+        assertTrue(IoRuntime.output(published.ioState, output))
+        assertEquals(
+            0.0,
+            published.workcellState.entities.getValue(cylinder.id)
+                .actuatorState!!.positionMm,
+            0.0
+        )
+        subscription.cancel()
+    }
+
+    @Test
+    fun rejectedReferencedRemovalRollsBackWithoutNotification() {
+        val runtime = runtime()
+        val input = DigitalIoAddress(3)
+        val sensor = testSensor("sensor", 0.0)
+        runtime.dispatch(RuntimeCommand.UpsertWorkcellEntity(sensor))
+        runtime.dispatch(
+            RuntimeCommand.SetSignalBindings(
+                listOf(SignalBinding.SensorToInput(sensor.id, input))
+            )
+        )
+        val before = runtime.state
+        val observed = mutableListOf<SharedRuntimeState>()
+        val subscription = runtime.subscribe { observed += it }
+
+        try {
+            runtime.dispatch(RuntimeCommand.RemoveWorkcellEntity(sensor.id))
+            fail("Expected referenced entity removal to be rejected")
+        } catch (_: IllegalArgumentException) {
+        }
+
+        assertEquals(before, runtime.state)
+        assertEquals(1, observed.size)
+        subscription.cancel()
+    }
+
+    @Test
+    fun functionalToolSetupCommandsUpdateCanonicalToolState() {
+        val runtime = runtime()
+        val closeOutput = DigitalIoAddress(6)
+        val definition = testGripper(closeOutput)
+
+        runtime.dispatch(RuntimeCommand.RegisterFunctionalTool(definition))
+        runtime.dispatch(RuntimeCommand.SelectFunctionalTool(definition.id))
+        runtime.dispatch(
+            RuntimeCommand.SetToolMountPose(
+                CartesianPose(25.0, 50.0, 75.0)
+            )
+        )
+
+        assertEquals(definition.id, runtime.state.toolState.activeToolId)
+        assertEquals(25.0, runtime.state.toolState.mountPose.x, 0.0)
+        assertEquals(50.0, runtime.state.toolState.mountPose.y, 0.0)
+        assertEquals(75.0, runtime.state.toolState.mountPose.z, 0.0)
+    }
+
+    private fun testSensor(id: String, x: Double): WorkcellEntity =
+        WorkcellEntity(
+            id = WorkcellEntityId(id),
+            pose = CartesianPose(x, 0.0, 0.0),
+            sensor = PresenceSensorComponent(testBox(10.0))
+        )
+
+    private fun testPart(id: String, x: Double): WorkcellEntity =
+        WorkcellEntity(
+            id = WorkcellEntityId(id),
+            pose = CartesianPose(x, 0.0, 0.0),
+            collision = CollisionShapeComponent(testBox(2.0)),
+            graspable = GraspableComponent
+        )
+
+    private fun testCylinder(id: String): WorkcellEntity =
+        WorkcellEntity(
+            id = WorkcellEntityId(id),
+            actuator = LinearActuatorComponent(
+                axis = Vector3.X,
+                strokeMm = 100.0,
+                speedMmPerSecond = 100.0
+            ),
+            actuatorState = LinearActuatorState()
+        )
+
+    private fun testGripper(
+        closeOutput: DigitalIoAddress
+    ): FunctionalToolDefinition =
+        FunctionalToolDefinition(
+            id = ToolRuntimeId("test-gripper"),
+            tool = ToolDefinition(
+                id = "test-gripper",
+                displayName = "Test gripper",
+                capabilities = setOf(
+                    ToolCapability.OPEN_CLOSE,
+                    ToolCapability.GRASP
+                )
+            ),
+            gripper = TwoFingerGripperSpec(
+                openWidthMm = 80.0,
+                closedWidthMm = 10.0,
+                speedMmPerSecond = 100.0,
+                graspBox = testBox(10.0),
+                closeOutput = closeOutput
+            )
+        )
+
+    private fun testBox(halfExtent: Double): AxisAlignedBox =
+        AxisAlignedBox(
+            center = Vector3.ZERO,
+            halfExtents = Vector3(halfExtent, halfExtent, halfExtent)
+        )
+
 }

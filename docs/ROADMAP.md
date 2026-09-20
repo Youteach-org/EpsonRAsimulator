@@ -29,7 +29,19 @@ Phase 2 itself does **not** execute SPEL+, emulate RC+ Build/Run, parse `.sprj` 
 - `SimulationCoordinator` combines clock, I/O and task transitions;
 - `SharedRuntimeState` publishes clock/I-O/task changes atomically to observers.
 
-This foundation does **not** execute arbitrary SPEL+/`ProgramDocument`, emulate Epson-native scheduling or RC+ Build/Run, add Task Manager/I/O Monitor UI, bind 3D workcell actors, bridge to RC+, or control physical hardware. C4 self-collision remains Issue #7.
+Phase 3 alone does **not** execute arbitrary SPEL+/`ProgramDocument`, emulate Epson-native scheduling or RC+ Build/Run, add Task Manager/I/O Monitor UI, bind 3D workcell actors, bridge to RC+, or control physical hardware. C4 self-collision remains Issue #7.
+
+## Functional Workcell + Tool Runtime Foundation — implemented on Phase 4 feature branch
+- canonical `SharedRuntimeState` now publishes clock, I/O, task, workcell, and tool state together;
+- reusable immutable workcell entities support render, AABB collision, graspable, fixture, presence-sensor, linear-actuator, and auxiliary-axis-ready components;
+- sensor bindings propagate into canonical digital inputs, while canonical digital outputs drive deterministic linear actuators and the first two-finger gripper;
+- selected-tool runtime owns the active tool definition, mount pose, TCP/collision data, and deterministic open/close state;
+- deterministic grasp/release relationships attach eligible graspable parts under defined overlap/output rules and make attached parts follow canonical tool-mount state;
+- the coordinator preserves deterministic ordering across clock, actuator/tool motion, attachment following, sensor evaluation, task evaluation, and grasp/release;
+- subscribers receive one coherent canonical state publication for each successful changed runtime command;
+- the current C4 SceneView renders canonical workcell primitives and selected-tool collision boxes through a pure mm-to-m scene projection; SceneView does not own simulation or collision truth.
+
+Phase 4 intentionally remains a training simulation foundation. It does **not** add rigid-body physics, general mesh collision, C4 self-collision (Issue #7), full conveyor dynamics, vacuum/welding/articulated-hand behavior, automatic robot-FK-to-tool-mount synchronization, Epson-native task/build/run semantics, bridge/network behavior, or physical robot safety/control. The auxiliary-axis component is an extension-ready contract only; full auxiliary-axis motion remains future work.
 
 ## Phase 0 — Foundation
 - repository;

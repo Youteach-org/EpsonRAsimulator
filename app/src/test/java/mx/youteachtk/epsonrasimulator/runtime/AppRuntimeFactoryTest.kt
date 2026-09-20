@@ -1,6 +1,7 @@
 package mx.youteachtk.epsonrasimulator.runtime
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppRuntimeFactoryTest {
@@ -22,5 +23,7 @@ class AppRuntimeFactoryTest {
             bundle.runtime.state.connectionMode
         )
         assertEquals(6, bundle.runtime.activeRobot().joints.size)
+        assertTrue(bundle.runtime.state.workcellState.order.isEmpty())
+        assertTrue(bundle.runtime.state.toolState.definitions.isEmpty())
     }
 }

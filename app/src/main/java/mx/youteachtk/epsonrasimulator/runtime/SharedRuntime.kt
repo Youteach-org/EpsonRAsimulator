@@ -201,6 +201,63 @@ class SharedRuntime(
                         command.enabled
                     )
                 )
+
+            is RuntimeCommand.UpsertWorkcellEntity ->
+                current.withSimulation(
+                    SimulationCoordinator.upsertWorkcellEntity(
+                        current.simulationDomain(),
+                        command.entity
+                    )
+                )
+
+            is RuntimeCommand.RemoveWorkcellEntity ->
+                current.withSimulation(
+                    SimulationCoordinator.removeWorkcellEntity(
+                        current.simulationDomain(),
+                        command.id
+                    )
+                )
+
+            is RuntimeCommand.SetWorkcellEntityPose ->
+                current.withSimulation(
+                    SimulationCoordinator.setWorkcellEntityPose(
+                        current.simulationDomain(),
+                        command.id,
+                        command.pose
+                    )
+                )
+
+            is RuntimeCommand.SetSignalBindings ->
+                current.withSimulation(
+                    SimulationCoordinator.setSignalBindings(
+                        current.simulationDomain(),
+                        command.bindings
+                    )
+                )
+
+            is RuntimeCommand.RegisterFunctionalTool ->
+                current.withSimulation(
+                    SimulationCoordinator.registerFunctionalTool(
+                        current.simulationDomain(),
+                        command.definition
+                    )
+                )
+
+            is RuntimeCommand.SelectFunctionalTool ->
+                current.withSimulation(
+                    SimulationCoordinator.selectFunctionalTool(
+                        current.simulationDomain(),
+                        command.id
+                    )
+                )
+
+            is RuntimeCommand.SetToolMountPose ->
+                current.withSimulation(
+                    SimulationCoordinator.setToolMountPose(
+                        current.simulationDomain(),
+                        command.pose
+                    )
+                )
         }
 
         if (next != current) {
@@ -221,7 +278,9 @@ class SharedRuntime(
         SimulationDomainState(
             clockState = clockState,
             ioState = ioState,
-            taskState = taskState
+            taskState = taskState,
+            workcellState = workcellState,
+            toolState = toolState
         )
 
     private fun SharedRuntimeState.withSimulation(
@@ -230,7 +289,9 @@ class SharedRuntime(
         copy(
             clockState = domain.clockState,
             ioState = domain.ioState,
-            taskState = domain.taskState
+            taskState = domain.taskState,
+            workcellState = domain.workcellState,
+            toolState = domain.toolState
         )
 
     private fun validateInitialJointState(
