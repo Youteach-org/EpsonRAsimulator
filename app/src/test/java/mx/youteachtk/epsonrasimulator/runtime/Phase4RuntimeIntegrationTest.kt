@@ -148,6 +148,152 @@ class Phase4RuntimeIntegrationTest {
         assertTrue(part.id in state.workcellState.attachments)
     }
 
+
+    @Test(expected = IllegalArgumentException::class)
+    fun aggregateStateRejectsAttachmentToMissingTool() {
+        val part = part("part", 0.0)
+        SimulationDomainState(
+            workcellState = WorkcellState(
+                order = listOf(part.id),
+                entities = mapOf(part.id to part),
+                attachments = mapOf(
+                    part.id to GraspAttachment(
+                        partId = part.id,
+                        toolId = ToolRuntimeId("missing"),
+                        offsetFromToolMm = Vector3.ZERO
+                    )
+                )
+            )
+        )
+    }
+
+    @Test
+    fun pausedClockDoesNotAdvanceActuatorOrGripper() {
+        val closeOutput = DigitalIoAddress(6)
+        val cylinder = cylinder()
+        val tool = gripper(closeOutput)
+        var state = SimulationDomainState(
+            workcellState = WorkcellState(
+                order = listOf(cylinder.id),
+                entities = mapOf(cylinder.id to cylinder),
+                bindings = listOf(
+                    SignalBinding.OutputToActuator(cylinderOutput, cylinder.id)
+                )
+            ),
+            toolState = selectedTool(tool)
+        )
+        state = SimulationCoordinator.setOutput(state, cylinderOutput, true)
+        state = SimulationCoordinator.setOutput(state, closeOutput, true)
+
+        state = SimulationCoordinator.advance(state, 1_000)
+
+        assertEquals(0L, state.clockState.timeMillis)
+        assertEquals(
+            0.0,
+            state.workcellState.entities.getValue(cylinder.id)
+                .actuatorState!!.positionMm,
+            0.0
+        )
+        assertEquals(
+            80.0,
+            state.toolState.gripperStates.getValue(tool.id).openingWidthMm,
+            0.0
+        )
+    }
+
+    @Test
+    fun scaledClockUsesElapsedSimulationTimeForActuatorAndGripper() {
+        val closeOutput = DigitalIoAddress(6)
+        val cylinder = cylinder()
+        val tool = gripper(closeOutput)
+        var state = SimulationDomainState(
+            workcellState = WorkcellState(
+                order = listOf(cylinder.id),
+                entities = mapOf(cylinder.id to cylinder),
+                bindings = listOf(
+                    SignalBinding.OutputToActuator(cylinderOutput, cylinder.id)
+                )
+            ),
+            toolState = selectedTool(tool)
+        )
+        state = SimulationCoordinator.setOutput(state, cylinderOutput, true)
+        state = SimulationCoordinator.setOutput(state, closeOutput, true)
+        state = SimulationCoordinator.setClockSpeedScale(state, 0.5)
+        state = SimulationCoordinator.startClock(state)
+
+        state = SimulationCoordinator.advance(state, 1_000)
+
+        assertEquals(500L, state.clockState.timeMillis)
+        assertEquals(
+            50.0,
+            state.workcellState.entities.getValue(cylinder.id)
+                .actuatorState!!.positionMm,
+            0.000001
+        )
+        assertEquals(
+            30.0,
+            state.toolState.gripperStates.getValue(tool.id).openingWidthMm,
+            0.000001
+        )
+    }
+
+    @Test
+    fun directOutputChangeReconcilesClosedGripperAtZeroElapsedTime() {
+        val closeOutput = DigitalIoAddress(6)
+        val part = part("part", 0.0)
+        val tool = gripper(closeOutput)
+        var tools = selectedTool(tool)
+        tools = tools.copy(
+            gripperStates = tools.gripperStates + (
+                tool.id to TwoFingerGripperState(10.0)
+            )
+        )
+        var state = SimulationDomainState(
+            workcellState = WorkcellState(
+                order = listOf(part.id),
+                entities = mapOf(part.id to part)
+            ),
+            toolState = tools
+        )
+
+        state = SimulationCoordinator.setOutput(state, closeOutput, true)
+
+        assertTrue(part.id in state.workcellState.attachments)
+    }
+
+    @Test
+    fun selectingToolReleasesPriorAttachmentWithoutImplicitTransfer() {
+        val firstOutput = DigitalIoAddress(6)
+        val secondOutput = DigitalIoAddress(7)
+        val part = part("part", 0.0)
+        val first = gripper(firstOutput, "first")
+        val second = gripper(secondOutput, "second")
+        var tools = ToolRuntime.register(ToolRuntimeState(), first)
+        tools = ToolRuntime.register(tools, second)
+        tools = ToolRuntime.select(tools, first.id)
+        tools = tools.copy(
+            gripperStates = tools.gripperStates + mapOf(
+                first.id to TwoFingerGripperState(10.0),
+                second.id to TwoFingerGripperState(10.0)
+            )
+        )
+        var state = SimulationDomainState(
+            workcellState = WorkcellState(
+                order = listOf(part.id),
+                entities = mapOf(part.id to part)
+            ),
+            toolState = tools
+        )
+        state = SimulationCoordinator.setOutput(state, firstOutput, true)
+        state = SimulationCoordinator.setOutput(state, secondOutput, true)
+        assertTrue(part.id in state.workcellState.attachments)
+
+        state = SimulationCoordinator.selectFunctionalTool(state, second.id)
+
+        assertTrue(state.workcellState.attachments.isEmpty())
+        assertEquals(0.0, state.workcellState.entities.getValue(part.id).pose.x, 0.0)
+    }
+
     private fun sensorReleasedCylinderState(): SimulationDomainState {
         val cylinder = cylinder()
         return SimulationCoordinator.setOutput(
@@ -191,9 +337,12 @@ class Phase4RuntimeIntegrationTest {
             actuatorState = LinearActuatorState()
         )
 
-    private fun gripper(closeOutput: DigitalIoAddress): FunctionalToolDefinition =
+    private fun gripper(
+        closeOutput: DigitalIoAddress,
+        id: String = "gripper"
+    ): FunctionalToolDefinition =
         FunctionalToolDefinition(
-            id = ToolRuntimeId("gripper"),
+            id = ToolRuntimeId(id),
             tool = ToolDefinition(
                 id = "gripper",
                 displayName = "Gripper",
