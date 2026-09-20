@@ -45,7 +45,17 @@ GitHub is authoritative. Before each task, re-read this ledger, PR #10, the task
 ## Tasks
 
 ### Task 1 — Immutable workcell entity/component model
-**Status:** in progress
+**Status:** complete
+
+Evidence:
+- RED commit: `c40d6fe27761e88c6b16899314f40d058f015a11` (`test: add failing workcell model tests`).
+- RED CI: Android CI #188 failed in Unit tests with unresolved workcell/AABB model references; APK/upload skipped.
+- GREEN commit: `ce4369f2dff48925a02caef3d158e08747b685a9` (`feat: add immutable workcell component model`).
+- GREEN CI: Android CI #189 completed successfully.
+- Unit tests: success.
+- Debug APK build: success.
+- Debug APK upload: success.
+- Verified inclusive AABB boundary overlap, separated boxes, translation, finite/positive geometry validation, explicit entity order, defensive collection copies, duplicate/missing order rejection, blank IDs, actuator state/stroke consistency, and sensor/actuator binding integrity.
 
 ### Task 2 — Sensor propagation into canonical IoState
 **Status:** pending
@@ -70,4 +80,5 @@ GitHub is authoritative. Before each task, re-read this ledger, PR #10, the task
 
 ## Current checkpoint
 
-Exact next action: Task 1 RED — add failing workcell model/invariant and AABB overlap tests.
+Current implementation HEAD before this ledger commit: `ce4369f2dff48925a02caef3d158e08747b685a9`.
+Exact next action: Task 2 RED — add failing presence-sensor → canonical IoState propagation and clear/boundary tests.
