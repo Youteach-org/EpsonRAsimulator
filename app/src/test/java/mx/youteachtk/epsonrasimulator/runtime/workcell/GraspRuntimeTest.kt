@@ -23,7 +23,13 @@ class GraspRuntimeTest {
     @Test
     fun fullyClosedActiveGripperAttachesOverlappingPart() {
         val tool = gripperDefinition()
-        val toolState = closedToolState(tool)
+        val toolState = closedToolState(tool).copy(
+            gripperStates = mapOf(
+                tool.id to TwoFingerGripperState(
+                    tool.gripper!!.closedWidthMm + 0.5e-9
+                )
+            )
+        )
         val part = part(id = "part", x = 4.0)
         val state = workcell(part)
 
@@ -177,7 +183,7 @@ class GraspRuntimeTest {
 
     @Test
     fun actuatorBearingPartStoresBasePoseWithoutDoubleDisplacement() {
-        val tool = gripperDefinition()
+        val tool = gripperDefinition(graspHalfExtent = 20.0)
         val initialToolState = closedToolState(tool)
         val part = part("actuated-part", 5.0).copy(
             actuator = LinearActuatorComponent(

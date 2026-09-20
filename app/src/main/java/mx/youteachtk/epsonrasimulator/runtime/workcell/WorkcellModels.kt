@@ -3,6 +3,7 @@ package mx.youteachtk.epsonrasimulator.runtime.workcell
 import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import mx.youteachtk.epsonrasimulator.kinematics.Vector3
 import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
+import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeId
 
 @JvmInline
 value class WorkcellEntityId(val value: String) {
@@ -20,6 +21,12 @@ data class CollisionShapeComponent(
 object GraspableComponent
 
 object FixtureComponent
+
+data class GraspAttachment(
+    val partId: WorkcellEntityId,
+    val toolId: ToolRuntimeId,
+    val offsetFromToolMm: Vector3
+)
 
 data class PresenceSensorComponent(
     val detectionBox: AxisAlignedBox
@@ -147,11 +154,14 @@ data class WorkcellEntity(
 class WorkcellState(
     order: List<WorkcellEntityId> = emptyList(),
     entities: Map<WorkcellEntityId, WorkcellEntity> = emptyMap(),
-    bindings: List<SignalBinding> = emptyList()
+    bindings: List<SignalBinding> = emptyList(),
+    attachments: Map<WorkcellEntityId, GraspAttachment> = emptyMap()
 ) {
     val order: List<WorkcellEntityId> = order.toList()
     val entities: Map<WorkcellEntityId, WorkcellEntity> = entities.toMap()
     val bindings: List<SignalBinding> = bindings.toList()
+    val attachments: Map<WorkcellEntityId, GraspAttachment> =
+        attachments.toMap()
 
     init {
         require(this.order.size == this.order.toSet().size) {
@@ -195,32 +205,62 @@ class WorkcellState(
                 }
             }
         }
+        this.attachments.forEach { (partId, attachment) ->
+            require(partId == attachment.partId) {
+                "Attachment map key must match attachment part id"
+            }
+            val part = requireNotNull(this.entities[partId]) {
+                "Attachment references missing part: ${partId.value}"
+            }
+            require(part.collision != null && part.graspable != null) {
+                "Attached part must have collision and graspable components"
+            }
+            require(
+                attachment.offsetFromToolMm.x.isFinite() &&
+                    attachment.offsetFromToolMm.y.isFinite() &&
+                    attachment.offsetFromToolMm.z.isFinite()
+            ) {
+                "Attachment offset must be finite"
+            }
+        }
+        require(
+            this.attachments.values.map { it.toolId }.toSet().size ==
+                this.attachments.size
+        ) {
+            "A tool may hold at most one part"
+        }
     }
 
     fun copy(
         order: List<WorkcellEntityId> = this.order,
         entities: Map<WorkcellEntityId, WorkcellEntity> = this.entities,
-        bindings: List<SignalBinding> = this.bindings
+        bindings: List<SignalBinding> = this.bindings,
+        attachments: Map<WorkcellEntityId, GraspAttachment> =
+            this.attachments
     ): WorkcellState =
         WorkcellState(
             order = order,
             entities = entities,
-            bindings = bindings
+            bindings = bindings,
+            attachments = attachments
         )
 
     override fun equals(other: Any?): Boolean =
         other is WorkcellState &&
             order == other.order &&
             entities == other.entities &&
-            bindings == other.bindings
+            bindings == other.bindings &&
+            attachments == other.attachments
 
     override fun hashCode(): Int {
         var result = order.hashCode()
         result = 31 * result + entities.hashCode()
         result = 31 * result + bindings.hashCode()
+        result = 31 * result + attachments.hashCode()
         return result
     }
 
     override fun toString(): String =
-        "WorkcellState(order=$order, entities=$entities, bindings=$bindings)"
+        "WorkcellState(order=$order, entities=$entities, bindings=$bindings, " +
+            "attachments=$attachments)"
 }
