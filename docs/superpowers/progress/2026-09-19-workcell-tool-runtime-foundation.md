@@ -169,3 +169,13 @@ Read-only independent preflight checked Tasks 4–7 against existing runtime and
 - Independent reviewer: specification APPROVE, code quality APPROVE, no findings. 17 focused / 179 full JVM tests passed. Fresh Android CI #201 / 35544435714 checks the published checkpoint.
 - Task 4 final ledger CI #199 / 35522077625 succeeded. Existing minor coverage note remains deferred to final review.
 - Exact next action: Task 6 RED for five-field canonical coordinator/SharedRuntime integration. Do not redo Tasks 1–5. Codex active.
+
+## Task 6 RED checkpoint / quota handoff
+- Task 5 remote GREEN checkpoint `12e427203ffeda089a1a199ab861362e675a1a90`: Android CI #201 / 35544435714 SUCCESS (unit tests, APK, upload). Independent spec/quality review approved with no findings. Full local baseline 179 tests passed.
+- Task 6 implementation was stopped before production edits to reserve quota for a durable handoff. No active implementer remains.
+- Added three initial coordinator integration tests in `app/src/test/java/mx/youteachtk/epsonrasimulator/runtime/Phase4RuntimeIntegrationTest.kt`: sensor->task->output with no retroactive actuator movement, exact 500/1000ms cylinder travel, closed-gripper attachment plus mount-follow-before-sensor evaluation.
+- Local RED command: `..\run-phase4-tests.ps1 -ClassFilter '*Phase4RuntimeIntegrationTest'`. Fails compilation on missing workcellState/toolState fields and coordinator setup methods, as intended. Log retained locally at `work/phase4-task-6-red.log`.
+- This is a PARTIAL test checkpoint, not Task 6 completion. No claim of GREEN or independent review for Task 6. Aggregate validation, RuntimeCommand/SharedRuntime tests, rollback, paused/scaled time and legacy output/step semantics still need tests.
+- Exact next action: read current PR #10 HEAD/comments and this ledger; continue Task 6 with the existing three RED tests, add remaining plan/ruling tests, then implement five-field coordinator/SharedRuntime integration. Run focused/full tests, independent review/fix rounds, and fresh Android CI. Preserve Tasks 1–5.
+- Tasks 7–8 remain pending (3D projection/rendering, docs, whole-branch review and final CI). C4 collision Issue #7 remains separate. PR #10 Draft, no merge; PR #9 unchanged.
+- Final SHA and exact CI status for this checkpoint are recorded in the PR comment beginning HANDOFF READY FOR INLINE RESUME. If that CI is RED, missing Task 6 APIs are expected; do not weaken tests or revert completed functionality.
