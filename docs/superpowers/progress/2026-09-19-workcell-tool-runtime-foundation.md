@@ -68,7 +68,14 @@ Evidence:
 - Verified overlap sets canonical input, leaving zone clears the same input, boundary contact counts as presence, fixtures do not trigger presence, and unrelated entity order does not alter the boolean result.
 
 ### Task 3 — Deterministic linear actuators driven by outputs
-**Status:** pending
+**Status:** complete
+
+Evidence:
+- RED commit: `bb6d89d71c024b0422b2e29d86459e5dc23c45d6` (`test: add failing linear actuator runtime tests`).
+- RED CI: Android CI #194 failed in Unit tests with unresolved `advanceActuators`; APK/upload skipped.
+- GREEN commit: `ea5ae4019c6395323d4ea9a90ff332c76f832acd` (`feat: drive linear workcell actuators from io`).
+- GREEN CI: Android CI #195 completed successfully; Unit tests, debug APK build, and upload all passed.
+- Verified output-driven extension/retraction, exact stroke clamp, zero-delta no-op, negative-delta rejection, normalized actuator axis, and effective entity pose/collision displacement.
 
 ### Task 4 — Functional two-finger tool runtime
 **Status:** pending
@@ -87,5 +94,5 @@ Evidence:
 
 ## Current checkpoint
 
-Current implementation HEAD before this ledger commit: `0de90d6acde308a7d2aa63575cb7bb4991bad155`.
-Exact next action: Task 3 RED — add failing deterministic linear-actuator movement, clamp/retract, zero/negative-delta, and effective-pose tests.
+Current implementation HEAD before this ledger commit: `ea5ae4019c6395323d4ea9a90ff332c76f832acd`.
+Exact next action: Task 4 RED — add failing functional two-finger tool register/select/TCP, timed gripper motion, clamp, and active-collision tests.
