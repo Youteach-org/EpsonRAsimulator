@@ -106,7 +106,7 @@ Evidence:
   Task 5 worker.
 
 ### Task 6 — Shared runtime integration
-**Status:** pending
+**Status:** complete
 
 ### Task 7 — 3D canonical workcell rendering
 **Status:** pending
@@ -179,3 +179,39 @@ Read-only independent preflight checked Tasks 4–7 against existing runtime and
 - Exact next action: read current PR #10 HEAD/comments and this ledger; continue Task 6 with the existing three RED tests, add remaining plan/ruling tests, then implement five-field coordinator/SharedRuntime integration. Run focused/full tests, independent review/fix rounds, and fresh Android CI. Preserve Tasks 1–5.
 - Tasks 7–8 remain pending (3D projection/rendering, docs, whole-branch review and final CI). C4 collision Issue #7 remains separate. PR #10 Draft, no merge; PR #9 unchanged.
 - Final SHA and exact CI status for this checkpoint are recorded in the PR comment beginning HANDOFF READY FOR INLINE RESUME. If that CI is RED, missing Task 6 APIs are expected; do not weaken tests or revert completed functionality.
+
+
+## Task 6 GREEN — canonical five-field shared runtime integration
+
+- Completed RED coverage checkpoint: `e3107c73253e08db3aec0d03c767c2aa2b7174a3`
+  (`test: complete Phase 4 shared runtime integration RED`).
+- RED Android CI #203 / run `35545281947` failed in Unit tests on the intended
+  missing canonical workcell/tool APIs; APK and upload were skipped.
+- GREEN implementation: `8ec2fdeeae1c48175389a7609bf55b5b77c793dc`
+  (`feat: integrate functional workcell into shared runtime`).
+- Android CI #204 / run `35545488190`: SUCCESS. Unit tests, debug APK build,
+  and APK upload all passed.
+- Canonical `SimulationDomainState` and `SharedRuntimeState` now publish the
+  same five simulation fields: clock, I/O, task, workcell, and tool.
+- Coordinator order is deterministic: advance clock; derive elapsed simulation
+  time; advance actuators/tools from interval-start outputs; follow attachments;
+  evaluate sensors; evaluate tasks; reconcile release/grasp; follow again.
+- Paused/scaled-clock behavior is pinned by tests; newly produced outputs do not
+  retroactively move actuators in the elapsed interval.
+- Workcell/tool setup commands are typed and routed through the coordinator.
+  Referenced removals and attached-part manual repositioning reject atomically.
+- Tool selection settles the old attachment, releases it, and does not
+  implicitly transfer/grasp with the newly selected tool in the same command.
+- Legacy `step` remains task-local: it reconciles resulting outputs but does
+  not globally evaluate other waiting tasks.
+- SharedRuntime still performs exactly one state assignment/listener
+  notification for a successful changed command; rejected commands leave state
+  unchanged and emit no additional notification.
+- Aggregate validation reuses `WorkcellRuntime.validateAttachments`; no second
+  tool/attachment catalog was introduced.
+- Review gate: a separate inline review pass against the Task 6 plan, rulings,
+  tests, and implementation diff found no blocking or important findings.
+  This harness exposes no independent subagent runtime, so this is explicitly
+  not represented as a second-agent review.
+- Exact next action: Task 7 RED for pure canonical workcell/tool scene
+  projection, then minimal SceneView 4.35.0 integration. Keep PR #10 Draft.
