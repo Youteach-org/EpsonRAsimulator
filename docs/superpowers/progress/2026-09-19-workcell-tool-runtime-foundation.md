@@ -109,7 +109,7 @@ Evidence:
 **Status:** complete
 
 ### Task 7 — 3D canonical workcell rendering
-**Status:** pending
+**Status:** complete
 
 ### Task 8 — Docs/final review/final CI
 **Status:** pending
@@ -215,3 +215,32 @@ Read-only independent preflight checked Tasks 4–7 against existing runtime and
   not represented as a second-agent review.
 - Exact next action: Task 7 RED for pure canonical workcell/tool scene
   projection, then minimal SceneView 4.35.0 integration. Keep PR #10 Draft.
+
+
+## Task 7 GREEN — canonical workcell projection and SceneView rendering
+
+- RED commit: `1e3e78ace843e9d315ff0360f8e0ca1befe8df16`
+  (`test: define canonical workcell scene projection RED`).
+- RED Android CI #206 / run `35545647659`: expected Unit-test compilation
+  failure on missing `WorkcellSceneProjection`; APK/upload skipped.
+- GREEN implementation: `6cc187761802ef2157662c9cef972691dff67143`
+  (`feat: render canonical workcell primitives in 3d`).
+- Android CI #207 / run `35545740096`: SUCCESS. Unit tests, debug APK build,
+  and APK upload all passed against pinned SceneView `4.35.0`.
+- Projection is pure and read-only. Explicit workcell render primitives use the
+  canonical effective pose, including actuator displacement, and convert
+  current CAD/SceneView Y-up XYZ millimetres directly to metres.
+- Selected-tool collision AABBs are projected only for the active tool; scene
+  size is the full extent (`2 * halfExtents`) and mount translation is read
+  from canonical ToolRuntime state.
+- `C4RobotScene` keeps the robot hierarchy/transforms unchanged and adds only
+  `CubeNode` consumers for projected boxes. SceneView owns no simulation,
+  collision, I/O, grasp, or tool truth.
+- `RobotTrainerScreen` derives scene boxes from
+  `runtimeState.workcellState` + `runtimeState.toolState`; no FK coupling or
+  shadow scene state was introduced.
+- Review gate: separate inline diff/spec pass found no blocking or important
+  findings. As with Task 6, the harness has no independent subagent runtime, so
+  this is not represented as a second-agent review.
+- Exact next action: Task 8 final documentation, whole-branch review, full CI,
+  and Draft-PR checkpoint. Do not merge.
