@@ -133,3 +133,10 @@ Read-only independent preflight checked Tasks 4–7 against existing runtime and
 - Exact next action: inspect PR #10 HEAD/comments and CI, resolve any Task 4 review findings, then proceed with Task 5 RED using the plan and preflight rulings above. Do not redo Tasks 1–3 or Phase 3.
 - This ledger commit is documentation only; its exact final SHA and CI result are recorded in the PR handoff comment. GitHub connector publication remaps local commit timestamps; content trees are checked before alignment.
 - Codex is stopping at this safe boundary. Keep PR #10 Draft, no merge, keep Issue #7 separate.
+
+## 2026-09-20 resumed after quota reset
+- HEAD `f6404010ab65403dcd3a27946dac8bb2fd947f0f` rechecked; no concurrent branch advancement. Task 4 production CI #198 / 35521997672 passed.
+- Independent Task 4 review: spec compliant, quality approved, no blocking findings; 20 focused and 162 full tests already recorded.
+- Ruling: keep ordinary immutable tool model classes with defensive snapshots and manual value equality/copy; illustrative data-class syntax is not needed by downstream contracts. Cost if wrong: add convenience copy/component API later without changing canonical behavior.
+- Deferred minor test gap: nonzero mount rotation/translation should explicitly pin local TCP and translated-only boxes in future focused coverage; implementation inspected and correct.
+- Task 4 accepted subject to final branch gates. Exact next action: Task 5 RED for deterministic grasp/release using the preflight rulings above. Codex active again; no merge.
