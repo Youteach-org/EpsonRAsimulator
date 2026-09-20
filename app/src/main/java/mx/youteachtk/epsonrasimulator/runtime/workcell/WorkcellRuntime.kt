@@ -4,6 +4,8 @@ import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import mx.youteachtk.epsonrasimulator.kinematics.Vector3
 import mx.youteachtk.epsonrasimulator.runtime.io.IoRuntime
 import mx.youteachtk.epsonrasimulator.runtime.io.IoState
+import kotlin.math.max
+import kotlin.math.min
 
 data class WorkcellEvaluation(
     val workcellState: WorkcellState,
@@ -14,10 +16,24 @@ object WorkcellRuntime {
     fun entityPose(
         state: WorkcellState,
         id: WorkcellEntityId
-    ): CartesianPose =
-        requireNotNull(state.entities[id]) {
+    ): CartesianPose {
+        val entity = requireNotNull(state.entities[id]) {
             "Unknown workcell entity: ${id.value}"
-        }.pose
+        }
+        val actuator = entity.actuator
+        val actuatorState = entity.actuatorState
+        if (actuator == null || actuatorState == null) {
+            return entity.pose
+        }
+
+        val axis = actuator.axis.normalized()
+        val position = actuatorState.positionMm
+        return entity.pose.copy(
+            x = entity.pose.x + axis.x * position,
+            y = entity.pose.y + axis.y * position,
+            z = entity.pose.z + axis.z * position
+        )
+    }
 
     fun worldCollisionBox(
         state: WorkcellState,
@@ -27,7 +43,8 @@ object WorkcellRuntime {
             "Unknown workcell entity: ${id.value}"
         }
         val box = entity.collision?.box ?: return null
-        return box.translated(entity.pose.translationVector())
+        val pose = entityPose(state, id)
+        return box.translated(pose.translationVector())
     }
 
     fun evaluateSensors(
@@ -39,9 +56,10 @@ object WorkcellRuntime {
         state.bindings.forEach { binding ->
             if (binding is SignalBinding.SensorToInput) {
                 val sensorEntity = state.entities.getValue(binding.sensorId)
+                val sensorPose = entityPose(state, binding.sensorId)
                 val detectionBox = sensorEntity.sensor!!
                     .detectionBox
-                    .translated(sensorEntity.pose.translationVector())
+                    .translated(sensorPose.translationVector())
 
                 val detected = state.order.any { candidateId ->
                     if (candidateId == binding.sensorId) {
@@ -67,6 +85,52 @@ object WorkcellRuntime {
             workcellState = state,
             ioState = nextIo
         )
+    }
+
+    fun advanceActuators(
+        state: WorkcellState,
+        ioState: IoState,
+        deltaMillis: Long
+    ): WorkcellState {
+        require(deltaMillis >= 0L) {
+            "Actuator simulation delta must be non-negative"
+        }
+        if (deltaMillis == 0L) {
+            return state
+        }
+
+        var entities = state.entities
+        state.bindings.forEach { binding ->
+            if (binding is SignalBinding.OutputToActuator) {
+                val entity = entities.getValue(binding.actuatorId)
+                val actuator = entity.actuator!!
+                val current = entity.actuatorState?.positionMm ?: 0.0
+                val target =
+                    if (IoRuntime.output(ioState, binding.output)) {
+                        actuator.strokeMm
+                    } else {
+                        0.0
+                    }
+                val travel =
+                    actuator.speedMmPerSecond *
+                        deltaMillis.toDouble() /
+                        1000.0
+                val nextPosition =
+                    if (current < target) {
+                        min(current + travel, target)
+                    } else {
+                        max(current - travel, target)
+                    }
+
+                entities = entities + (
+                    entity.id to entity.copy(
+                        actuatorState = LinearActuatorState(nextPosition)
+                    )
+                )
+            }
+        }
+
+        return state.copy(entities = entities)
     }
 
     private fun CartesianPose.translationVector(): Vector3 =
