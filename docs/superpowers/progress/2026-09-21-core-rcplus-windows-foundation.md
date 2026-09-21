@@ -40,3 +40,7 @@
 
 - Task 2 complete candidate: `eb06a67a313cdc8a0b3b795460db09870c3a50d2`; Android CI #244 run `35611447417` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
 - Task 3: cross-runtime I/O→task chain test plus genuine RED routing boundary prepared; no Compose wiring added yet.
+
+- Task 3 RED: `e9524390c9bf78b4e47d43807a822353e70c1d88`; Android CI #245 run `35611825955` failed exactly on missing `RcCoreWindowKind` / `RcCoreWindowRouting`.
+- Task 3 GREEN implementation candidate routes only I/O Monitor and Task Manager to live bodies, leaves Robot Manager/Command Window structural, injects a stable-key content slot into `RcMdiHost`, and replaces structural Status with canonical runtime status/clock controls in desktop and compact layouts.
+- Task 3 device smoke: unverified in this GitHub-only harness; JVM/Android compilation evidence is separate and must not be represented as device evidence.
