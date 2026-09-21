@@ -38,7 +38,10 @@ class RcProjectAcceptanceTest {
         )
         val all = flatten(root)
         val byPath = all
-            .filter { it.path != null }
+            .filter {
+                it.path != null &&
+                    it.kind != RcProjectNodeKind.FUNCTION
+            }
             .associateBy { it.path!! }
 
         assertEquals(

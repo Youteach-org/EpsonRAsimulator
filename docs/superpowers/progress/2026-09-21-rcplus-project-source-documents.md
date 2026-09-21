@@ -53,3 +53,5 @@
 
 - Task 4 complete candidate: `6c4ea197698d2725cb0c6367e6c770b6b3122744`; Android CI #262 / run `35659428507` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
 - Task 5 acceptance tests prepared for full five-resource Project Explorer projection, source-only byte round-trip, independent same-basename document windows/ranges across compact projection, and retained project/source/point/window state across RC+ Trainer <-> Visual Lab.
+
+- Task 5 acceptance CI #263 / run `35659768848` exposed a test-construction bug, not a product failure: FUNCTION nodes intentionally share their source file path, so the test's `associateBy(path)` replaced resource nodes with function nodes. Acceptance indexing was corrected to exclude FUNCTION nodes; no production code changed.
