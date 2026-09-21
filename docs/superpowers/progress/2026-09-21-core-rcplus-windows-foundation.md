@@ -20,3 +20,11 @@
 - Local93da5ed is a snapshot convenience, NOT remote832d5c8. Never push that local import history. Remote docs publication uses actual832d5c8 parent.
 - No product changes made in this session. No new product tests run; CI239 is baseline evidence, not evidence for unimplemented Phase6.
 - Exact documentation publication SHA/PR/CI belong in the PR checkpoint comment after publication.
+
+
+## Inline resume after Codex quota exhaustion — 2026-09-21
+- Codex published no Task 1 product/test commit before quota exhaustion; remote PR #12 remained documentation-only at `fdd01b61e8c65a062f6cd9a80382de95fd554c21`.
+- CI #240 / run `35608392751` on that documentation-only head completed SUCCESS.
+- PR #11 still points at verified Phase 5 base `832d5c8da5f23c262fbc2696bec2ca88f0efb00e`; PR #12 remains Draft and stacked on it.
+- Ruling: execution switches from the approved Codex/subagent-driven method to Superpowers inline/native execution because no active Codex implementer remains and this harness has no independent implementer subagent runtime — behavior/plan/TDD gates are unchanged — cost if wrong: task-level review is less independent; final whole-branch review remains mandatory.
+- Task 1: RED tests prepared for pure live I/O/task/status projections; production code intentionally absent in this checkpoint.
