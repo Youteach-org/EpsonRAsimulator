@@ -44,3 +44,6 @@
 - Task 3 RED: `e9524390c9bf78b4e47d43807a822353e70c1d88`; Android CI #245 run `35611825955` failed exactly on missing `RcCoreWindowKind` / `RcCoreWindowRouting`.
 - Task 3 GREEN implementation candidate routes only I/O Monitor and Task Manager to live bodies, leaves Robot Manager/Command Window structural, injects a stable-key content slot into `RcMdiHost`, and replaces structural Status with canonical runtime status/clock controls in desktop and compact layouts.
 - Task 3 device smoke: unverified in this GitHub-only harness; JVM/Android compilation evidence is separate and must not be represented as device evidence.
+
+- Task 3 compile fix: `d84cf5b1f69c881766af236065ae12a8543ae41d` added the missing compact `RcMdiHost` content slot after CI #246 exposed it; Android CI #247 run `35614238927` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Task 3 is GREEN. Device smoke remains explicitly unverified.
+- Task 4 acceptance/regression tests added for two controllers sharing one runtime, task-local STEP, experience retention, and fractional clock advance. These target already-implemented acceptance behavior; if they pass immediately they are coverage evidence, not a fabricated RED.
