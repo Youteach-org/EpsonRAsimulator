@@ -49,6 +49,11 @@ sealed interface RcWorkspaceAction {
     data object CascadeWindows : RcWorkspaceAction
     data object TileWindows : RcWorkspaceAction
     data object CloseActiveWindow : RcWorkspaceAction
+    data object ProjectNew : RcWorkspaceAction
+    data object ProjectOpen : RcWorkspaceAction
+    data object ProjectRename : RcWorkspaceAction
+    data object ProjectRemove : RcWorkspaceAction
+    data object ProjectDelete : RcWorkspaceAction
 }
 
 data class RcCommandDescriptor(
