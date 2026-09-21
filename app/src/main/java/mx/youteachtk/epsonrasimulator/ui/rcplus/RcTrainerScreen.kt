@@ -39,6 +39,9 @@ import androidx.compose.ui.unit.dp
 import mx.youteachtk.epsonrasimulator.adapters.SimulatorAdapter
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntime
 import mx.youteachtk.epsonrasimulator.ui.rememberRuntimeState
+import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowContent
+import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcLiveController
+import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcRuntimeStatus
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcMenuSection
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcShortcut
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcShortcutKey
@@ -61,6 +64,9 @@ fun RcTrainerScreen(
     val workspaceState =
         rememberRcWorkspaceState(workspaceSession)
     val runtimeState = rememberRuntimeState(runtime)
+    val liveController = remember(runtime) {
+        RcLiveController(runtime)
+    }
     var compactProjectOpen by remember {
         mutableStateOf(false)
     }
@@ -131,6 +137,14 @@ fun RcTrainerScreen(
                             session = workspaceSession,
                             toolRegistry =
                                 RcPlusWorkspaceCatalog.toolRegistry,
+                            content = { toolId, contentModifier ->
+                                RcCoreWindowContent(
+                                    toolId = toolId,
+                                    state = runtimeState,
+                                    controller = liveController,
+                                    modifier = contentModifier
+                                )
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
@@ -138,11 +152,11 @@ fun RcTrainerScreen(
                     }
 
                     presentation.docks.bottomTool?.let {
-                        RcFoundationPanel(
-                            tool = it,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(68.dp)
+                        RcRuntimeStatus(
+                            state = runtimeState,
+                            controller = liveController,
+                            compact = false,
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
                 }
@@ -202,13 +216,26 @@ fun RcTrainerScreen(
                         session = workspaceSession,
                         toolRegistry =
                             RcPlusWorkspaceCatalog.toolRegistry,
+                        content = { toolId, contentModifier ->
+                            RcCoreWindowContent(
+                                toolId = toolId,
+                                state = runtimeState,
+                                controller = liveController,
+                                modifier = contentModifier
+                            )
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
                     )
 
                     presentation.docks.compactStatusTool?.let {
-                        RcCompactStatusStrip(tool = it)
+                        RcRuntimeStatus(
+                            state = runtimeState,
+                            controller = liveController,
+                            compact = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
             }
