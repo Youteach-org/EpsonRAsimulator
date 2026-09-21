@@ -44,3 +44,6 @@
 - Task 3 UI GREEN candidate wires retained ProjectNavigationSession, reactive project/navigation bindings, functional Project Explorer gestures/context menu, exact source editing with current diagnostics and function selection, preserved-resource read-only view, and exact-window MDI content identity. POINTS remains a structural body until Task 4 as planned.
 
 - Task 3 UI compile correction after Android CI #259 / run `35658503816`: compact MDI still used the old `RcToolId` content signature, Project Explorer needed explicit `detectTapGestures` / `isSecondaryPressed` extension imports, and `RcCoreWindowContent` needed exhaustive routing for document kinds. No behavioral scope change.
+
+- Task 3 complete: final implementation head `99b709c5749f279f68e8aeba2f6c4e2137812b8f`; Android CI #260 / run `35658704285` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Device/emulator gesture smoke remains unverified in this GitHub-only harness.
+- Task 4 RED prepared for finite six-axis point save, deterministic point rows, invalid/unknown rejection without publication, dedicated point-window routing, and byte-identical native `.pts` preservation across Local Simulation save/remove.

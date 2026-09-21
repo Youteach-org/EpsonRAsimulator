@@ -5,6 +5,7 @@ import mx.youteachtk.epsonrasimulator.programming.ProgramSupportState
 import mx.youteachtk.epsonrasimulator.project.ProjectRuntimeResult
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
 import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceCatalog
+import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceTools
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWorkspaceSession
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -161,4 +162,47 @@ class RcProjectSourceIntegrationTest {
             capabilities = RcPlus7SimulatorAdapter.capabilities
         )
     }
+
+    @Test
+    fun pointsNodeOpensDedicatedPointWindowWithoutChangingNativeBytes() {
+        val bundle = AppRuntimeFactory.createDefault()
+        val nativePts = byteArrayOf(3, 1, 4, 1, 5)
+        bundle.projectRuntime.loadProject(
+            "Points",
+            linkedMapOf("Robot.pts" to nativePts)
+        )
+        val workspace = RcWorkspaceSession(
+            RcPlusWorkspaceCatalog.commandRegistry,
+            RcPlusWorkspaceCatalog.toolRegistry,
+            RcPlus7SimulatorAdapter.capabilities
+        )
+        val navigation = RcProjectNavigationSession()
+        val root = requireNotNull(
+            RcProjectExplorerProjection.tree(
+                bundle.projectRuntime.state
+            )
+        )
+        val points = root.children.single()
+
+        val windowId = requireNotNull(
+            navigation.open(points, workspace)
+        )
+
+        assertEquals(
+            "points:Robot.pts",
+            windowId.value
+        )
+        assertEquals(
+            RcPlusWorkspaceTools.POINT_DOCUMENT,
+            workspace.state.windows
+                .getValue(windowId)
+                .toolId
+        )
+        assertArrayEquals(
+            nativePts,
+            bundle.projectRuntime.export()
+                .getValue("Robot.pts")
+        )
+    }
+
 }
