@@ -26,3 +26,6 @@
 
 - Task 1 complete candidate: `35a0899fa59cb7d60ce6aa5d09f94135f798f019`; Android CI #252 / run `35623204552` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
 - Task 2 RED: tests prepared for deterministic nested Project Explorer projection, syntax-invalid stale function safety, dynamic source/point/resource window namespaces, selection-vs-open behavior, global context command registration/capability gating, and targetless context dispatch rejection.
+
+- Task 2 RED: `28cf77a5fad65349f316c5b537030d3c43367e3f`; Android CI #253 / run `35623669162` failed in Unit tests exactly on missing Project Explorer projection/navigation, dynamic document tool IDs/openWindow, and project context command IDs.
+- Task 2 GREEN candidate adds pure sorted tree/function projection, stale-range safety, dynamic document namespaces/navigation, validated dynamic MDI opening, three capability-gated document tools, and five target-requiring project commands in the existing global command registry.

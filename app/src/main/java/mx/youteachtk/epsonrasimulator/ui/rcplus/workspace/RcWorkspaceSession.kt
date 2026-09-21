@@ -45,6 +45,38 @@ class RcWorkspaceSession(
         return apply(descriptor.action)
     }
 
+    fun openWindow(
+        id: RcWindowId,
+        toolId: RcToolId
+    ): RcWindowManagerState =
+        mutate { current ->
+            val tool = toolRegistry.descriptor(toolId)
+            check(
+                capabilities.containsAll(
+                    tool.requiredCapabilities
+                )
+            ) {
+                "RC+ tool is unavailable: ${tool.id.value}"
+            }
+            check(
+                tool.surface == RcToolSurface.CHILD_WINDOW
+            ) {
+                "Docked RC+ tool cannot open as child window"
+            }
+            val existing = current.windows[id]
+            check(
+                existing == null ||
+                    existing.toolId == toolId
+            ) {
+                "RC+ window id is already owned by another tool: ${id.value}"
+            }
+            RcWindowManager.open(
+                current,
+                id,
+                toolId
+            )
+        }
+
     fun focusWindow(id: RcWindowId): RcWindowManagerState =
         mutate { RcWindowManager.focus(it, id) }
 
@@ -133,6 +165,15 @@ class RcWorkspaceSession(
                             it
                         )
                     } ?: current
+
+                RcWorkspaceAction.ProjectNew,
+                RcWorkspaceAction.ProjectOpen,
+                RcWorkspaceAction.ProjectRename,
+                RcWorkspaceAction.ProjectRemove,
+                RcWorkspaceAction.ProjectDelete ->
+                    error(
+                        "Project command requires a project-tree target"
+                    )
             }
         }
 
