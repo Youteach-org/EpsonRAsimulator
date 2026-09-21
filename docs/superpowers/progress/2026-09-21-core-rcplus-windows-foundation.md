@@ -31,3 +31,6 @@
 
 - Task 1 RED: `6a7c5efcb5601c915682b3627d4e7da02214f908`; Android CI #241 run `35610375182` failed in Unit tests exactly on missing `RcLiveProjection` / `RcIoDirection` / `RcTaskControl`.
 - Task 1 GREEN implementation candidate adds only immutable DTOs and pure projections over `SharedRuntimeState`; runtime/Compose behavior is unchanged.
+
+- Task 1 complete candidate: `1aadf85ef261a58a665c151bd528337a2fe8745a`; Android CI #242 run `35610667840` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
+- Task 2: RED controller tests prepared; production controller intentionally absent.
