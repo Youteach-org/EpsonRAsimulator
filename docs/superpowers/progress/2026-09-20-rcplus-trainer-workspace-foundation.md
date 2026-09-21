@@ -43,5 +43,6 @@ Task 8: pending.
 - Android CI #223 exposed Compose import/compile errors: incorrect `zIndex`, `focusable`, and explicit `weight` imports.
 - Inline compile-fix commits: `eeae35bb4ac275abba6b69291094606e322c0317` and `dae5302593124074072b26694f79bdae24ff5484`.
 - CI #225 on `dae530...` failed before usable workflow logs were retrievable; GitHub's job-log endpoint returned `BlobNotFound`, so no code-failure claim is made from that run.
+- CI #226 attempt 4 on the same code also failed before runner allocation: job `106222585799`, `runner_id=0`, empty runner name, `steps=[]`, completed in about 2 seconds. This is infrastructure/runner allocation evidence, not Kotlin/Compose execution evidence.
 - This checkpoint intentionally does not mark Task 6 complete. Exact next action: require a fresh CI run on the current code, inspect any concrete compiler/test failure, then only mark Task 6 complete after unit tests + APK build + upload succeed.
 - No concurrent Codex/inline advancement was observed before this checkpoint. PR #11 remains Draft; do not merge.
