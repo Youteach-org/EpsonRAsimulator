@@ -110,4 +110,23 @@ class AppSessionViewModelTest {
         )
     }
 
+
+    @Test
+    fun projectNavigationSessionIsRetainedAcrossExperienceSwitches() {
+        val session = AppSessionViewModel(
+            initialBundle = AppRuntimeFactory.createDefault()
+        )
+        val navigationBefore =
+            session.projectNavigationSession
+
+        session.selectExperience(AppExperience.RCPLUS_TRAINER)
+        session.selectExperience(AppExperience.VISUAL_LAB)
+        session.selectExperience(AppExperience.RCPLUS_TRAINER)
+
+        assertSame(
+            navigationBefore,
+            session.projectNavigationSession
+        )
+    }
+
 }

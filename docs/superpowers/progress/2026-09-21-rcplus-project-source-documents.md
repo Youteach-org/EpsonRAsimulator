@@ -36,3 +36,6 @@
 
 - Task 3 RED: `4897b2c71e7d8b87ff4e4c4229bc2752785cf8f0`; Android CI #256 / run `35624756098` failed in Unit tests exactly on missing `RcProjectController`, `RcProjectNavigationState`, navigation subscription, and controller methods.
 - Task 3 controller GREEN candidate adds target-safe global-registry dispatch and observable presentation-only navigation state; project/source authority remains in ProjectRuntime.
+
+- Task 3 controller GREEN: `46bc8718fe265f16e51afdf098e6b4b263bbf7c4`; Android CI #257 / run `35625133875` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
+- Task 3 UI RED: regression tests prepared requiring SOURCE/POINTS/PRESERVED_RESOURCE window routing and a retained `projectNavigationSession` in AppSessionViewModel before Compose wiring.

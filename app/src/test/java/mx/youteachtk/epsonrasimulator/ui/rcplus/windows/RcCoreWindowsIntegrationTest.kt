@@ -97,6 +97,24 @@ class RcCoreWindowsIntegrationTest {
                 RcPlusWorkspaceTools.COMMAND_WINDOW
             )
         )
+        assertEquals(
+            RcCoreWindowKind.SOURCE,
+            RcCoreWindowRouting.kind(
+                RcPlusWorkspaceTools.SOURCE_DOCUMENT
+            )
+        )
+        assertEquals(
+            RcCoreWindowKind.POINTS,
+            RcCoreWindowRouting.kind(
+                RcPlusWorkspaceTools.POINT_DOCUMENT
+            )
+        )
+        assertEquals(
+            RcCoreWindowKind.PRESERVED_RESOURCE,
+            RcCoreWindowRouting.kind(
+                RcPlusWorkspaceTools.PRESERVED_RESOURCE
+            )
+        )
     }
 
     @Test
