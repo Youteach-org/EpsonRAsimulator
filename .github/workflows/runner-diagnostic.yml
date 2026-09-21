@@ -1,0 +1,11 @@
+name: Runner Diagnostic
+
+on:
+  pull_request:
+
+jobs:
+  probe:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Runner allocated
+        run: echo "runner-ok"
