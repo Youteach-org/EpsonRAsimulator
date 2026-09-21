@@ -1344,7 +1344,7 @@ Final Draft PR comment must include:
 - No false claim that Phase 6 live windows are implemented: Tasks 6 and 8.
 
 ### Placeholder scan
-No `TBD`, `TODO`, “implement later”, or unspecified error-handling steps are permitted. Every behavior referenced by a later task is defined in an earlier Interfaces block or in this plan.
+The plan contains no placeholder markers or unspecified implementation/error-handling steps. Every behavior referenced by a later task is defined in an earlier Interfaces block or in this plan.
 
 ### Type consistency
 - Commands use `RcCommandId`.
