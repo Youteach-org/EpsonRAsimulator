@@ -24,7 +24,7 @@ Spec authority: `docs/superpowers/specs/2026-09-16-rcplus-trainer-shared-runtime
 
 ### Status
 
-Task 1: pending.
+Task 1: complete — RED `59b597354c79364ad313d2e3235efd48ce2e16b0`, Android CI #212 run `35549041871` failed in Unit tests on the expected missing `RcCommandId`/registry APIs; GREEN `00ad1b4c784ea33b6cdf58be53c3671aac933211`, Android CI #213 run `35549142898` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
 Task 2: pending.
 Task 3: pending.
 Task 4: pending.
