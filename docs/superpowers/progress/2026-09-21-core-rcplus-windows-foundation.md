@@ -37,3 +37,6 @@
 
 - Task 2 RED: `65c80cc6e2deac63b86c80eac32c28562b31b2f4`; Android CI #243 run `35611141771` failed exactly on missing `RcLiveController` / `RcControlResult`.
 - Task 2 GREEN implementation candidate validates address/speed/delta text before dispatch, protects sensor-owned INPUT values, revalidates task control against current runtime state, and catches only validated command IllegalArgumentException/IllegalStateException.
+
+- Task 2 complete candidate: `eb06a67a313cdc8a0b3b795460db09870c3a50d2`; Android CI #244 run `35611447417` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
+- Task 3: cross-runtime I/O→task chain test plus genuine RED routing boundary prepared; no Compose wiring added yet.
