@@ -23,7 +23,8 @@ data class RcToolbarItem(
 data class RcDockPresentation(
     val startTool: RcToolDescriptor?,
     val bottomTool: RcToolDescriptor?,
-    val compactProjectExplorer: RcToolDescriptor?
+    val compactProjectExplorer: RcToolDescriptor?,
+    val compactStatusTool: RcToolDescriptor?
 )
 
 data class RcWindowSwitcherItem(
@@ -85,14 +86,16 @@ object RcTrainerPresentation {
                 RcDockPresentation(
                     startTool = projectExplorer,
                     bottomTool = status,
-                    compactProjectExplorer = null
+                    compactProjectExplorer = null,
+                    compactStatusTool = null
                 )
 
             RcWorkspaceLayoutMode.COMPACT ->
                 RcDockPresentation(
                     startTool = null,
-                    bottomTool = status,
-                    compactProjectExplorer = projectExplorer
+                    bottomTool = null,
+                    compactProjectExplorer = projectExplorer,
+                    compactStatusTool = status
                 )
         }
 

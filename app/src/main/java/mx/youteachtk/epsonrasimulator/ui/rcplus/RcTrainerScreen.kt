@@ -206,6 +206,10 @@ fun RcTrainerScreen(
                             .weight(1f)
                             .fillMaxWidth()
                     )
+
+                    presentation.docks.compactStatusTool?.let {
+                        RcCompactStatusStrip(tool = it)
+                    }
                 }
             }
 
@@ -350,6 +354,26 @@ private fun RcFoundationPanel(
                 style = MaterialTheme.typography.bodySmall
             )
         }
+    }
+}
+
+@Composable
+private fun RcCompactStatusStrip(
+    tool: RcToolDescriptor
+) {
+    Surface(
+        tonalElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "${tool.title} — Workspace foundation",
+            modifier = Modifier.padding(
+                horizontal = 10.dp,
+                vertical = 6.dp
+            ),
+            maxLines = 1,
+            style = MaterialTheme.typography.labelMedium
+        )
     }
 }
 
