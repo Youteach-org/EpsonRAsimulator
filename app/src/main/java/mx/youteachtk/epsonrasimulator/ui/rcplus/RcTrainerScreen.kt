@@ -216,6 +216,14 @@ fun RcTrainerScreen(
                         session = workspaceSession,
                         toolRegistry =
                             RcPlusWorkspaceCatalog.toolRegistry,
+                        content = { toolId, contentModifier ->
+                            RcCoreWindowContent(
+                                toolId = toolId,
+                                state = runtimeState,
+                                controller = liveController,
+                                modifier = contentModifier
+                            )
+                        },
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
