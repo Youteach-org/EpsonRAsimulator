@@ -66,6 +66,22 @@ The Phase 4 collision/grasp model is deliberately axis-aligned and deterministic
 
 Still deferred are rigid-body physics, general mesh collision, C4 robot self-collision (Issue #7), conveyor dynamics beyond future component extension, vacuum/welding/articulated-hand tool behavior, automatic robot-FK-to-tool-mount synchronization, Epson-native task/build/run semantics, bridge/network behavior, and physical robot safety/control.
 
+## Implemented RC+ Trainer workspace foundation
+
+The Phase 5 feature branch adds the structural RC+ Trainer workspace as a presentation/session layer without creating a second simulation authority:
+
+- `RcCommandRegistry` is the single command model behind verified menu, toolbar, and keyboard entry points; the only pinned keyboard shortcut in this phase is F6 for Robot Manager;
+- `RcToolRegistry` capability-gates the structural Project Explorer, Robot Manager, Command Window, I/O Monitor, Task Manager, and Status surfaces;
+- `RcWindowManagerState` and the pure `RcWindowManager` own child-window open/focus/z-order/move/resize/minimize/maximize/restore/cascade/tile behavior;
+- `RcWorkspaceSession` is the only mutable RC+ workspace boundary and publishes changed window state without copying robot, task, I/O, workcell, or tool simulation state;
+- desktop and compact layouts project the same window-manager state; compact presentation maximizes the active child without overwriting stored desktop geometry;
+- the Compose RC+ shell provides the menu bar, toolbar, Project Explorer structural surface, child-window host, Status structural surface, minimized-window bar, canonical-runtime status text, and touch window-management affordances;
+- `AppSessionViewModel` retains one `AppRuntimeBundle` and one `RcWorkspaceSession` across Activity configuration recreation, while `AppExperienceRoot` switches RC+ Trainer and Visual Lab over the same canonical `SharedRuntime`.
+
+RC+ workspace/window geometry is presentation/session state and is intentionally **not** part of `SharedRuntimeState`. The current ViewModel retention covers the live Android session/configuration lifecycle only; durable workspace persistence and process-death restoration remain a later persistence phase.
+
+The Phase 5 RC+ tool bodies are deliberately structural foundation shells. They do not claim live/native RC+ Project Explorer, Robot Manager pages, Command Window execution, I/O Monitor controls, Task Manager controls, or Build/Run/Status behavior. Exact unverified shortcuts/menu/tool variants, disk persistence, digital-twin/bridge integration, and physical hardware behavior remain deferred.
+
 ## Layering
 
 ### UI
