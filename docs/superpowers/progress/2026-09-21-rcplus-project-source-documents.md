@@ -29,3 +29,7 @@
 
 - Task 2 RED: `28cf77a5fad65349f316c5b537030d3c43367e3f`; Android CI #253 / run `35623669162` failed in Unit tests exactly on missing Project Explorer projection/navigation, dynamic document tool IDs/openWindow, and project context command IDs.
 - Task 2 GREEN candidate adds pure sorted tree/function projection, stale-range safety, dynamic document namespaces/navigation, validated dynamic MDI opening, three capability-gated document tools, and five target-requiring project commands in the existing global command registry.
+
+- Task 2 compile fix: `641a450437c9871d35b495b7c09ce463b449d4e1` added the five `RcWorkspaceAction.Project*` objects that the first GREEN candidate's patch failed to insert; Android CI #255 / run `35624305721` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Task 2 is GREEN.
+- Task 3 Ruling: `RcProjectNavigationSession` must publish selection/range state changes — opening another function in an already-active source window can be a workspace no-op, so UI cannot depend on workspace publication to observe the new cursor target — cost if wrong: one small presentation-session subscription API can be removed later without changing project/runtime data.
+- Task 3 RED: controller/source integration tests prepared for selection vs Open, dynamic-window reuse, current/stale function navigation publication, global context descriptors, disabled mutation safety, exact source edit preservation, syntax-invalid retention, and source-window independence.
