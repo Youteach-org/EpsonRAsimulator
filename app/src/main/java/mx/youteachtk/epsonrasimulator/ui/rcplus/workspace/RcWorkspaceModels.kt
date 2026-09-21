@@ -84,3 +84,50 @@ data class RcToolDescriptor(
         require(title.isNotBlank()) { "RC+ tool title must not be blank" }
     }
 }
+
+data class RcRect(
+    val x: Float,
+    val y: Float,
+    val width: Float,
+    val height: Float
+) {
+    init {
+        require(listOf(x, y, width, height).all(Float::isFinite)) {
+            "RC+ window geometry must be finite"
+        }
+        require(x in 0.0f..1.0f && y in 0.0f..1.0f) {
+            "RC+ window origin must be normalized"
+        }
+        require(width > 0.0f && height > 0.0f) {
+            "RC+ window size must be positive"
+        }
+        require(x + width <= 1.00001f && y + height <= 1.00001f) {
+            "RC+ window must stay inside normalized workspace"
+        }
+    }
+
+    companion object {
+        val DEFAULT = RcRect(0.12f, 0.10f, 0.62f, 0.66f)
+        val FULL = RcRect(0.0f, 0.0f, 1.0f, 1.0f)
+    }
+}
+
+enum class RcWindowMode {
+    NORMAL,
+    MAXIMIZED,
+    MINIMIZED
+}
+
+data class RcWindowInstance(
+    val id: RcWindowId,
+    val toolId: RcToolId,
+    val normalBounds: RcRect = RcRect.DEFAULT,
+    val mode: RcWindowMode = RcWindowMode.NORMAL,
+    val minimizedFrom: RcWindowMode = RcWindowMode.NORMAL
+)
+
+data class RcWindowManagerState(
+    val windows: Map<RcWindowId, RcWindowInstance> = emptyMap(),
+    val zOrder: List<RcWindowId> = emptyList(),
+    val activeWindowId: RcWindowId? = null
+)
