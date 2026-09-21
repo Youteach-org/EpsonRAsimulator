@@ -40,6 +40,8 @@ import mx.youteachtk.epsonrasimulator.adapters.SimulatorAdapter
 import mx.youteachtk.epsonrasimulator.project.ProjectRuntime
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntime
 import mx.youteachtk.epsonrasimulator.ui.rememberRuntimeState
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcPointController
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcPointDocument
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcPreservedResourceDocument
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectController
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectExplorer
@@ -84,6 +86,9 @@ fun RcTrainerScreen(
         )
     val liveController = remember(runtime) {
         RcLiveController(runtime)
+    }
+    val pointController = remember(runtime) {
+        RcPointController(runtime)
     }
     val projectController = remember(
         projectRuntime,
@@ -186,6 +191,8 @@ fun RcTrainerScreen(
                                         projectNavigationState,
                                     projectController =
                                         projectController,
+                                    pointController =
+                                        pointController,
                                     modifier = contentModifier
                                 )
                             },
@@ -277,6 +284,8 @@ fun RcTrainerScreen(
                                     projectNavigationState,
                                 projectController =
                                     projectController,
+                                pointController =
+                                    pointController,
                                 modifier = contentModifier
                             )
                         },
@@ -502,6 +511,7 @@ private fun RcTrainerWindowContent(
     projectNavigationState:
         mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectNavigationState,
     projectController: RcProjectController,
+    pointController: RcPointController,
     modifier: Modifier = Modifier
 ) {
     val path = window.id.value.substringAfter(
@@ -553,10 +563,10 @@ private fun RcTrainerWindowContent(
             )
 
         RcCoreWindowKind.POINTS ->
-            RcFoundationPanel(
-                tool =
-                    RcPlusWorkspaceCatalog.toolRegistry
-                        .descriptor(window.toolId),
+            RcPointDocument(
+                path = path,
+                state = runtimeState,
+                controller = pointController,
                 modifier = modifier
             )
     }

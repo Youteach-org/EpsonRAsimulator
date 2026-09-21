@@ -47,3 +47,6 @@
 
 - Task 3 complete: final implementation head `99b709c5749f279f68e8aeba2f6c4e2137812b8f`; Android CI #260 / run `35658704285` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Device/emulator gesture smoke remains unverified in this GitHub-only harness.
 - Task 4 RED prepared for finite six-axis point save, deterministic point rows, invalid/unknown rejection without publication, dedicated point-window routing, and byte-identical native `.pts` preservation across Local Simulation save/remove.
+
+- Task 4 RED: `19e224f790f178fd4c884c09f776abc43b5fcd58`; Android CI #261 / run `35659077289` failed in Unit tests exactly on missing `RcPointController` / `RcPointResult`.
+- Task 4 GREEN candidate adds validated finite Local Simulation point save/remove over the existing SharedRuntime, deterministic point rows, and a functional point document. It never parses or rewrites the native `.pts` resource; the UI states that boundary explicitly.
