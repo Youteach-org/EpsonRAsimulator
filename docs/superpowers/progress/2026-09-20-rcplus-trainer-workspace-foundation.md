@@ -35,7 +35,7 @@ Task 4: complete — RED `11de4eed30540a76a3d2be72102cdd7516c1e820`, Android CI 
 Task 5: complete — RED `1513a34783a86b2beab06984d85dc415a6a0bd59`, Android CI #220 run `35549901841` failed on the expected missing `RcTrainerPresentation`; GREEN `ff862b2af0a240bd9276f57fa7d41ce59606639c`, Android CI #221 run `35549999758` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
 Task 6: complete — RED `4f72efc12d1a2f3becdd9b3654e87ecea005c102`, Android CI #222 failed as expected; GREEN implementation `3b1f68099e8dec87baf739342e4c12da8b95d06a` plus compile fixes `eeae35bb4ac275abba6b69291094606e322c0317` and `dae5302593124074072b26694f79bdae24ff5484`; Android CI #227 run `35564339331` attempt 2 SUCCESS after runner access was restored by returning the repository to public visibility (Unit tests, Build debug APK, Upload debug APK).
 Task 7: complete — RED `410e3c2ace9a4b3eaf02b94668c4fb84a8829894`, Android CI #229 run `35566113271` failed in Unit tests on the expected missing `AppSessionViewModel` / `AppExperience`; GREEN `ccaf162dbe9878430fd6d6cb790d7540328a7b68`, Android CI #230 run `35566258645` SUCCESS (Unit tests, Build debug APK, Upload debug APK). No Gradle dependency change was required.
-Task 8: documentation/review/final exact-HEAD CI in progress.
+Task 8: complete through documentation + whole-branch self-review; final exact-HEAD Android CI is required on the final documentation-only checkpoint before Phase 5 is accepted.
 
 ### Task 6 inline resume checkpoint
 - Existing Task 6 RED commit: `4f72efc12d1a2f3becdd9b3654e87ecea005c102`; Android CI #222 failed as expected after the workspace chrome tests were introduced.
@@ -68,4 +68,20 @@ Task 8: documentation/review/final exact-HEAD CI in progress.
 
 - Repository transfer checkpoint: repository ID `1372016168` moved from `youteachtk/EpsonRAsimulator` to `Youteach-org/EpsonRAsimulator` while Phase 5 was in progress. Branch/PR history remained intact. The organization currently reports the repository as private; this checkpoint triggers CI against the compact-geometry fix candidate `2e47c67e2f5f290446ffd485877ecc1fd7bf19c2` before any further action.
 - Important finding: compact RC+ shell omitted the structural Status surface even though the presentation model still exposed it as a desktop-style bottom tool. The plan requires a dedicated single-line compact Status strip. RED presentation test added before production fix.
-- Final compact-Status RED: `71212def086446c3d685fbaa3d5cb394bd8d84eb`, Android CI #237 run `35567245363` failed exactly on missing `RcDockPresentation.compactStatusTool`; GREEN implementation pending verification.
+- Final compact-Status RED: `71212def086446c3d685fbaa3d5cb394bd8d84eb`, Android CI #237 run `35567245363` failed exactly on missing `RcDockPresentation.compactStatusTool`; GREEN `84c6e6e9eabd14abaa0c6bda89c05a4300490a30`, Android CI #238 run `35567482537` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
+
+
+### Final scope verification
+- Base-to-Phase-5 review uses accepted Phase 4 SHA `9ab75c8682a1e901f4a3110bb4211a368504b06a`.
+- Production changes are limited to RC+ workspace/session/presentation UI plus top-level app experience/session wiring. Tests and Phase 5 docs accompany those changes.
+- No task/I-O/workcell/tool simulation behavior changed.
+- No C4 kinematics/SceneView transform behavior changed.
+- No SPEL+ parser/source or native-project semantics changed.
+- No bridge/hardware code changed.
+- `app/build.gradle.kts` is unchanged from Phase 4; SceneView remains pinned at `4.35.0`.
+- PR #10 remains OPEN, Draft, unmerged at `9ab75c8682a1e901f4a3110bb4211a368504b06a`; PR #11 remains stacked on `feature/workcell-tool-runtime-foundation` and must not merge first.
+- Repository transfer preserved repository ID `1372016168` and branch/PR history; canonical repository path is now `Youteach-org/EpsonRAsimulator`.
+- Final review fixed two Important findings by RED→GREEN: compact mode can no longer edit stored desktop geometry, and compact mode now exposes the required structural Status strip.
+- No Critical findings remain from the final self-review. No deferred Minor findings were recorded.
+- Next implementation-sequence item after explicit Phase 5 acceptance: **Core RC+ Windows**.
+- Final exact-HEAD CI gate: after this documentation-only checkpoint, require Android CI Unit tests + Build debug APK + Upload debug APK success. Record the exact SHA/run in the final PR comment without moving the branch again.
