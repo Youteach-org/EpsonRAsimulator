@@ -43,6 +43,17 @@ Phase 3 alone does **not** execute arbitrary SPEL+/`ProgramDocument`, emulate Ep
 
 Phase 4 intentionally remains a training simulation foundation. It does **not** add rigid-body physics, general mesh collision, C4 self-collision (Issue #7), full conveyor dynamics, vacuum/welding/articulated-hand behavior, automatic robot-FK-to-tool-mount synchronization, Epson-native task/build/run semantics, bridge/network behavior, or physical robot safety/control. The auxiliary-axis component is an extension-ready contract only; full auxiliary-axis motion remains future work.
 
+## RC+ Trainer Workspace Foundation — implemented on Phase 5 feature branch
+- one capability-gated command/tool catalog drives the structural RC+ menu, toolbar, F6 Robot Manager shortcut, Project Explorer, Status, and registered child tools;
+- deterministic MDI state supports singleton open/focus, z-order, move, resize, minimize, maximize, restore, close, cascade, and tile;
+- desktop and compact Android layouts project the same workspace state instead of maintaining separate phone/tablet window models;
+- compact mode presents the active child full-size and provides a switcher without overwriting desktop window geometry;
+- the RC+ shell includes structural menu/toolbar/docks/status/minimized-window surfaces and touch window-management affordances;
+- a retained app session keeps one canonical `SharedRuntime` and one RC+ workspace session while switching between RC+ Trainer and the existing Visual Lab;
+- Activity configuration recreation retains that session through `AppSessionViewModel`; disk/process-death workspace persistence is not yet claimed.
+
+Phase 5 is structural only for core RC+ windows. Live Project Explorer/source/point content, Robot Manager functional pages, Command Window execution, I/O Monitor controls, Task Manager controls, native Build/Run/Status behavior, exact unverified RC+ shortcut/menu variants, durable workspace persistence, bridge/digital-twin integration, and physical hardware behavior remain future work. The next implementation sequence item is **Core RC+ Windows**.
+
 ## Phase 0 — Foundation
 - repository;
 - architecture;

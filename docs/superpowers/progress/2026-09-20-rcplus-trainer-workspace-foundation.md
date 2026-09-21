@@ -34,8 +34,8 @@ Task 3: complete — RED `2b01990fe0b1674f4b364f9ae0077aa2d3518df9`, Android CI 
 Task 4: complete — RED `11de4eed30540a76a3d2be72102cdd7516c1e820`, Android CI #218 run `35549706898` failed on the expected missing `RcWorkspaceLayoutMode`/`RcWorkspaceLayout`/`RcWorkspaceViewport`; GREEN `0dcf27dfa1940a7b2684d555cb3aaa0a46afe527`, Android CI #219 run `35549786905` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
 Task 5: complete — RED `1513a34783a86b2beab06984d85dc415a6a0bd59`, Android CI #220 run `35549901841` failed on the expected missing `RcTrainerPresentation`; GREEN `ff862b2af0a240bd9276f57fa7d41ce59606639c`, Android CI #221 run `35549999758` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
 Task 6: complete — RED `4f72efc12d1a2f3becdd9b3654e87ecea005c102`, Android CI #222 failed as expected; GREEN implementation `3b1f68099e8dec87baf739342e4c12da8b95d06a` plus compile fixes `eeae35bb4ac275abba6b69291094606e322c0317` and `dae5302593124074072b26694f79bdae24ff5484`; Android CI #227 run `35564339331` attempt 2 SUCCESS after runner access was restored by returning the repository to public visibility (Unit tests, Build debug APK, Upload debug APK).
-Task 7: RED `410e3c2ace9a4b3eaf02b94668c4fb84a8829894`, Android CI #229 run `35566113271` failed in Unit tests on the expected missing `AppSessionViewModel` / `AppExperience`; GREEN implementation pending verification.
-Task 8: pending.
+Task 7: complete — RED `410e3c2ace9a4b3eaf02b94668c4fb84a8829894`, Android CI #229 run `35566113271` failed in Unit tests on the expected missing `AppSessionViewModel` / `AppExperience`; GREEN `ccaf162dbe9878430fd6d6cb790d7540328a7b68`, Android CI #230 run `35566258645` SUCCESS (Unit tests, Build debug APK, Upload debug APK). No Gradle dependency change was required.
+Task 8: documentation/review/final exact-HEAD CI in progress.
 
 ### Task 6 inline resume checkpoint
 - Existing Task 6 RED commit: `4f72efc12d1a2f3becdd9b3654e87ecea005c102`; Android CI #222 failed as expected after the workspace chrome tests were introduced.
@@ -50,3 +50,11 @@ Task 8: pending.
 - Repository metadata currently reports `visibility=private`. GitHub documents that standard hosted runners are free for public repositories but consume included/billable Actions minutes for private repositories, and usage can be blocked when included quota/budget/payment conditions prevent further use. This is a plausible cause, not confirmed because billing settings are unavailable through the connector.
 - Repository returned to public visibility; CI #227 attempt 2 then received a hosted runner and completed Unit tests + Build debug APK + Upload debug APK successfully. Task 6 is GREEN.
 - No concurrent Codex/inline advancement was observed before this checkpoint. PR #11 remains Draft; do not merge.
+
+
+### Phase 5 durable rulings
+- Ruling: RC+ workspace/window state stays outside `SharedRuntimeState` — it is presentation/session state; canonical robot/task/I-O/workcell/tool truth remains in `SharedRuntime` — cost if wrong: workspace persistence would require a later migration boundary, not simulation-state migration.
+- Ruling: only F6 -> Robot Manager is pinned as a verified keyboard shortcut in Phase 5 — undocumented shortcuts are not invented — cost if wrong: additional verified shortcuts can be added later through the registry.
+- Ruling: Phase 5 core RC+ window bodies remain explicit structural “workspace foundation” shells — live/native behavior belongs to Core RC+ Windows — cost if wrong: labels/content can be replaced later without changing the command/window state model.
+- Ruling: `AppSessionViewModel` retains the app runtime/workspace across configuration recreation only; durable disk/process-death persistence remains a later persistence phase — cost if wrong: process death loses workspace geometry/active experience until persistence is implemented.
+- Ruling: no lifecycle Gradle dependency was added — existing AndroidX Activity/Compose dependency graph compiled `ViewModel` and `by viewModels()` successfully in CI #230 — cost if wrong: dependency can be made explicit in a later build-only correction.
