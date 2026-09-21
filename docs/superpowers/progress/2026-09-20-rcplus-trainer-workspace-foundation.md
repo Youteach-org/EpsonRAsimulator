@@ -67,3 +67,4 @@ Task 8: documentation/review/final exact-HEAD CI in progress.
 - Final: fix in progress — compact projection now carries an explicit geometry-editing contract; MDI drag/resize will honor it. GREEN verification pending.
 
 - Repository transfer checkpoint: repository ID `1372016168` moved from `youteachtk/EpsonRAsimulator` to `Youteach-org/EpsonRAsimulator` while Phase 5 was in progress. Branch/PR history remained intact. The organization currently reports the repository as private; this checkpoint triggers CI against the compact-geometry fix candidate `2e47c67e2f5f290446ffd485877ecc1fd7bf19c2` before any further action.
+- Important finding: compact RC+ shell omitted the structural Status surface even though the presentation model still exposed it as a desktop-style bottom tool. The plan requires a dedicated single-line compact Status strip. RED presentation test added before production fix.

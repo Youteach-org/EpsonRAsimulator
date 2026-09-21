@@ -131,6 +131,21 @@ class RcTrainerPresentationTest {
     }
 
     @Test
+    fun compactExposesStatusAsDedicatedSingleLineStripSurface() {
+        val presentation = RcTrainerPresentation.build(
+            RcPlus7SimulatorAdapter.capabilities,
+            RcWindowManagerState(),
+            RcWorkspaceLayoutMode.COMPACT
+        )
+
+        assertNull(presentation.docks.bottomTool)
+        assertEquals(
+            RcPlusWorkspaceTools.STATUS,
+            presentation.docks.compactStatusTool?.id
+        )
+    }
+
+    @Test
     fun minimizedWindowsAppearOnlyInMinimizedBar() {
         val robot = RcWindowId("robot-manager")
         val io = RcWindowId("io-monitor")
