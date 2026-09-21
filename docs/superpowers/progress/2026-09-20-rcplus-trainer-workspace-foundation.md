@@ -34,7 +34,7 @@ Task 3: complete — RED `2b01990fe0b1674f4b364f9ae0077aa2d3518df9`, Android CI 
 Task 4: complete — RED `11de4eed30540a76a3d2be72102cdd7516c1e820`, Android CI #218 run `35549706898` failed on the expected missing `RcWorkspaceLayoutMode`/`RcWorkspaceLayout`/`RcWorkspaceViewport`; GREEN `0dcf27dfa1940a7b2684d555cb3aaa0a46afe527`, Android CI #219 run `35549786905` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
 Task 5: complete — RED `1513a34783a86b2beab06984d85dc415a6a0bd59`, Android CI #220 run `35549901841` failed on the expected missing `RcTrainerPresentation`; GREEN `ff862b2af0a240bd9276f57fa7d41ce59606639c`, Android CI #221 run `35549999758` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
 Task 6: complete — RED `4f72efc12d1a2f3becdd9b3654e87ecea005c102`, Android CI #222 failed as expected; GREEN implementation `3b1f68099e8dec87baf739342e4c12da8b95d06a` plus compile fixes `eeae35bb4ac275abba6b69291094606e322c0317` and `dae5302593124074072b26694f79bdae24ff5484`; Android CI #227 run `35564339331` attempt 2 SUCCESS after runner access was restored by returning the repository to public visibility (Unit tests, Build debug APK, Upload debug APK).
-Task 7: RED pending publication.
+Task 7: RED `410e3c2ace9a4b3eaf02b94668c4fb84a8829894`, Android CI #229 run `35566113271` failed in Unit tests on the expected missing `AppSessionViewModel` / `AppExperience`; GREEN implementation pending verification.
 Task 8: pending.
 
 ### Task 6 inline resume checkpoint
