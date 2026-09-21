@@ -18,6 +18,9 @@ class NativeProjectResourceSet private constructor(
 
     fun resource(path: String): ProjectResource? = resources[path]
 
+    fun resourcesSnapshot(): List<ProjectResource> =
+        resources.values.toList()
+
     fun replaceEditable(path: String, replacementBytes: ByteArray) {
         val existing = requireNotNull(resources[path]) {
             "Unknown project resource: $path"

@@ -20,3 +20,6 @@
 - Pre-flight shared interfaces: Task 1 native-resource preservation -> Task 4 point document: `.pts` remains `NativeKnownPreserved`; no serializer path is introduced.
 - Pre-flight shared interfaces: Task 2 existing global `RcCommandRegistry` context descriptors -> Task 3 Project Explorer context UI: one-registry rule is preserved.
 - Task 1 RED: test-only checkpoint prepared for canonical retained ProjectRuntime, classification, strict UTF-8, syntax-invalid source preservation, rejected native/opaque edits and no-op publication behavior.
+
+- Task 1 RED: `d4bac3ec27d84f1693727cf32ab2bf843f84aa78`; Android CI #251 / run `35622786335` failed in Unit tests exactly on missing `AppRuntimeBundle.projectRuntime`, `ProjectResourceAccess`, `ProjectSourceAvailability`, and `ProjectRuntimeResult`.
+- Task 1 GREEN candidate adds the neutral retained ProjectRuntime, strict UTF-8 source decoding, native-format classifier contract, defensive resource snapshots, source edit/export/subscription behavior, and AppRuntimeBundle wiring. No UI/runtime simulation semantics changed.

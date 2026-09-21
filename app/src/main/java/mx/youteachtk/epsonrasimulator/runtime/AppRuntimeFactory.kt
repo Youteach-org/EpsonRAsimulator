@@ -6,11 +6,13 @@ import mx.youteachtk.epsonrasimulator.adapters.rcplus.RcPlusProjectFormatAdapter
 import mx.youteachtk.epsonrasimulator.adapters.rcplus.SpelPlusLanguageAdapter
 import mx.youteachtk.epsonrasimulator.robot.EpsonRobotProvider
 import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
+import mx.youteachtk.epsonrasimulator.project.ProjectRuntime
 
 data class AppRuntimeBundle(
     val runtime: SharedRuntime,
     val robots: RobotRegistry,
-    val adapters: AdapterRegistry
+    val adapters: AdapterRegistry,
+    val projectRuntime: ProjectRuntime
 )
 
 object AppRuntimeFactory {
@@ -38,11 +40,19 @@ object AppRuntimeFactory {
                 connectionMode = ConnectionMode.LOCAL_SIMULATION
             )
         )
+        val projectRuntime = ProjectRuntime(
+            classifier = adapters
+                .nativeProjectFormatFor(simulator.id)
+                .resourceClassifier,
+            sourceLanguage =
+                adapters.sourceLanguageFor(simulator.id)
+        )
 
         return AppRuntimeBundle(
             runtime = runtime,
             robots = robots,
-            adapters = adapters
+            adapters = adapters,
+            projectRuntime = projectRuntime
         )
     }
 }
