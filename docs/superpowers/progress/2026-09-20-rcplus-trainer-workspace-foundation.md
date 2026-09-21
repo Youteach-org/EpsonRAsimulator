@@ -65,3 +65,5 @@ Task 8: documentation/review/final exact-HEAD CI in progress.
 - Important finding: compact `RcMdiHost` reused desktop drag/resize interactions, so a full-screen compact projection could mutate stored desktop window geometry. Fix requires explicit projection metadata and UI gating; RED test published before production fix.
 - Final fix RED test commit: `fd193428a30f36e535cc90039edf6449e8dbff2e`; Android CI #232 run `35566613276` failed in Unit tests exactly on missing `RcProjectedWindow.allowsGeometryEditing`. The following documentation-only checkpoint did not alter production behavior.
 - Final: fix in progress — compact projection now carries an explicit geometry-editing contract; MDI drag/resize will honor it. GREEN verification pending.
+
+- Repository transfer checkpoint: repository ID `1372016168` moved from `youteachtk/EpsonRAsimulator` to `Youteach-org/EpsonRAsimulator` while Phase 5 was in progress. Branch/PR history remained intact. The organization currently reports the repository as private; this checkpoint triggers CI against the compact-geometry fix candidate `2e47c67e2f5f290446ffd485877ecc1fd7bf19c2` before any further action.
