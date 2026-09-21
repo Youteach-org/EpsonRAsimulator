@@ -6,6 +6,7 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcShortcut
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcShortcutKey
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWorkspaceAction
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RcPlusWorkspaceCatalogTest {
@@ -29,7 +30,7 @@ class RcPlusWorkspaceCatalogTest {
     }
 
     @Test
-    fun schoolCapabilitiesExposeSixStructuralTools() {
+    fun schoolCapabilitiesExposeStructuralAndDynamicDocumentTools() {
         val capabilities = RcPlus7SimulatorAdapter.capabilities
         val titles = RcPlusWorkspaceCatalog.toolRegistry
             .available(capabilities)
@@ -42,9 +43,62 @@ class RcPlusWorkspaceCatalogTest {
                 "Command Window",
                 "I/O Monitor",
                 "Task Manager",
-                "Status"
+                "Status",
+                "Source Document",
+                "Point Document",
+                "Preserved Resource"
             ),
             titles
         )
     }
+
+    @Test
+    fun projectContextCommandsUseGlobalRegistryButStayOutOfNormalMenus() {
+        val commandIds = listOf(
+            RcPlusWorkspaceCommands.PROJECT_NEW,
+            RcPlusWorkspaceCommands.PROJECT_OPEN,
+            RcPlusWorkspaceCommands.PROJECT_RENAME,
+            RcPlusWorkspaceCommands.PROJECT_REMOVE,
+            RcPlusWorkspaceCommands.PROJECT_DELETE
+        )
+        val labels = commandIds.map {
+            RcPlusWorkspaceCatalog.commandRegistry
+                .descriptor(it)
+                .label
+        }
+
+        assertEquals(
+            listOf(
+                "New...",
+                "Open",
+                "Rename...",
+                "Remove",
+                "Delete"
+            ),
+            labels
+        )
+        commandIds.forEach {
+            assertEquals(
+                null,
+                RcPlusWorkspaceCatalog.commandRegistry
+                    .descriptor(it)
+                    .menuSection
+            )
+        }
+
+        val presentation = RcTrainerPresentation.build(
+            capabilities = RcPlus7SimulatorAdapter.capabilities,
+            windowState =
+                mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowManagerState(),
+            layoutMode =
+                mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWorkspaceLayoutMode.DESKTOP
+        )
+        val normalMenuIds = presentation.menus
+            .flatMap { it.commands }
+            .map { it.id }
+            .toSet()
+
+        assertTrue(commandIds.none { it in normalMenuIds })
+    }
+
 }

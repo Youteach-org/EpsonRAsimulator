@@ -23,3 +23,6 @@
 
 - Task 1 RED: `d4bac3ec27d84f1693727cf32ab2bf843f84aa78`; Android CI #251 / run `35622786335` failed in Unit tests exactly on missing `AppRuntimeBundle.projectRuntime`, `ProjectResourceAccess`, `ProjectSourceAvailability`, and `ProjectRuntimeResult`.
 - Task 1 GREEN candidate adds the neutral retained ProjectRuntime, strict UTF-8 source decoding, native-format classifier contract, defensive resource snapshots, source edit/export/subscription behavior, and AppRuntimeBundle wiring. No UI/runtime simulation semantics changed.
+
+- Task 1 complete candidate: `35a0899fa59cb7d60ce6aa5d09f94135f798f019`; Android CI #252 / run `35623204552` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
+- Task 2 RED: tests prepared for deterministic nested Project Explorer projection, syntax-invalid stale function safety, dynamic source/point/resource window namespaces, selection-vs-open behavior, global context command registration/capability gating, and targetless context dispatch rejection.

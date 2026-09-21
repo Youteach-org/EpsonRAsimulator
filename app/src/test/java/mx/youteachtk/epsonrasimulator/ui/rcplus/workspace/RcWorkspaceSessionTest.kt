@@ -144,4 +144,77 @@ class RcWorkspaceSessionTest {
         RcPlusWorkspaceCatalog.toolRegistry,
         RcPlus7SimulatorAdapter.capabilities
     )
+
+    @Test
+    fun dynamicOpenUsesExactWindowIdAndRejectsDockedTool() {
+        val session = session()
+        val sourceId = RcWindowId("source:A/Main.prg")
+
+        session.openWindow(
+            sourceId,
+            RcPlusWorkspaceTools.SOURCE_DOCUMENT
+        )
+        session.openWindow(
+            RcWindowId("source:B/Main.prg"),
+            RcPlusWorkspaceTools.SOURCE_DOCUMENT
+        )
+        session.openWindow(
+            sourceId,
+            RcPlusWorkspaceTools.SOURCE_DOCUMENT
+        )
+
+        assertEquals(2, session.state.windows.size)
+        assertEquals(sourceId, session.state.activeWindowId)
+
+        val before = session.state
+        try {
+            session.openWindow(
+                RcWindowId("bad-dock"),
+                RcPlusWorkspaceTools.PROJECT_EXPLORER
+            )
+            fail("Expected docked tool to reject dynamic open")
+        } catch (_: IllegalStateException) {
+        }
+        assertEquals(before, session.state)
+    }
+
+    @Test
+    fun directContextCommandDispatchRejectsWithoutWorkspaceMutation() {
+        val session = session()
+        val before = session.state
+        val observed = mutableListOf<RcWindowManagerState>()
+        val subscription = session.subscribe { observed += it }
+
+        try {
+            session.dispatch(
+                RcPlusWorkspaceCommands.PROJECT_OPEN
+            )
+            fail("Expected targetless project command to reject")
+        } catch (error: IllegalStateException) {
+            assertEquals(
+                "Project command requires a project-tree target",
+                error.message
+            )
+        }
+
+        assertEquals(before, session.state)
+        assertEquals(1, observed.size)
+        subscription.cancel()
+    }
+
+    @Test
+    fun projectContextCommandsAreCapabilityGated() {
+        val unavailable = RcPlusWorkspaceCatalog.commandRegistry
+            .available(CapabilitySet())
+            .map { it.id }
+            .toSet()
+
+        assertTrue(
+            RcPlusWorkspaceCommands.PROJECT_OPEN !in unavailable
+        )
+        assertTrue(
+            RcPlusWorkspaceCommands.PROJECT_DELETE !in unavailable
+        )
+    }
+
 }
