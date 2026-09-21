@@ -42,3 +42,5 @@
 
 - Task 3 UI RED: `52b71470e3c0b5fec2e8ffd01d9cef5de4d3839d`; Android CI #258 / run `35625439557` failed in Unit tests exactly on missing retained `projectNavigationSession` and missing SOURCE/POINTS/PRESERVED_RESOURCE routing.
 - Task 3 UI GREEN candidate wires retained ProjectNavigationSession, reactive project/navigation bindings, functional Project Explorer gestures/context menu, exact source editing with current diagnostics and function selection, preserved-resource read-only view, and exact-window MDI content identity. POINTS remains a structural body until Task 4 as planned.
+
+- Task 3 UI compile correction after Android CI #259 / run `35658503816`: compact MDI still used the old `RcToolId` content signature, Project Explorer needed explicit `detectTapGestures` / `isSecondaryPressed` extension imports, and `RcCoreWindowContent` needed exhaustive routing for document kinds. No behavioral scope change.

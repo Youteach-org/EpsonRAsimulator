@@ -35,6 +35,9 @@ fun RcCoreWindowContent(
                 modifier = modifier
             )
 
+        RcCoreWindowKind.SOURCE,
+        RcCoreWindowKind.POINTS,
+        RcCoreWindowKind.PRESERVED_RESOURCE,
         RcCoreWindowKind.STRUCTURAL ->
             RcStructuralWindowBody(
                 toolId = toolId,

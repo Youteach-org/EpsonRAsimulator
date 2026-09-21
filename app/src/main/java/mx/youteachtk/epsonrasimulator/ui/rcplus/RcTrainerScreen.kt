@@ -265,11 +265,18 @@ fun RcTrainerScreen(
                         session = workspaceSession,
                         toolRegistry =
                             RcPlusWorkspaceCatalog.toolRegistry,
-                        content = { toolId, contentModifier ->
-                            RcCoreWindowContent(
-                                toolId = toolId,
-                                state = runtimeState,
-                                controller = liveController,
+                        content = {
+                                window,
+                                contentModifier ->
+                            RcTrainerWindowContent(
+                                window = window,
+                                runtimeState = runtimeState,
+                                liveController = liveController,
+                                projectState = projectState,
+                                projectNavigationState =
+                                    projectNavigationState,
+                                projectController =
+                                    projectController,
                                 modifier = contentModifier
                             )
                         },
