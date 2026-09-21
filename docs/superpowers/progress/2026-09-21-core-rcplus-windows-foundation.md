@@ -28,3 +28,6 @@
 - PR #11 still points at verified Phase 5 base `832d5c8da5f23c262fbc2696bec2ca88f0efb00e`; PR #12 remains Draft and stacked on it.
 - Ruling: execution switches from the approved Codex/subagent-driven method to Superpowers inline/native execution because no active Codex implementer remains and this harness has no independent implementer subagent runtime — behavior/plan/TDD gates are unchanged — cost if wrong: task-level review is less independent; final whole-branch review remains mandatory.
 - Task 1: RED tests prepared for pure live I/O/task/status projections; production code intentionally absent in this checkpoint.
+
+- Task 1 RED: `6a7c5efcb5601c915682b3627d4e7da02214f908`; Android CI #241 run `35610375182` failed in Unit tests exactly on missing `RcLiveProjection` / `RcIoDirection` / `RcTaskControl`.
+- Task 1 GREEN implementation candidate adds only immutable DTOs and pure projections over `SharedRuntimeState`; runtime/Compose behavior is unchanged.
