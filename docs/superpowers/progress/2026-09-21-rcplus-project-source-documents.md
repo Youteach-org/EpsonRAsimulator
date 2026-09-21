@@ -39,3 +39,6 @@
 
 - Task 3 controller GREEN: `46bc8718fe265f16e51afdf098e6b4b263bbf7c4`; Android CI #257 / run `35625133875` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
 - Task 3 UI RED: regression tests prepared requiring SOURCE/POINTS/PRESERVED_RESOURCE window routing and a retained `projectNavigationSession` in AppSessionViewModel before Compose wiring.
+
+- Task 3 UI RED: `52b71470e3c0b5fec2e8ffd01d9cef5de4d3839d`; Android CI #258 / run `35625439557` failed in Unit tests exactly on missing retained `projectNavigationSession` and missing SOURCE/POINTS/PRESERVED_RESOURCE routing.
+- Task 3 UI GREEN candidate wires retained ProjectNavigationSession, reactive project/navigation bindings, functional Project Explorer gestures/context menu, exact source editing with current diagnostics and function selection, preserved-resource read-only view, and exact-window MDI content identity. POINTS remains a structural body until Task 4 as planned.

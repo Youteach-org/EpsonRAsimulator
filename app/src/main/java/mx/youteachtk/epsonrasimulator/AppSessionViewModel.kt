@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeBundle
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
 import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceCatalog
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectNavigationSession
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWorkspaceSession
 
 enum class AppExperience {
@@ -28,6 +29,9 @@ class AppSessionViewModel(
         toolRegistry = RcPlusWorkspaceCatalog.toolRegistry,
         capabilities = simulator.capabilities
     )
+
+    val projectNavigationSession =
+        RcProjectNavigationSession()
 
     var activeExperience: AppExperience? by mutableStateOf(null)
         private set
