@@ -58,3 +58,8 @@ Task 8: documentation/review/final exact-HEAD CI in progress.
 - Ruling: Phase 5 core RC+ window bodies remain explicit structural “workspace foundation” shells — live/native behavior belongs to Core RC+ Windows — cost if wrong: labels/content can be replaced later without changing the command/window state model.
 - Ruling: `AppSessionViewModel` retains the app runtime/workspace across configuration recreation only; durable disk/process-death persistence remains a later persistence phase — cost if wrong: process death loses workspace geometry/active experience until persistence is implemented.
 - Ruling: no lifecycle Gradle dependency was added — existing AndroidX Activity/Compose dependency graph compiled `ViewModel` and `by viewModels()` successfully in CI #230 — cost if wrong: dependency can be made explicit in a later build-only correction.
+
+
+### Final whole-branch review
+- Final review: self-review (no subagent tool; the installed review skill exposes no independent reviewer runtime in this harness).
+- Important finding: compact `RcMdiHost` reused desktop drag/resize interactions, so a full-screen compact projection could mutate stored desktop window geometry. Fix requires explicit projection metadata and UI gating; RED test published before production fix.

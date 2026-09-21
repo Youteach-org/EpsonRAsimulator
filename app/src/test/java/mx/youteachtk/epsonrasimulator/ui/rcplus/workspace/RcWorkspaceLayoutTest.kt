@@ -1,6 +1,8 @@
 package mx.youteachtk.epsonrasimulator.ui.rcplus.workspace
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RcWorkspaceLayoutTest {
@@ -85,6 +87,29 @@ class RcWorkspaceLayoutTest {
         )
 
         assertEquals(before, state)
+    }
+
+
+    @Test
+    fun compactProjectionDisablesDesktopGeometryEditing() {
+        val id = RcWindowId("robot")
+        val state = RcWindowManager.open(
+            RcWindowManagerState(),
+            id,
+            RcToolId("robot-manager")
+        )
+
+        val compact = RcWorkspaceLayout.project(
+            state,
+            RcWorkspaceViewport(412, 915)
+        ).single()
+        val desktop = RcWorkspaceLayout.project(
+            state,
+            RcWorkspaceViewport(1280, 800)
+        ).single()
+
+        assertFalse(compact.allowsGeometryEditing)
+        assertTrue(desktop.allowsGeometryEditing)
     }
 
     @Test
