@@ -50,3 +50,6 @@
 
 - Task 4 RED: `19e224f790f178fd4c884c09f776abc43b5fcd58`; Android CI #261 / run `35659077289` failed in Unit tests exactly on missing `RcPointController` / `RcPointResult`.
 - Task 4 GREEN candidate adds validated finite Local Simulation point save/remove over the existing SharedRuntime, deterministic point rows, and a functional point document. It never parses or rewrites the native `.pts` resource; the UI states that boundary explicitly.
+
+- Task 4 complete candidate: `6c4ea197698d2725cb0c6367e6c770b6b3122744`; Android CI #262 / run `35659428507` SUCCESS (Unit tests, Build debug APK, Upload debug APK).
+- Task 5 acceptance tests prepared for full five-resource Project Explorer projection, source-only byte round-trip, independent same-basename document windows/ranges across compact projection, and retained project/source/point/window state across RC+ Trainer <-> Visual Lab.
