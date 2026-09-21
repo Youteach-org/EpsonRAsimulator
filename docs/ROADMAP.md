@@ -54,6 +54,17 @@ Phase 4 intentionally remains a training simulation foundation. It does **not** 
 
 Phase 5 is structural only for core RC+ windows. Live Project Explorer/source/point content, Robot Manager functional pages, Command Window execution, I/O Monitor controls, Task Manager controls, native Build/Run/Status behavior, exact unverified RC+ shortcut/menu variants, durable workspace persistence, bridge/digital-twin integration, and physical hardware behavior remain future work. The next implementation sequence item is **Core RC+ Windows**.
 
+## Core RC+ Windows 6A — live I/O, tasks and status implemented
+- I/O Monitor now projects canonical inputs, outputs, labels and sensor ownership from `SharedRuntimeState`, including direct access to valid addresses beyond the initial 0–15 browsing set;
+- validated I/O controls dispatch through the retained `SharedRuntime`; sensor-owned input values cannot be overridden from this window, while labels and outputs remain editable;
+- Task Manager now renders canonical task order/status/action/wait state and dispatches Start/Pause/Resume/Halt/Step/Stop only after revalidating current task availability;
+- Status now shows canonical elapsed simulation time, running/paused state, speed scale and task counts in desktop and compact layouts, with explicit Start/Pause/speed/manual-advance controls;
+- desktop and compact child windows use one live-content routing model under stable MDI window identity and continue sharing the same workspace/session state;
+- cross-window acceptance covers two controllers sharing one runtime, coherent I/O-to-task transitions, task-local STEP, fractional clock accumulation, and RC+ Trainer/Visual Lab experience retention;
+- no new dependency or automatic clock scheduler was introduced; SceneView remains pinned at 4.35.0.
+
+This is **Phase 6A, not all of Phase 6**. Project Explorer/source/point documents remain 6B; Robot Manager functional pages remain 6C; Command Window and the verified supported Build/Run subset remain 6D. Durable persistence, bridge/digital-twin behavior, physical hardware control, and C4 self-collision Issue #7 remain future work.
+
 ## Phase 0 — Foundation
 - repository;
 - architecture;

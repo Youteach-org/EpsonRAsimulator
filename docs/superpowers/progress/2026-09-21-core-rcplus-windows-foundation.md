@@ -47,3 +47,28 @@
 
 - Task 3 compile fix: `d84cf5b1f69c881766af236065ae12a8543ae41d` added the missing compact `RcMdiHost` content slot after CI #246 exposed it; Android CI #247 run `35614238927` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Task 3 is GREEN. Device smoke remains explicitly unverified.
 - Task 4 acceptance/regression tests added for two controllers sharing one runtime, task-local STEP, experience retention, and fractional clock advance. These target already-implemented acceptance behavior; if they pass immediately they are coverage evidence, not a fabricated RED.
+
+
+## Task 4 acceptance and whole-branch review — 2026-09-21
+- Task 4 acceptance commit: `832d98e67969199e239d17ea6d3441ac4b86f64d`.
+- Android CI #248 / run `35614697531` SUCCESS on that acceptance head: `gradle testDebugUnitTest --stacktrace` BUILD SUCCESSFUL and `gradle assembleDebug --stacktrace` BUILD SUCCESSFUL; artifact upload also SUCCESS.
+- Phase 6A adds 22 new JUnit `@Test` methods across the new live projection/controller/integration coverage plus one new retention test in the existing AppSessionViewModel test file. The four relevant files contain 23 `@Test` methods total because one Phase 5 session-retention test pre-existed.
+- Task 4 acceptance tests passed immediately because they pin behavior already implemented by Tasks 1–3; they are recorded as regression/acceptance evidence, not falsely labelled as RED.
+- Device/emulator smoke remains UNVERIFIED in this GitHub-only harness. CI proves JVM behavior, Android compilation, debug APK creation, and artifact upload; it does not prove touch/keyboard/layout behavior on a physical device or emulator.
+
+### Whole-branch review
+- Review range: verified Phase 5 base `832d5c8da5f23c262fbc2696bec2ca88f0efb00e` through Task 4 head `832d98e67969199e239d17ea6d3441ac4b86f64d`.
+- Final review: self-review (no independent reviewer/subagent runtime is available in this harness after Codex quota exhaustion). This is weaker than a fresh independent review and must not be represented as one.
+- Critical findings: none.
+- Important findings: none established.
+- Final: minor (deferred): `RcTrainerScreen.kt` still contains the now-unused private `RcCompactStatusStrip` helper from Phase 5 after live compact Status replaced it; it is unreachable dead UI code and does not affect runtime behavior.
+- Inherited Phase 4 review observations remain explicitly unresolved/nonblocking: stable scene key compliance, projected scene-ID namespace separation, and narrower-than-requested Phase 4 regression evidence. Phase 6A does not claim to fix them.
+- Scope review: no task scheduler/time-integration/workcell/grasp algorithm change, no SPEL+ execution or project-format semantic change, no bridge/hardware path, no dependency change, no completed prior phase branch edit, and no SceneView version change. SceneView remains `4.35.0`.
+- Review Focus results: stale task controls revalidate current state; invalid/overflow addresses reject before dispatch; sensor-owned input values reject; terminal/invalid task controls do not mutate; MDI child local state is keyed by window identity; experience retention keeps the same runtime; status reads the canonical deterministic clock without a second automatic loop.
+
+### Task completion
+- Task 1 complete: RED `6a7c5efcb5601c915682b3627d4e7da02214f908` / CI #241 expected failure; GREEN `1aadf85ef261a58a665c151bd528337a2fe8745a` / CI #242 SUCCESS.
+- Task 2 complete: RED `65c80cc6e2deac63b86c80eac32c28562b31b2f4` / CI #243 expected failure; GREEN `eb06a67a313cdc8a0b3b795460db09870c3a50d2` / CI #244 SUCCESS.
+- Task 3 complete: RED `e9524390c9bf78b4e47d43807a822353e70c1d88` / CI #245 expected failure; GREEN candidate `b0779a835cee059c81458515385b74b358c54b59` exposed one missing compact content-slot compile error in CI #246; fix `d84cf5b1f69c881766af236065ae12a8543ae41d` / CI #247 SUCCESS.
+- Task 4 acceptance: `832d98e67969199e239d17ea6d3441ac4b86f64d` / CI #248 SUCCESS.
+- Final exact-head gate: the documentation checkpoint created from this state must receive one fresh Android CI run with Unit tests + Build debug APK + Upload debug APK all successful. After that, record the exact SHA/run in PR #12 without moving the branch again.

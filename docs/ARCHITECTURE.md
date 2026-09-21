@@ -82,6 +82,23 @@ RC+ workspace/window geometry is presentation/session state and is intentionally
 
 The Phase 5 RC+ tool bodies are deliberately structural foundation shells. They do not claim live/native RC+ Project Explorer, Robot Manager pages, Command Window execution, I/O Monitor controls, Task Manager controls, or Build/Run/Status behavior. Exact unverified shortcuts/menu/tool variants, disk persistence, digital-twin/bridge integration, and physical hardware behavior remain deferred.
 
+## Implemented Core RC+ Windows 6A — live I/O, tasks, and status
+
+The Phase 6A feature branch replaces the I/O Monitor, Task Manager, and Status structural shells with live local-simulation views over the existing canonical `SharedRuntime`:
+
+- `RcLiveProjection` derives immutable I/O rows, task rows/control availability, and status/task counts directly from the current `SharedRuntimeState`; it does not cache or mutate simulation truth;
+- I/O input/output namespaces remain distinct, addresses 0–15 are only the initial browsing set, higher valid addresses remain reachable, and sensor-bound inputs are visibly marked;
+- `RcLiveController` validates user text before dispatch, rejects sensor-owned input value writes and stale/invalid task controls, and sends only existing `RuntimeCommand` values through the retained `SharedRuntime`;
+- I/O changes and task consequences therefore publish as one canonical coherent runtime snapshot rather than through a second window-local runtime;
+- Task Manager renders the canonical task order/status/action/wait state and exposes only controls allowed by the current canonical task status; the controller revalidates again at dispatch time;
+- Status reads canonical simulation time, speed scale, running state, and task counts, and exposes explicit Start/Pause/speed/manual-advance controls using the existing deterministic clock semantics;
+- `RcMdiHost` now supplies child-window content under stable window identity, while both desktop and compact RC+ layouts inject the same live content over the same retained runtime;
+- experience switches retain the same runtime/workspace session, so live I/O/task state is shared with Visual Lab rather than reconstructed.
+
+Phase 6A remains **Local Simulation only**. It does not claim native Epson RC+ I/O, scheduler, Task Manager, Status, compiler, Build/Run, or hardware equivalence. No automatic wall-clock scheduler was added; elapsed simulation advances only through the existing explicit deterministic clock commands.
+
+Still pending under Core RC+ Windows are Project Explorer/source/point documents (6B), Robot Manager functional pages (6C), and Command Window plus supported Build/Run foundations (6D). Durable process-death workspace persistence, digital-twin/bridge integration, physical control, and C4 self-collision Issue #7 also remain outside this delivery.
+
 ## Layering
 
 ### UI

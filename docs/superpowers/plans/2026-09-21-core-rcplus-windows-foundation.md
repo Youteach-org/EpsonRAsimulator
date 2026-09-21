@@ -12,7 +12,7 @@
 
 **Verified base:** `Youteach-org/EpsonRAsimulator`, Phase 5 PR #11, branch `feature/rcplus-trainer-workspace-foundation`, SHA `832d5c8da5f23c262fbc2696bec2ca88f0efb00e`. Android CI #239 / run 35601745199 passed Unit tests, Build debug APK and Upload debug APK. PR #11 and its stacked bases remain Draft and unmerged.
 
-**Execution status:** Proposed plan, awaiting review. No Phase 6 production implementation has started.
+**Execution status:** Approved by the user and implemented as Phase 6A on the stacked feature branch. The progress ledger is authoritative for RED/GREEN commits, CI evidence, review limits, and the switch from Codex/subagent execution to inline execution after Codex quota exhaustion.
 
 ## Scope and intent
 
@@ -351,4 +351,4 @@ GitHub connector is authenticated for the transferred private repository. Local 
 
 ## Handoff
 
-Review this plan before implementation; preserve the already chosen subagent-driven execution method. All implementation checkboxes remain unchecked until executed and verified. The next action is plan approval, followed by Task1 RED on the verified remote base.
+Implementation has completed through the Phase 6A final-checkpoint preparation. Checkboxes above preserve the original executable plan text; completion evidence is recorded in `docs/superpowers/progress/2026-09-21-core-rcplus-windows-foundation.md`. The remaining gate is exact-final-head Android CI and a final Draft PR checkpoint comment. Do not merge.
