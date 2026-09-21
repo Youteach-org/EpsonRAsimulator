@@ -19,7 +19,8 @@ data class RcWorkspaceViewport(
 data class RcProjectedWindow(
     val id: RcWindowId,
     val bounds: RcRect,
-    val isActive: Boolean
+    val isActive: Boolean,
+    val allowsGeometryEditing: Boolean
 )
 
 object RcWorkspaceLayout {
@@ -58,7 +59,8 @@ object RcWorkspaceLayout {
                         } else {
                             it.normalBounds
                         },
-                        isActive = it.id == active
+                        isActive = it.id == active,
+                        allowsGeometryEditing = true
                     )
                 }
 
@@ -72,7 +74,8 @@ object RcWorkspaceLayout {
                         RcProjectedWindow(
                             id = it.id,
                             bounds = RcRect.FULL,
-                            isActive = true
+                            isActive = true,
+                            allowsGeometryEditing = false
                         )
                     }
                 )

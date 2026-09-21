@@ -148,30 +148,40 @@ fun RcMdiHost(
                                                 }
                                             )
                                         }
-                                        .pointerInput(
-                                            projected.id,
-                                            window.mode,
-                                            hostWidthPx,
-                                            hostHeightPx
-                                        ) {
-                                            detectDragGestures {
-                                                    change,
-                                                    dragAmount ->
-                                                change.consume()
-                                                if (
-                                                    hostWidthPx > 0f &&
-                                                    hostHeightPx > 0f
+                                        .then(
+                                            if (
+                                                projected
+                                                    .allowsGeometryEditing
+                                            ) {
+                                                Modifier.pointerInput(
+                                                    projected.id,
+                                                    window.mode,
+                                                    hostWidthPx,
+                                                    hostHeightPx
                                                 ) {
-                                                    session.moveWindowBy(
-                                                        projected.id,
-                                                        dragAmount.x /
-                                                            hostWidthPx,
-                                                        dragAmount.y /
-                                                            hostHeightPx
-                                                    )
+                                                    detectDragGestures {
+                                                            change,
+                                                            dragAmount ->
+                                                        change.consume()
+                                                        if (
+                                                            hostWidthPx > 0f &&
+                                                            hostHeightPx > 0f
+                                                        ) {
+                                                            session
+                                                                .moveWindowBy(
+                                                                    projected.id,
+                                                                    dragAmount.x /
+                                                                        hostWidthPx,
+                                                                    dragAmount.y /
+                                                                        hostHeightPx
+                                                                )
+                                                        }
+                                                    }
                                                 }
+                                            } else {
+                                                Modifier
                                             }
-                                        }
+                                        )
                                         .padding(
                                             horizontal = 12.dp,
                                             vertical = 8.dp
@@ -261,7 +271,8 @@ fun RcMdiHost(
                         }
 
                         if (
-                            window.mode == RcWindowMode.NORMAL
+                            window.mode == RcWindowMode.NORMAL &&
+                            projected.allowsGeometryEditing
                         ) {
                             Box(
                                 modifier = Modifier

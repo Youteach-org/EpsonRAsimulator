@@ -63,4 +63,5 @@ Task 8: documentation/review/final exact-HEAD CI in progress.
 ### Final whole-branch review
 - Final review: self-review (no subagent tool; the installed review skill exposes no independent reviewer runtime in this harness).
 - Important finding: compact `RcMdiHost` reused desktop drag/resize interactions, so a full-screen compact projection could mutate stored desktop window geometry. Fix requires explicit projection metadata and UI gating; RED test published before production fix.
-- Final fix RED test commit: `fd193428a30f36e535cc90039edf6449e8dbff2e`; production remains unchanged at this checkpoint. GitHub did not emit a pull-request run for that SHA while CI #231 was still finishing, so this documentation-only checkpoint is used to obtain executable RED evidence.
+- Final fix RED test commit: `fd193428a30f36e535cc90039edf6449e8dbff2e`; Android CI #232 run `35566613276` failed in Unit tests exactly on missing `RcProjectedWindow.allowsGeometryEditing`. The following documentation-only checkpoint did not alter production behavior.
+- Final: fix in progress — compact projection now carries an explicit geometry-editing contract; MDI drag/resize will honor it. GREEN verification pending.
