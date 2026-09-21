@@ -5,20 +5,44 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceTools
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowId
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWorkspaceSession
 
-class RcProjectNavigationSession {
-    private val ranges =
-        linkedMapOf<RcWindowId, SourceRange>()
+data class RcProjectNavigationState(
+    val selectedNodeId: String? = null,
+    val ranges: Map<RcWindowId, SourceRange> = emptyMap()
+)
 
-    var selectedNodeId: String? = null
+class RcProjectNavigationSubscription(
+    private val cancelAction: () -> Unit
+) {
+    private var cancelled = false
+
+    fun cancel() {
+        if (!cancelled) {
+            cancelled = true
+            cancelAction()
+        }
+    }
+}
+
+class RcProjectNavigationSession {
+    private val listeners =
+        linkedSetOf<(RcProjectNavigationState) -> Unit>()
+
+    var state: RcProjectNavigationState =
+        RcProjectNavigationState()
         private set
 
+    val selectedNodeId: String?
+        get() = state.selectedNodeId
+
     fun select(nodeId: String?) {
-        selectedNodeId = nodeId
+        publishIfChanged(
+            state.copy(selectedNodeId = nodeId)
+        )
     }
 
     fun navigationRange(
         windowId: RcWindowId
-    ): SourceRange? = ranges[windowId]
+    ): SourceRange? = state.ranges[windowId]
 
     fun open(
         node: RcProjectNode,
@@ -58,6 +82,7 @@ class RcProjectNavigationSession {
             toolId = toolId
         )
 
+        val ranges = state.ranges.toMutableMap()
         if (
             node.kind == RcProjectNodeKind.FUNCTION &&
             node.sourceRange != null
@@ -66,7 +91,30 @@ class RcProjectNavigationSession {
         } else {
             ranges.remove(windowId)
         }
+        publishIfChanged(
+            state.copy(ranges = ranges.toMap())
+        )
 
         return windowId
+    }
+
+    fun subscribe(
+        listener: (RcProjectNavigationState) -> Unit
+    ): RcProjectNavigationSubscription {
+        listeners += listener
+        listener(state)
+        return RcProjectNavigationSubscription {
+            listeners -= listener
+        }
+    }
+
+    private fun publishIfChanged(
+        next: RcProjectNavigationState
+    ) {
+        if (next == state) {
+            return
+        }
+        state = next
+        listeners.toList().forEach { it(next) }
     }
 }

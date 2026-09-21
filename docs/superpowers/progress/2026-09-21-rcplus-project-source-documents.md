@@ -33,3 +33,6 @@
 - Task 2 compile fix: `641a450437c9871d35b495b7c09ce463b449d4e1` added the five `RcWorkspaceAction.Project*` objects that the first GREEN candidate's patch failed to insert; Android CI #255 / run `35624305721` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Task 2 is GREEN.
 - Task 3 Ruling: `RcProjectNavigationSession` must publish selection/range state changes — opening another function in an already-active source window can be a workspace no-op, so UI cannot depend on workspace publication to observe the new cursor target — cost if wrong: one small presentation-session subscription API can be removed later without changing project/runtime data.
 - Task 3 RED: controller/source integration tests prepared for selection vs Open, dynamic-window reuse, current/stale function navigation publication, global context descriptors, disabled mutation safety, exact source edit preservation, syntax-invalid retention, and source-window independence.
+
+- Task 3 RED: `4897b2c71e7d8b87ff4e4c4229bc2752785cf8f0`; Android CI #256 / run `35624756098` failed in Unit tests exactly on missing `RcProjectController`, `RcProjectNavigationState`, navigation subscription, and controller methods.
+- Task 3 controller GREEN candidate adds target-safe global-registry dispatch and observable presentation-only navigation state; project/source authority remains in ProjectRuntime.
