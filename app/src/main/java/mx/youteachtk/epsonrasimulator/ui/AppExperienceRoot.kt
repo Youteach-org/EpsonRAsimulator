@@ -51,6 +51,8 @@ fun AppExperienceRoot(
                 session.robotManagerSession,
             commandWindowSession =
                 session.commandWindowSession,
+            runWindowSession =
+                session.runWindowSession,
             onExit = session::clearExperience,
             modifier = modifier
         )

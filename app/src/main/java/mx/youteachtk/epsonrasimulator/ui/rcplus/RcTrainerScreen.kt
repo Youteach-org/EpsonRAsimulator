@@ -63,6 +63,9 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerProje
 import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerSession
 import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerSessionState
 import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.rememberRcRobotManagerState
+import mx.youteachtk.epsonrasimulator.ui.rcplus.run.RcRunCommandHandler
+import mx.youteachtk.epsonrasimulator.ui.rcplus.run.RcRunWindow
+import mx.youteachtk.epsonrasimulator.ui.rcplus.run.RcRunWindowSession
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowContent
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowKind
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowRouting
@@ -90,6 +93,7 @@ fun RcTrainerScreen(
     projectNavigationSession: RcProjectNavigationSession,
     robotManagerSession: RcRobotManagerSession,
     commandWindowSession: RcCommandWindowSession,
+    runWindowSession: RcRunWindowSession,
     onExit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -102,12 +106,31 @@ fun RcTrainerScreen(
         RcBuildDiagnosticNavigator(projectRuntime, localBuildRuntime, workspaceSession, projectNavigationSession)
     }
     val buildState = rememberLocalBuildState(localBuildRuntime)
-    val dispatcher = remember(workspaceSession, simulator.capabilities, buildHandler) {
+    val runHandler = remember(
+        projectRuntime,
+        localBuildRuntime,
+        workspaceSession
+    ) {
+        RcRunCommandHandler(
+            projectRuntime = projectRuntime,
+            buildRuntime = localBuildRuntime,
+            workspace = workspaceSession
+        )
+    }
+    val dispatcher = remember(
+        workspaceSession,
+        simulator.capabilities,
+        buildHandler,
+        runHandler
+    ) {
         RcTrainerCommandDispatcher(
             RcPlusWorkspaceCatalog.commandRegistry,
             simulator.capabilities,
             workspaceSession,
-            mapOf(RcPlusWorkspaceCommands.PROJECT_BUILD to buildHandler)
+            mapOf(
+                RcPlusWorkspaceCommands.PROJECT_BUILD to buildHandler,
+                RcPlusWorkspaceCommands.OPEN_RUN_WINDOW to runHandler
+            )
         )
     }
     val runtimeState = rememberRuntimeState(runtime)
@@ -257,6 +280,10 @@ fun RcTrainerScreen(
 
                                     commandGateway =
                                         commandGateway,
+
+
+                                    runWindowSession =
+                                        runWindowSession,
                                     modifier = contentModifier
                                 )
                             },
@@ -367,6 +394,10 @@ fun RcTrainerScreen(
 
                                 commandGateway =
                                     commandGateway,
+
+
+                                runWindowSession =
+                                    runWindowSession,
                                 modifier = contentModifier
                             )
                         },
@@ -605,6 +636,7 @@ private fun RcTrainerWindowContent(
     robotManagerController: RcRobotManagerController,
     commandWindowSession: RcCommandWindowSession,
     commandGateway: RcLocalSpelCommandGateway,
+    runWindowSession: RcRunWindowSession,
     modifier: Modifier = Modifier
 ) {
     val path = window.id.value.substringAfter(
@@ -627,6 +659,14 @@ private fun RcTrainerWindowContent(
             RcCommandWindow(
                 session = commandWindowSession,
                 gateway = commandGateway,
+                modifier = modifier
+            )
+
+        RcCoreWindowKind.RUN ->
+            RcRunWindow(
+                runtimeState = runtimeState,
+                session = runWindowSession,
+                controller = liveController,
                 modifier = modifier
             )
 

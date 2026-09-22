@@ -10,6 +10,7 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceCatalog
 import mx.youteachtk.epsonrasimulator.ui.rcplus.command.RcCommandWindowSession
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectNavigationSession
 import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerSession
+import mx.youteachtk.epsonrasimulator.ui.rcplus.run.RcRunWindowSession
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWorkspaceSession
 
 enum class AppExperience {
@@ -40,6 +41,9 @@ class AppSessionViewModel(
 
     val commandWindowSession =
         RcCommandWindowSession()
+
+    val runWindowSession =
+        RcRunWindowSession()
 
     var activeExperience: AppExperience? by mutableStateOf(null)
         private set
