@@ -48,3 +48,7 @@ Ruling: retain the user's tracked GitHub ledger while keeping temporary reports 
 
 - Task 2 RED: `4220e1a7bc33b1bcbb84aaebe6f6c3ad2daceedd`; Android CI #269 / run `35688490732` failed in Unit tests exactly on missing `RcRobotManagerController`, `RcRobotManagerResult` and `RcJogDirection`. Build/upload skipped. RED matches the plan.
 - Task 2 GREEN candidate adds deterministic robot snapshots, canonical robot selection, presentation-only training-step parsing, revolute-only canonical joint nudging and strict pre-dispatch limit/index validation. It does not map Reset/Home or Cartesian RC+ modes.
+
+- Task 2 complete: GREEN `d2ebfe3a25d6d879c639d3e630d8c6c062b1f599`; Android CI #270 / run `35688659814` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Task 2 RED->GREEN contract satisfied.
+- Task 3 ruling: the canonical point behavior is already implemented and TDD-covered in Phase 6B; Task 3 is a presentation-only extraction/reuse. Per the plan's no-fabricated-RED rule, add acceptance coverage first and require it GREEN before refactoring instead of writing a test designed to fail on an already-correct canonical behavior — cost if wrong: the new Compose wrapper itself is protected by compilation/integration rather than a JVM behavioral RED.
+- Task 3 acceptance coverage prepared for shared canonical point rows and byte-identical native `.pts` preservation across Robot Manager save/remove.
