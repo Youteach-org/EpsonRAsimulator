@@ -42,3 +42,6 @@ Ruling: retain the user's tracked GitHub ledger while keeping temporary reports 
 
 - Task 1 RED: `d31b51dbd89af2c6a708e95cb814dece3ebe199d`; Android CI #267 / run `35688164753` failed in Unit tests on the intended missing Robot Manager APIs (including unresolved `AppSessionViewModel.robotManagerSession`). Build/upload were skipped. RED matches the plan.
 - Task 1 GREEN candidate adds only the planned C4 page registry, presentation-only retained session, pure canonical runtime projection and ViewModel retention; no Compose body or runtime mutation API is added.
+
+- Task 1 complete: GREEN `3221746da40f174e61fab8407cebd0d83248f24f`; Android CI #268 / run `35688335065` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Task 1 RED->GREEN contract satisfied.
+- Task 2 RED prepared for same-active selection no-op, canonical future robot selection, session-only training-step validation, one-joint canonical nudges, strict boundary/index rejection and the preflight ruling that degree nudges reject PRISMATIC joints.
