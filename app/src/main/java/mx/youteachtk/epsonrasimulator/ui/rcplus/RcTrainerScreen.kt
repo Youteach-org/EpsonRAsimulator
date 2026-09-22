@@ -42,6 +42,9 @@ import mx.youteachtk.epsonrasimulator.adapters.SimulatorAdapter
 import mx.youteachtk.epsonrasimulator.project.ProjectRuntime
 import mx.youteachtk.epsonrasimulator.programming.build.LocalBuildRuntime
 import mx.youteachtk.epsonrasimulator.ui.rcplus.build.*
+import mx.youteachtk.epsonrasimulator.ui.rcplus.command.RcCommandWindow
+import mx.youteachtk.epsonrasimulator.ui.rcplus.command.RcCommandWindowSession
+import mx.youteachtk.epsonrasimulator.ui.rcplus.command.RcLocalSpelCommandGateway
 import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntime
 import mx.youteachtk.epsonrasimulator.ui.rememberRuntimeState
@@ -86,6 +89,7 @@ fun RcTrainerScreen(
     localBuildRuntime: LocalBuildRuntime,
     projectNavigationSession: RcProjectNavigationSession,
     robotManagerSession: RcRobotManagerSession,
+    commandWindowSession: RcCommandWindowSession,
     onExit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -120,6 +124,9 @@ fun RcTrainerScreen(
         )
     val liveController = remember(runtime) {
         RcLiveController(runtime)
+    }
+    val commandGateway = remember(runtime) {
+        RcLocalSpelCommandGateway(runtime)
     }
     val pointController = remember(runtime) {
         RcPointController(runtime)
@@ -244,6 +251,12 @@ fun RcTrainerScreen(
                                         robotManagerSession,
                                     robotManagerController =
                                         robotManagerController,
+
+                                    commandWindowSession =
+                                        commandWindowSession,
+
+                                    commandGateway =
+                                        commandGateway,
                                     modifier = contentModifier
                                 )
                             },
@@ -348,6 +361,12 @@ fun RcTrainerScreen(
                                     robotManagerSession,
                                 robotManagerController =
                                     robotManagerController,
+
+                                commandWindowSession =
+                                    commandWindowSession,
+
+                                commandGateway =
+                                    commandGateway,
                                 modifier = contentModifier
                             )
                         },
@@ -584,6 +603,8 @@ private fun RcTrainerWindowContent(
     robotManagerState: RcRobotManagerSessionState,
     robotManagerSession: RcRobotManagerSession,
     robotManagerController: RcRobotManagerController,
+    commandWindowSession: RcCommandWindowSession,
+    commandGateway: RcLocalSpelCommandGateway,
     modifier: Modifier = Modifier
 ) {
     val path = window.id.value.substringAfter(
@@ -599,6 +620,13 @@ private fun RcTrainerWindowContent(
                 toolId = window.toolId,
                 state = runtimeState,
                 controller = liveController,
+                modifier = modifier
+            )
+
+        RcCoreWindowKind.COMMAND ->
+            RcCommandWindow(
+                session = commandWindowSession,
+                gateway = commandGateway,
                 modifier = modifier
             )
 

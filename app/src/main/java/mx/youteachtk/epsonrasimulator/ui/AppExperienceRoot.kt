@@ -49,6 +49,8 @@ fun AppExperienceRoot(
                 session.projectNavigationSession,
             robotManagerSession =
                 session.robotManagerSession,
+            commandWindowSession =
+                session.commandWindowSession,
             onExit = session::clearExperience,
             modifier = modifier
         )

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeBundle
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
 import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceCatalog
+import mx.youteachtk.epsonrasimulator.ui.rcplus.command.RcCommandWindowSession
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectNavigationSession
 import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerSession
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWorkspaceSession
@@ -36,6 +37,9 @@ class AppSessionViewModel(
 
     val robotManagerSession =
         RcRobotManagerSession()
+
+    val commandWindowSession =
+        RcCommandWindowSession()
 
     var activeExperience: AppExperience? by mutableStateOf(null)
         private set
