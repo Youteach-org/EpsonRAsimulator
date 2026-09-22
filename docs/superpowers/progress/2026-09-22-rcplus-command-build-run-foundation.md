@@ -47,3 +47,14 @@
 - GREEN: 830ac5a80d1c57b98e7128d93a3bf21e18376c27; 303 local tests PASS. Android CI #281/run35764322342 Unit tests, APK build and upload SUCCESS.
 - One dispatcher now handles menu, toolbar and keyboard; exact Ctrl+M and preserved F6; capabilities, disabled handlers and targetless commands tested.
 - Task 3 RED observed locally: missing PROJECT_BUILD, build handler and diagnostic navigator.
+
+## Task 3: complete — quota handoff
+- RED: 2230d5d24c1811080ee8675fe6bf5c2104154291; local missing PROJECT_BUILD/handler/navigator confirmed before implementation.
+- GREEN: c4d56dc0a49db2931ab577fc0fa89462280f941a; 306 local tests PASS. Exact-head Android CI #283/run35764993694 Unit tests, Build debug APK and Upload debug APK SUCCESS.
+- Build now uses the global command registry (Project > Build, Ctrl+B), remains disabled without a project and rejects direct workspace dispatch. Status observes both project/build state, reports stale results, and opens current diagnostic source ranges through one navigator. Desktop and compact surfaces share it.
+- Ruling: add canOpen to the diagnostic navigator so button/double-click enablement shares the same current-range validation as execution. Cost: one extra public query beyond the plan interface; avoids UI/handler drift.
+- Next exact step: Task 4 RED — functional Command Window Print-literal subset. Then Task 5 Run Window and Task 6 acceptance/docs/final independent review. User approval already granted; continue without another plan gate.
+- Preserve exact source bytes and canonical SharedRuntime; no compiler/source mapper/hardware bridge. Keep all stacked PRs Draft/unmerged; Issue #7 untouched.
+- Device/emulator smoke UNVERIFIED. Final independent whole-branch review has not happened because Tasks 4–6 remain.
+- Local worktree work/EpsonRAsimulator-phase6d; local implementation HEAD31e645a (different snapshot ancestry from remote). Publish only intended file contents on the latest verified remote parent; never push the snapshot ancestry, force-update, or resume stale 6C worktrees.
+- Local runner work/run-phase6d-tests.ps1 excludes the two Android ViewModel test classes; Android CI is the full-suite/build authority. Source packages named build require git add -f due to the existing ignore rule.
