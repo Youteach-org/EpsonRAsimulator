@@ -159,4 +159,18 @@ class AdapterRegistryTest {
         )
     }
 
+    @Test
+    fun rcPlusVisualSourceLanguageProvidesVisualProgrammingSupport() {
+        val registry = AdapterRegistry(
+            simulators = listOf(mx.youteachtk.epsonrasimulator.adapters.rcplus.RcPlus7SimulatorAdapter),
+            languages = listOf(mx.youteachtk.epsonrasimulator.adapters.rcplus.SpelPlusLanguageAdapter),
+            projectFormats = listOf(mx.youteachtk.epsonrasimulator.adapters.rcplus.RcPlusProjectFormatAdapter)
+        )
+
+        val adapter = registry.visualSourceLanguageFor(
+            SimulatorAdapterId("epson-rcplus-7.5.3")
+        )
+
+        assertEquals("epson-spel-plus", adapter.id.value)
+    }
 }
