@@ -58,3 +58,7 @@
 - Device/emulator smoke UNVERIFIED. Final independent whole-branch review has not happened because Tasks 4–6 remain.
 - Local worktree work/EpsonRAsimulator-phase6d; local implementation HEAD31e645a (different snapshot ancestry from remote). Publish only intended file contents on the latest verified remote parent; never push the snapshot ancestry, force-update, or resume stale 6C worktrees.
 - Local runner work/run-phase6d-tests.ps1 excludes the two Android ViewModel test classes; Android CI is the full-suite/build authority. Source packages named build require git add -f due to the existing ignore rule.
+
+- Resume verified from durable handoff: Tasks 1–3 are complete; remote HEAD before Task 4 was `0dac3acb5a101c2e8378fe0533ecbf9086b3ac66`, CI #284 / run `35765336557` SUCCESS.
+- Task 4 RED prepared first, before production code: Print literal/no-arg/finite-number subset, unsupported-command trainer rejection with zero SharedRuntime publication, transcript prompt/output/error + recall, one publication per explicit submit, and retained command-window session across experience switches/clear.
+- Task 4 research boundary recorded before production code: Phase 6D intentionally narrows documented SPEL+ Print to a literal-only Local Simulation subset and uses product trainer rejection codes rather than Epson controller error numbers.

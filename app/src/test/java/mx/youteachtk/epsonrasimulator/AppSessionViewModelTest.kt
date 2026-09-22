@@ -324,4 +324,36 @@ class AppSessionViewModelTest {
         )
     }
 
+
+    @Test
+    fun commandWindowSessionIsRetainedAcrossExperienceSwitchesAndClear() {
+        val session = AppSessionViewModel(
+            initialBundle = AppRuntimeFactory.createDefault()
+        )
+        val commandWindowBefore =
+            session.commandWindowSession
+
+        session.selectExperience(
+            AppExperience.RCPLUS_TRAINER
+        )
+        session.selectExperience(
+            AppExperience.VISUAL_LAB
+        )
+        session.selectExperience(
+            AppExperience.RCPLUS_TRAINER
+        )
+
+        assertSame(
+            commandWindowBefore,
+            session.commandWindowSession
+        )
+
+        session.clearExperience()
+
+        assertSame(
+            commandWindowBefore,
+            session.commandWindowSession
+        )
+    }
+
 }
