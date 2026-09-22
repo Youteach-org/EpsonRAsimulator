@@ -1,6 +1,5 @@
 package mx.youteachtk.epsonrasimulator.ui.visual.programming
 
-import mx.youteachtk.epsonrasimulator.adapters.visualSourceLanguageFor
 import mx.youteachtk.epsonrasimulator.programming.visual.VisualProgramProjectionStatus
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
 import org.junit.Assert.assertArrayEquals
@@ -235,3 +234,4 @@ class VisualProgrammingControllerTest {
         )
     }
 }
+
