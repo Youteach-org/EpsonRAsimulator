@@ -90,6 +90,18 @@ Phase 6B intentionally does not add source execution, native Build/Run, Android 
 
 Next Core RC+ Windows block: **6D — Command Window + verified supported Build/Run subset**. Full Cartesian Robot Manager motion, controller/safety state, native `.pts` editing, durable persistence, bridge/digital-twin/hardware behavior, and C4 self-collision Issue #7 remain future work.
 
+## Core RC+ Windows 6D — Command Window + Training Build/Run implemented
+- Training Build performs local source validation only and keeps exact source/resource bytes intact; it does not claim Epson compilation, linking or controller transfer;
+- Build status distinguishes never-built, current success, current failure and stale results, and diagnostic navigation rejects stale ranges;
+- Command Window supports only the bounded Local Simulation `Print` literal/no-argument subset and honestly rejects unsupported commands without changing canonical runtime state;
+- Run Window is gated by a successful Training Build and controls only canonical tasks already loaded into `TaskRuntime`;
+- F5 Run, Ctrl+B Build, Ctrl+M Command Window and F6 Robot Manager share the global command registry;
+- RC+ Trainer and Visual Lab retain the same `SharedRuntime`, workspace, build runtime and Command/Run presentation sessions.
+
+No source-to-task mapper, native Epson Build/Run semantics, bridge/hardware path, durable file-picker persistence, Rebuild/Operator/debug semantics, or C4 self-collision work is included in 6D.
+
+**Next shared-runtime sequence item: Phase 7 — Visual Lab Migration + Shared Programming View.** This phase will provide the verified shared programming path needed before source can become neutral runnable tasks.
+
 ## Phase 0 — Foundation
 - repository;
 - architecture;

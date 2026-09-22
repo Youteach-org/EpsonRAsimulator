@@ -130,6 +130,18 @@ Phase 6C replaces the structural Robot Manager shell with a verified C4-class le
 
 Phase 6C deliberately does **not** map `RuntimeCommand.ResetJoints` to RC+ Reset/Home, map the physical gripper `ToolRuntime` to RC+ Tools, expose fake motor/power/safety state, or claim verified Cartesian RC+ jogging. Command Window execution and the verified supported Build/Run subset remain Phase 6D. Digital Twin/bridge behavior, physical hardware control, durable persistence, full Cartesian Robot Manager semantics, and C4 self-collision Issue #7 remain deferred.
 
+## Core RC+ Windows 6D — Command Window + Training Build/Run
+
+Phase 6D adds a deliberately bounded local training workflow without claiming Epson-native compilation, linking, controller transfer, or execution fidelity:
+
+- **Training Build** is local source validation over the retained `ProjectRuntime`; it reports current success/failure/stale status and preserves exact source/resource bytes. It is not Epson RC+ Build.
+- **Command Window** executes only the Phase 6D Local Simulation subset: `Print` with no argument, one simple quoted literal, or one finite numeric literal. Unsupported commands reject with trainer code `TRN-CMD-001` and do not mutate `SharedRuntime`.
+- **Run Window** is build-gated and controls only canonical tasks that already exist in the shared `TaskRuntime`. Its selection stores only a `TaskId`, and task state/control remain owned by `SharedRuntime` through the existing `RcLiveController` / `RcLiveProjection`.
+- F5 Run, Ctrl+B Build, Ctrl+M Command Window, and F6 Robot Manager resolve through the same global RC+ command registry.
+- Current build diagnostics navigate only while their build fingerprint is current; stale diagnostics do not navigate as current errors.
+
+Phase 6D does **not** add a SPEL+ source-to-task mapper, native compiler/linker/controller transfer, Rebuild/Operator/debug semantics, disk persistence/file picking, bridge/digital-twin transport, or physical hardware control. Source-to-neutral-task mapping and the shared programming view remain the next shared-runtime implementation sequence.
+
 ## Layering
 
 ### UI

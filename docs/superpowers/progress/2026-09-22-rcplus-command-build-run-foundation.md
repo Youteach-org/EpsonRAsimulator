@@ -80,3 +80,15 @@
 - Exact-head Android CI #291 / run `35774906456` SUCCESS: Unit tests, Build debug APK and Upload debug APK all passed.
 - No source-to-task mapping, native Epson Build/Run, second task authority, bridge or hardware path was added.
 - Task 6 starts with acceptance coverage over the already implemented behavior; per plan, acceptance that already passes is not given an artificial RED.
+
+
+## Task 6: acceptance + final review + documentation
+- Acceptance head: `e4aee303d8d9c00ae61f8597760b9c1225196b9b`; cross-window acceptance covers Build success -> STALE -> syntax failure with exact bytes, current-only diagnostic navigation, retained Command Window transcript with zero runtime mutation, F5 build gating/singleton Run Window, canonical TaskRuntime control, invalid-F5 focus preservation, and retained singleton services.
+- Exact-head Android CI #292 / run `35775339901` SUCCESS: Unit tests, Build debug APK and Upload debug APK all passed.
+- Whole-branch review range: exact Phase 6C base `015f63694e5c581e10e194c87e74a09ef601a1d4` through acceptance head `e4aee303d8d9c00ae61f8597760b9c1225196b9b`.
+- Final review: self-review (no subagent tool). No Critical, Important, or Minor findings identified in the Phase 6D review focus.
+- Review boundaries verified: no source-to-task mapper; no native compiler/linker/controller-transfer claim; no Rebuild/Operator/debug semantics; unsupported Command Window commands do not mutate runtime; no Epson controller error numbers; no second task/project/command authority; no disk persistence/file-picker; no bridge/hardware path.
+- `app/build.gradle.kts` is unchanged from Phase 6C and SceneView remains pinned to `4.35.0`. Issue #7 was not modified.
+- Ruling carried forward: `RcBuildDiagnosticNavigator.canOpen` remains the shared enablement/execution guard for current diagnostic ranges. Cost if wrong: one additional public query surface, but it prevents stale UI/controller drift.
+- Device/emulator smoke UNVERIFIED in this GitHub-only harness; CI proves JVM behavior, Android compilation, debug APK creation and artifact upload only.
+- Documentation records Training Build as local validation, the bounded Print subset, honest rejection, canonical TaskRuntime Run control, and Phase 7 — Visual Lab Migration + Shared Programming View as the next sequence item.
