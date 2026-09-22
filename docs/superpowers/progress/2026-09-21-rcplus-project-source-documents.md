@@ -55,3 +55,36 @@
 - Task 5 acceptance tests prepared for full five-resource Project Explorer projection, source-only byte round-trip, independent same-basename document windows/ranges across compact projection, and retained project/source/point/window state across RC+ Trainer <-> Visual Lab.
 
 - Task 5 acceptance CI #263 / run `35659768848` exposed a test-construction bug, not a product failure: FUNCTION nodes intentionally share their source file path, so the test's `associateBy(path)` replaced resource nodes with function nodes. Acceptance indexing was corrected to exclude FUNCTION nodes; no production code changed.
+
+
+## Task 5 acceptance and whole-branch review — 2026-09-21
+- Task 5 corrected acceptance head: `fa17b25db2c609dbd3fd3ccd9e7ec9ecb627e6c5`.
+- Android CI #264 / run `35660009722` SUCCESS on that head: Unit tests SUCCESS, Build debug APK SUCCESS, Upload debug APK SUCCESS.
+- CI #263 / run `35659768848` was not a product failure: the acceptance test incorrectly used `associateBy(path)` over FUNCTION and resource nodes sharing a path. Commit `fa17b25...` changed only the test indexing to exclude FUNCTION nodes; no production code changed.
+- Task 5 acceptance covers: exact five-resource Project Explorer projection, source-only native-byte round-trip, same-basename independent document IDs/ranges through compact projection, and retention of ProjectRuntime/SharedRuntime/workspace/navigation/source/point state across RC+ Trainer -> Visual Lab -> RC+ Trainer.
+
+### Whole-branch review
+- Review range: Phase 6A verified base `d054742b7a4e619d0963de1627cc0014ab9c86ed` through Phase 6B acceptance head `fa17b25db2c609dbd3fd3ccd9e7ec9ecb627e6c5`.
+- Final review method: inline self-review because no independent reviewer/subagent runtime is available in this harness. This must not be described as an independent review.
+- Critical findings: none.
+- Important findings: none established.
+- Device/emulator gesture smoke: UNVERIFIED in this GitHub-only harness. CI proves JVM behavior, Android compilation, debug APK creation and artifact upload; it does not prove physical touch/mouse/rotation behavior.
+- Native `.pts` boundary verified: `RcPointController` dispatches only existing `SharedRuntime` teach-point commands; ProjectRuntime never parses/serializes `.pts`; preservation tests assert byte-identical export before/after Local Simulation save/remove.
+- Source execution boundary verified: the Phase 6B diff adds project/source presentation and preservation services only; it does not modify TaskRuntime/SimulationCoordinator or add a source->task execution/build path.
+- Point authority verified: no second point map exists in ProjectRuntime or UI; point rows read `SharedRuntime.state.teachPoints`.
+- Command authority verified: Phase 6B extends the existing `RcPlusWorkspaceCatalog.commandRegistry`; no second production `RcCommandRegistry` was added.
+- Dependency/version boundary verified: `app/build.gradle.kts` has the identical blob SHA `62cc0b600dfd9ad36dc8a35c76f255c8ce67bf89` at the Phase 6A base and Phase 6B acceptance head; SceneView remains `4.35.0`.
+- Strict source-decoding boundary verified: `ProjectRuntime` uses a UTF-8 `CharsetDecoder` with `CodingErrorAction.REPORT`; invalid UTF-8 resources have no editable ProgramDocument and retain original bytes.
+- Preserved/opaque round-trip verified by implementation defensive copies plus Task 1/Task 5 byte-equality tests.
+- Syntax-invalid navigation safety verified: last-valid function names may be shown, but stale nodes carry `sourceRange=null` and opening them clears the navigation jump instead of using stale offsets.
+- Dynamic-window identity verified: source/points/resource namespaces plus exact path prevent kind collisions; same-basename resources in different folders retain distinct window IDs/ranges.
+- Local Simulation boundary: current `SharedRuntime` constructor and `SetConnectionMode` both reject non-`LOCAL_SIMULATION` executable state in this phase, so point editing cannot execute in Digital Twin/Real Hardware under the present runtime invariant.
+- Deferred/nonblocking: physical mouse/touch gesture smoke and Android rotation smoke remain unverified; process-death/disk persistence/import remains a later phase; C4 self-collision remains Issue #7.
+
+### Phase 6B task completion
+- Task 1: RED `d4bac3ec27d84f1693727cf32ab2bf843f84aa78` / CI #251 expected failure; GREEN `35a0899fa59cb7d60ce6aa5d09f94135f798f019` / CI #252 SUCCESS.
+- Task 2: RED `28cf77a5fad65349f316c5b537030d3c43367e3f` / CI #253 expected failure; initial candidate `e31370c...` exposed missing Project action objects in CI #254; fix `641a450437c9871d35b495b7c09ce463b449d4e1` / CI #255 SUCCESS.
+- Task 3: RED `4897b2c71e7d8b87ff4e4c4229bc2752785cf8f0` / CI #256 expected failure; controller GREEN `46bc8718fe265f16e51afdf098e6b4b263bbf7c4` / CI #257 SUCCESS; UI RED `52b71470e3c0b5fec2e8ffd01d9cef5de4d3839d` / CI #258 expected failure; compile correction chain through final Task 3 head `99b709c5749f279f68e8aeba2f6c4e2137812b8f` / CI #260 SUCCESS.
+- Task 4: RED `19e224f790f178fd4c884c09f776abc43b5fcd58` / CI #261 expected failure; GREEN `6c4ea197698d2725cb0c6367e6c770b6b3122744` / CI #262 SUCCESS.
+- Task 5 acceptance: CI #263 exposed only a test-construction bug; corrected acceptance head `fa17b25db2c609dbd3fd3ccd9e7ec9ecb627e6c5` / CI #264 SUCCESS.
+- Final exact-head gate: after the documentation-only checkpoint created from this review, require one fresh Android CI run with Unit tests + Build debug APK + Upload debug APK all SUCCESS. Then add the final Draft checkpoint comment to PR #13 without moving the branch again.

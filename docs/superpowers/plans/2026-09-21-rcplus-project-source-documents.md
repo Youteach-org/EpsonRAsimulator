@@ -1,5 +1,7 @@
 # RC+ Project Explorer + Source/Point Documents 6B — Implementation Plan
 
+**Execution status:** Tasks 1–5 implemented and acceptance-verified; final documentation-only exact-head CI pending. PR #13 remains Draft and must not be merged without explicit user instruction.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make RC+ Trainer's Project Explorer display a canonical native-project tree, open source and point documents in dynamic MDI child windows, preserve native bytes safely, and edit source/canonical Local Simulation points without creating a second project or point authority.

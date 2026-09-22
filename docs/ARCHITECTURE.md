@@ -99,6 +99,22 @@ Phase 6A remains **Local Simulation only**. It does not claim native Epson RC+ I
 
 Still pending under Core RC+ Windows are Project Explorer/source/point documents (6B), Robot Manager functional pages (6C), and Command Window plus supported Build/Run foundations (6D). Durable process-death workspace persistence, digital-twin/bridge integration, physical control, and C4 self-collision Issue #7 also remain outside this delivery.
 
+## Implemented Core RC+ Windows 6B — Project Explorer and source/point documents
+
+Phase 6B adds a retained canonical native-project service plus functional RC+ Trainer project/source/point presentation without creating a second robot, point, task, I/O, command, or project authority:
+
+- `AppRuntimeBundle` now retains one neutral `ProjectRuntime` beside the canonical `SharedRuntime`; it owns the imported native resource set and source-document sessions, while `SharedRuntime` remains authoritative for teach points and simulation state;
+- editable `.prg` / `.inc` resources are exposed only after strict UTF-8 decoding with malformed/unmappable input rejected; invalid UTF-8 source bytes remain preserved and non-editable instead of replacement-decoding;
+- source editing remains source-preserving: exact text, comments, trivia, unsupported Direct Code and syntax-invalid edits remain exportable, while the last valid semantic model stays available only for safe presentation;
+- untouched preserved and opaque resources export byte-for-byte unchanged; `.pts` remains `NativeKnownPreserved` and is never parsed, regenerated or rewritten by the point editor;
+- Project Explorer projects one sorted resource/folder/function tree from `ProjectRuntimeState`; current semantic function ranges may be navigated, while syntax-invalid last-valid function names are marked stale and intentionally carry no jump range;
+- the existing global `RcCommandRegistry` now also owns the verified context labels `New...`, `Open`, `Rename...`, `Remove`, and `Delete`; only Open is implemented in 6B, while destructive/unverified mutations remain disabled;
+- source, point and preserved-resource documents use namespace-separated dynamic MDI IDs over the existing `RcWindowManagerState`, so same-basename resources in different paths remain independent and reopening the same exact path focuses the same window;
+- source documents edit the canonical `ProjectRuntime`; point documents edit only canonical Local Simulation teach points through existing `SharedRuntime` commands and visibly state that native `.pts` bytes are preserved;
+- `AppSessionViewModel` retains the same project runtime, navigation session, workspace session and shared runtime across RC+ Trainer / Visual Lab switching and Activity configuration retention.
+
+Phase 6B does **not** execute source, translate source into TaskRuntime, implement native RC+ Build/Run, parse or serialize `.pts`, import projects from Android storage, persist projects/windows across process death, bridge to RC+, or control physical hardware. Robot Manager functional pages remain Phase 6C; Command Window and the verified supported Build/Run subset remain Phase 6D. C4 self-collision remains separate Issue #7.
+
 ## Layering
 
 ### UI
