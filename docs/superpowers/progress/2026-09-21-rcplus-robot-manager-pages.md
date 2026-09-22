@@ -55,3 +55,6 @@ Ruling: retain the user's tracked GitHub ledger while keeping temporary reports 
 
 - Task 3 acceptance baseline: `562b452a6967e0f9340198befd2aebcf96c518fc`; Android CI #271 / run `35688864165` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Existing canonical point behavior and `.pts` preservation are green before refactor.
 - Task 3 refactor candidate extracts `RcPointEditorContent` and adds a Robot Manager Points wrapper over the same `RcPointController`/SharedRuntime rows. RX/RY/RZ remain Local Simulation labels; no unverified U/V/W or native `.pts` semantics introduced.
+
+- Task 3 complete: refactor head `076cfa3c9f991b3c670fab5345260770647ebff2`; Android CI #272 / run `35689098028` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Shared editor compiles over unchanged canonical point semantics.
+- Task 4 RED prepared: Robot Manager must route to a dedicated `ROBOT_MANAGER` window kind instead of STRUCTURAL, while singleton F6/open/minimize/restore/experience switching preserves the retained Robot Manager session and selected page.

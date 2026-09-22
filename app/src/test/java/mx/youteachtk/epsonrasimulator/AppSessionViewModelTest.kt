@@ -13,6 +13,7 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcPointController
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectController
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectExplorerProjection
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectNavigationSession
+import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerPageId
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcControlResult
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcIoDirection
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcLiveController
@@ -268,6 +269,58 @@ class AppSessionViewModelTest {
         assertSame(
             robotManagerBefore,
             session.robotManagerSession
+        )
+    }
+
+
+    @Test
+    fun robotManagerPageSurvivesSingletonReopenMinimizeRestoreAndExperienceSwitch() {
+        val session = AppSessionViewModel(
+            initialBundle = AppRuntimeFactory.createDefault()
+        )
+        val robotManagerBefore =
+            session.robotManagerSession
+
+        robotManagerBefore.selectPage(
+            RcRobotManagerPageId.JOG_TEACH
+        )
+        session.workspaceSession.dispatch(
+            RcPlusWorkspaceCommands.OPEN_ROBOT_MANAGER
+        )
+        val windowId = requireNotNull(
+            session.workspaceSession.state.activeWindowId
+        )
+        session.workspaceSession.minimizeWindow(windowId)
+        session.workspaceSession.restoreWindow(windowId)
+        session.workspaceSession.dispatch(
+            RcPlusWorkspaceCommands.OPEN_ROBOT_MANAGER
+        )
+
+        session.selectExperience(
+            AppExperience.RCPLUS_TRAINER
+        )
+        session.selectExperience(
+            AppExperience.VISUAL_LAB
+        )
+        session.selectExperience(
+            AppExperience.RCPLUS_TRAINER
+        )
+
+        assertSame(
+            robotManagerBefore,
+            session.robotManagerSession
+        )
+        assertEquals(
+            RcRobotManagerPageId.JOG_TEACH,
+            session.robotManagerSession.state.selectedPage
+        )
+        assertEquals(
+            1,
+            session.workspaceSession.state.windows.size
+        )
+        assertEquals(
+            windowId,
+            session.workspaceSession.state.activeWindowId
         )
     }
 

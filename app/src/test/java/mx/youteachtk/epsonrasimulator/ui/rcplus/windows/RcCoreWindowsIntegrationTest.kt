@@ -86,7 +86,7 @@ class RcCoreWindowsIntegrationTest {
             )
         )
         assertEquals(
-            RcCoreWindowKind.STRUCTURAL,
+            RcCoreWindowKind.ROBOT_MANAGER,
             RcCoreWindowRouting.kind(
                 RcPlusWorkspaceTools.ROBOT_MANAGER
             )
