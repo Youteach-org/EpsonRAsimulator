@@ -35,3 +35,7 @@ Ruling: RobotRegistry.definitions is a member returning insertion-order snapshot
 Ruling: training-degree nudges reject non-revolute joints — avoids wrong units for future robots — cost if wrong: prismatic training awaits a separately named distance control.
 Ruling: retain the user's tracked GitHub ledger while keeping temporary reports in the skill's plan-specific workspace — durable cross-harness recovery takes precedence — cost if wrong: duplicate scratch/tracked records must stay synchronized.
 
+
+- Resume checkpoint: PR #14 is Draft/open at `ed0f52c98736bffa1e74a8263fc54436fb45b201`; Android CI #266 / run `35683172745` SUCCESS, but the branch contains only plan/preflight docs and no 6C production code.
+- Harness ruling: this session has GitHub connector execution but no materialized repository/worktree runner, so Superpowers task-start/task-done scripts cannot be executed locally. Preserve their TDD/completion semantics through GitHub test-only RED commits, Android CI evidence, GREEN commits, full-suite CI, and this canonical tracked ledger — cost if wrong: local scratch workspace metadata is absent, but durable Git history/CI/ledger remains authoritative.
+- Task 1 RED prepared: registry/order/status, pure projection, retained session validation/publication, and AppSessionViewModel retention tests. Production change that makes them pass: add the planned Robot Manager models/registry/session/projection and retained ViewModel service.

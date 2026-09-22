@@ -239,4 +239,36 @@ class AppSessionViewModelTest {
         )
     }
 
+
+    @Test
+    fun robotManagerSessionIsRetainedAcrossExperienceSwitchesAndClear() {
+        val session = AppSessionViewModel(
+            initialBundle = AppRuntimeFactory.createDefault()
+        )
+        val robotManagerBefore =
+            session.robotManagerSession
+
+        session.selectExperience(
+            AppExperience.RCPLUS_TRAINER
+        )
+        session.selectExperience(
+            AppExperience.VISUAL_LAB
+        )
+        session.selectExperience(
+            AppExperience.RCPLUS_TRAINER
+        )
+
+        assertSame(
+            robotManagerBefore,
+            session.robotManagerSession
+        )
+
+        session.clearExperience()
+
+        assertSame(
+            robotManagerBefore,
+            session.robotManagerSession
+        )
+    }
+
 }
