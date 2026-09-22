@@ -45,3 +45,6 @@ Ruling: retain the user's tracked GitHub ledger while keeping temporary reports 
 
 - Task 1 complete: GREEN `3221746da40f174e61fab8407cebd0d83248f24f`; Android CI #268 / run `35688335065` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Task 1 RED->GREEN contract satisfied.
 - Task 2 RED prepared for same-active selection no-op, canonical future robot selection, session-only training-step validation, one-joint canonical nudges, strict boundary/index rejection and the preflight ruling that degree nudges reject PRISMATIC joints.
+
+- Task 2 RED: `4220e1a7bc33b1bcbb84aaebe6f6c3ad2daceedd`; Android CI #269 / run `35688490732` failed in Unit tests exactly on missing `RcRobotManagerController`, `RcRobotManagerResult` and `RcJogDirection`. Build/upload skipped. RED matches the plan.
+- Task 2 GREEN candidate adds deterministic robot snapshots, canonical robot selection, presentation-only training-step parsing, revolute-only canonical joint nudging and strict pre-dispatch limit/index validation. It does not map Reset/Home or Cartesian RC+ modes.
