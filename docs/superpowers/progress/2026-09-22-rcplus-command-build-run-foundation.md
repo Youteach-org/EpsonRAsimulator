@@ -25,3 +25,13 @@
 - Compatibility search found no additional manual AppRuntimeBundle/RcTrainerScreen/RcRuntimeStatus construction sites requiring a separate migration rule; implementation must still rely on compiler/CI for authoritative call-site detection.
 - No Phase 6D production code or test has been implemented yet.
 - Next gate: user approval of the detailed 6D plan. After approval, open stacked Draft PR #15 against `feature/rcplus-robot-manager-pages`, then begin Task 1 with a test-only RED commit.
+
+## Approved execution — 2026-09-22
+- User explicitly approved Phase 6D. Draft PR #15 opened against Phase 6C.
+- Native/inline execution preserved; final independent branch review required.
+- Remote starting HEAD: 08b35f03e1fac873fb808b29d1ac6da98595391c.
+- Isolated local worktree: work/EpsonRAsimulator-phase6d, snapshot commit 4aab52c; snapshot history is never pushed. Connector publication creates commits on the real remote parent and checks HEAD before writes.
+- Ruling: reuse the existing manual worktree setup because the task cwd is outside the nested repository and native task worktree tooling cannot select that repository. Cost: local worktree is managed through git rather than the app.
+- Preflight: Task 1 neutral build models consume ProjectRuntime exact bytes; Task 2 dispatcher routes the existing registry; Task 3 build/status consumes Task 1/2; Task 4 console remains presentation-only; Task 5 Run consumes Task 1/2 and existing RcLiveController; Task 6 verifies cross-window retention. No additional runtime authority or dependency is introduced.
+- Local runner adaptation: exclude RcRobotManagerAcceptanceTest alongside AppSessionViewModelTest because both require the Android ViewModel excluded by this pure-JVM runner. Full Android CI remains mandatory. The initial local harness failure was unresolved ViewModel imports, not a production regression.
+- Task 1 started: six tests cover attempt publication/cancellation, sorted fingerprint, invalid bytes/current syntax, preserved Direct Code, stale results and malformed-byte fingerprinting. Production implementation not started.
