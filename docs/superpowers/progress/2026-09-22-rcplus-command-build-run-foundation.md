@@ -62,3 +62,12 @@
 - Resume verified from durable handoff: Tasks 1–3 are complete; remote HEAD before Task 4 was `0dac3acb5a101c2e8378fe0533ecbf9086b3ac66`, CI #284 / run `35765336557` SUCCESS.
 - Task 4 RED prepared first, before production code: Print literal/no-arg/finite-number subset, unsupported-command trainer rejection with zero SharedRuntime publication, transcript prompt/output/error + recall, one publication per explicit submit, and retained command-window session across experience switches/clear.
 - Task 4 research boundary recorded before production code: Phase 6D intentionally narrows documented SPEL+ Print to a literal-only Local Simulation subset and uses product trainer rejection codes rather than Epson controller error numbers.
+
+
+## Task 4: complete
+- RED: `9680e2c3c15e3494aff413bdfc34439ef43149f1`; Android CI #285 failed as intended because the Command Window production contracts did not yet exist.
+- GREEN implementation: `46f72365e09bf0fc4013905f8a239a73594af367`; strict case-insensitive Print/no-arg/string-literal/finite-number subset, retained prompt/output/error transcript, Recall, retained AppSession session, dedicated Command Window routing/body, and zero SharedRuntime dispatch from the command gateway.
+- GREEN fix 1: `47f80a0e83297a75b8199858621e3a07c25fe2d5`; CI #286 exposed one exhaustive routing compile omission, fixed without semantic expansion.
+- GREEN fix 2 / final Task 4 head: `34b9fe152a3bfb41fa13ed17a7f5cf53ef996a9e`; CI #287 exposed one legacy test still expecting structural Command Window routing, then CI #288 / run `35769364403` passed Unit tests, Build debug APK and Upload debug APK.
+- Task 4 boundary remains explicit: unsupported commands return trainer code `TRN-CMD-001`; no Epson controller error numbers, motion, variables or general expression evaluation are claimed.
+- Task 5 RED starts next: F5/Run Window registry, Training Build gate, singleton Run child, TaskId-only selection reconciliation, and canonical RcLiveController task control.

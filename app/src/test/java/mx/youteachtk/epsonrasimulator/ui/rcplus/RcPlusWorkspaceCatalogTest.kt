@@ -5,6 +5,7 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcMenuSection
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcShortcut
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcShortcutKey
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWorkspaceAction
+import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcToolSurface
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -43,6 +44,7 @@ class RcPlusWorkspaceCatalogTest {
                 "Command Window",
                 "I/O Monitor",
                 "Task Manager",
+                "Run Window",
                 "Status",
                 "Source Document",
                 "Point Document",
@@ -101,4 +103,91 @@ class RcPlusWorkspaceCatalogTest {
         assertTrue(commandIds.none { it in normalMenuIds })
     }
 
+
+    @Test
+    fun runWindowUsesVerifiedF5AndGlobalRegistries() {
+        val capabilities =
+            RcPlus7SimulatorAdapter.capabilities
+        val descriptor =
+            RcPlusWorkspaceCatalog.commandRegistry
+                .descriptor(
+                    RcPlusWorkspaceCommands.OPEN_RUN_WINDOW
+                )
+
+        assertEquals("Run Window", descriptor.label)
+        assertEquals(
+            RcMenuSection.RUN,
+            descriptor.menuSection
+        )
+        assertEquals(
+            RcShortcut(RcShortcutKey.F5),
+            descriptor.shortcut
+        )
+        assertEquals(
+            RcWorkspaceAction.OpenRunWindow,
+            descriptor.action
+        )
+
+        val tool =
+            RcPlusWorkspaceCatalog.toolRegistry
+                .descriptor(
+                    RcPlusWorkspaceTools.RUN_WINDOW
+                )
+        assertEquals("Run Window", tool.title)
+        assertEquals(
+            RcToolSurface.CHILD_WINDOW,
+            tool.surface
+        )
+
+        val registry =
+            RcPlusWorkspaceCatalog.commandRegistry
+        assertEquals(
+            RcPlusWorkspaceCommands.OPEN_RUN_WINDOW,
+            registry.commandFor(
+                RcShortcut(RcShortcutKey.F5),
+                capabilities
+            )?.id
+        )
+        assertEquals(
+            RcPlusWorkspaceCommands.PROJECT_BUILD,
+            registry.commandFor(
+                RcShortcut(
+                    RcShortcutKey.B,
+                    ctrl = true
+                ),
+                capabilities
+            )?.id
+        )
+        assertEquals(
+            RcPlusWorkspaceCommands.OPEN_COMMAND_WINDOW,
+            registry.commandFor(
+                RcShortcut(
+                    RcShortcutKey.M,
+                    ctrl = true
+                ),
+                capabilities
+            )?.id
+        )
+        assertEquals(
+            RcPlusWorkspaceCommands.OPEN_ROBOT_MANAGER,
+            registry.commandFor(
+                RcShortcut(RcShortcutKey.F6),
+                capabilities
+            )?.id
+        )
+        assertEquals(
+            null,
+            registry.commandFor(
+                RcShortcut(RcShortcutKey.B),
+                capabilities
+            )
+        )
+        assertEquals(
+            null,
+            registry.commandFor(
+                RcShortcut(RcShortcutKey.M),
+                capabilities
+            )
+        )
+    }
 }
