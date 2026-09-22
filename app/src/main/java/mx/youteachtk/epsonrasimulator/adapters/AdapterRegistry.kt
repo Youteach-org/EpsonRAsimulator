@@ -41,6 +41,16 @@ class AdapterRegistry(
         return requireNotNull(formatsById[simulator.projectFormatId])
     }
 
+    fun nativeProjectFormatFor(
+        id: SimulatorAdapterId
+    ): NativeProjectFormatAdapter {
+        val format = projectFormatFor(id)
+        require(format is NativeProjectFormatAdapter) {
+            "Project format adapter ${format.id.value} does not provide native-project resource support"
+        }
+        return format
+    }
+
     private fun <T, K> List<T>.uniqueById(
         kind: String,
         id: (T) -> K

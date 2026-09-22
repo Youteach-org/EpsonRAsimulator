@@ -65,6 +65,20 @@ Phase 5 is structural only for core RC+ windows. Live Project Explorer/source/po
 
 This is **Phase 6A, not all of Phase 6**. Project Explorer/source/point documents remain 6B; Robot Manager functional pages remain 6C; Command Window and the verified supported Build/Run subset remain 6D. Durable persistence, bridge/digital-twin behavior, physical hardware control, and C4 self-collision Issue #7 remain future work.
 
+## Core RC+ Windows 6B — Project Explorer and source/point documents implemented
+- one retained neutral `ProjectRuntime` owns native resource bytes and source-document sessions; canonical teach points remain in `SharedRuntime`;
+- strict UTF-8 source policy prevents destructive replacement-decoding of malformed native source;
+- exact source text, comments, trivia, Direct Code and syntax-invalid edits remain source-preserving and exportable;
+- untouched `.pts`, RC+ preserved resources and opaque files remain byte-identical on export;
+- Project Explorer now renders sorted project/folder/resource/function nodes, single selection, double-open, long-press/secondary-click context menu and safe current-function navigation;
+- dynamic source/point/resource windows reuse the existing MDI state with namespace-separated exact-path IDs;
+- verified context commands come from the one global RC+ command registry; Open is functional while New/Rename/Remove/Delete remain visible but disabled rather than assigned guessed semantics;
+- source documents edit canonical ProjectRuntime state; point documents edit canonical Local Simulation teach points and never rewrite native `.pts`;
+- project/source/point/window/navigation state is retained across RC+ Trainer and Visual Lab within the retained app session;
+- no new dependency or SceneView change was introduced; SceneView remains 4.35.0.
+
+Phase 6B intentionally does not add source execution, native Build/Run, Android project import/file-picker persistence, native `.pts` semantic editing, Robot Manager functional pages, Command Window execution, bridge/digital-twin behavior or physical control. Next Core RC+ Windows blocks remain **6C Robot Manager** and **6D Command Window + verified Build/Run subset**.
+
 ## Phase 0 — Foundation
 - repository;
 - architecture;

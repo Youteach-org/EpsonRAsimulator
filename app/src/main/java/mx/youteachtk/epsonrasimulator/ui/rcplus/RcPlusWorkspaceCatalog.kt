@@ -20,6 +20,9 @@ object RcPlusWorkspaceTools {
     val IO_MONITOR = RcToolId("io-monitor")
     val TASK_MANAGER = RcToolId("task-manager")
     val STATUS = RcToolId("status")
+    val SOURCE_DOCUMENT = RcToolId("source-document")
+    val POINT_DOCUMENT = RcToolId("point-document")
+    val PRESERVED_RESOURCE = RcToolId("preserved-resource")
 }
 
 object RcPlusWorkspaceCommands {
@@ -37,6 +40,16 @@ object RcPlusWorkspaceCommands {
         RcCommandId("rcplus.window.tile")
     val CLOSE_ACTIVE_WINDOW =
         RcCommandId("rcplus.window.close-active")
+    val PROJECT_NEW =
+        RcCommandId("rcplus.project.new")
+    val PROJECT_OPEN =
+        RcCommandId("rcplus.project.open")
+    val PROJECT_RENAME =
+        RcCommandId("rcplus.project.rename")
+    val PROJECT_REMOVE =
+        RcCommandId("rcplus.project.remove")
+    val PROJECT_DELETE =
+        RcCommandId("rcplus.project.delete")
 }
 
 object RcPlusWorkspaceCatalog {
@@ -88,6 +101,30 @@ object RcPlusWorkspaceCatalog {
                 surface = RcToolSurface.DOCKED_BOTTOM,
                 requiredCapabilities = setOf(
                     RcPlusCapabilities.BUILD_RUN_STATUS
+                )
+            ),
+            RcToolDescriptor(
+                id = RcPlusWorkspaceTools.SOURCE_DOCUMENT,
+                title = "Source Document",
+                surface = RcToolSurface.CHILD_WINDOW,
+                requiredCapabilities = setOf(
+                    RcPlusCapabilities.PROJECT_EXPLORER
+                )
+            ),
+            RcToolDescriptor(
+                id = RcPlusWorkspaceTools.POINT_DOCUMENT,
+                title = "Point Document",
+                surface = RcToolSurface.CHILD_WINDOW,
+                requiredCapabilities = setOf(
+                    RcPlusCapabilities.PROJECT_EXPLORER
+                )
+            ),
+            RcToolDescriptor(
+                id = RcPlusWorkspaceTools.PRESERVED_RESOURCE,
+                title = "Preserved Resource",
+                surface = RcToolSurface.CHILD_WINDOW,
+                requiredCapabilities = setOf(
+                    RcPlusCapabilities.PROJECT_EXPLORER
                 )
             )
         )
@@ -173,6 +210,61 @@ object RcPlusWorkspaceCatalog {
                 shortcut = null,
                 requiredCapabilities = emptySet(),
                 action = RcWorkspaceAction.CloseActiveWindow
+            ),
+            RcCommandDescriptor(
+                id = RcPlusWorkspaceCommands.PROJECT_NEW,
+                label = "New...",
+                menuSection = null,
+                toolbarOrder = null,
+                shortcut = null,
+                requiredCapabilities = setOf(
+                    RcPlusCapabilities.PROJECT_EXPLORER
+                ),
+                action = RcWorkspaceAction.ProjectNew
+            ),
+            RcCommandDescriptor(
+                id = RcPlusWorkspaceCommands.PROJECT_OPEN,
+                label = "Open",
+                menuSection = null,
+                toolbarOrder = null,
+                shortcut = null,
+                requiredCapabilities = setOf(
+                    RcPlusCapabilities.PROJECT_EXPLORER
+                ),
+                action = RcWorkspaceAction.ProjectOpen
+            ),
+            RcCommandDescriptor(
+                id = RcPlusWorkspaceCommands.PROJECT_RENAME,
+                label = "Rename...",
+                menuSection = null,
+                toolbarOrder = null,
+                shortcut = null,
+                requiredCapabilities = setOf(
+                    RcPlusCapabilities.PROJECT_EXPLORER
+                ),
+                action = RcWorkspaceAction.ProjectRename
+            ),
+            RcCommandDescriptor(
+                id = RcPlusWorkspaceCommands.PROJECT_REMOVE,
+                label = "Remove",
+                menuSection = null,
+                toolbarOrder = null,
+                shortcut = null,
+                requiredCapabilities = setOf(
+                    RcPlusCapabilities.PROJECT_EXPLORER
+                ),
+                action = RcWorkspaceAction.ProjectRemove
+            ),
+            RcCommandDescriptor(
+                id = RcPlusWorkspaceCommands.PROJECT_DELETE,
+                label = "Delete",
+                menuSection = null,
+                toolbarOrder = null,
+                shortcut = null,
+                requiredCapabilities = setOf(
+                    RcPlusCapabilities.PROJECT_EXPLORER
+                ),
+                action = RcWorkspaceAction.ProjectDelete
             )
         )
     )

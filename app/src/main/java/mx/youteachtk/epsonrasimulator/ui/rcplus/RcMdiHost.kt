@@ -33,7 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcProjectedWindow
-import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcToolId
+import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowInstance
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcToolRegistry
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowManagerState
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowMode
@@ -45,7 +45,7 @@ fun RcMdiHost(
     state: RcWindowManagerState,
     session: RcWorkspaceSession,
     toolRegistry: RcToolRegistry,
-    content: @Composable (RcToolId, Modifier) -> Unit,
+    content: @Composable (RcWindowInstance, Modifier) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
@@ -282,7 +282,7 @@ fun RcMdiHost(
                                 }
 
                                 content(
-                                    window.toolId,
+                                    window,
                                     Modifier.fillMaxSize()
                                 )
                             }

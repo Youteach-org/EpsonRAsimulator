@@ -6,6 +6,9 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcToolId
 enum class RcCoreWindowKind {
     IO,
     TASKS,
+    SOURCE,
+    POINTS,
+    PRESERVED_RESOURCE,
     STRUCTURAL
 }
 
@@ -17,6 +20,15 @@ object RcCoreWindowRouting {
 
             RcPlusWorkspaceTools.TASK_MANAGER ->
                 RcCoreWindowKind.TASKS
+
+            RcPlusWorkspaceTools.SOURCE_DOCUMENT ->
+                RcCoreWindowKind.SOURCE
+
+            RcPlusWorkspaceTools.POINT_DOCUMENT ->
+                RcCoreWindowKind.POINTS
+
+            RcPlusWorkspaceTools.PRESERVED_RESOURCE ->
+                RcCoreWindowKind.PRESERVED_RESOURCE
 
             else ->
                 RcCoreWindowKind.STRUCTURAL

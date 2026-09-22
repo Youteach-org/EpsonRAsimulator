@@ -37,9 +37,21 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import mx.youteachtk.epsonrasimulator.adapters.SimulatorAdapter
+import mx.youteachtk.epsonrasimulator.project.ProjectRuntime
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntime
 import mx.youteachtk.epsonrasimulator.ui.rememberRuntimeState
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcPointController
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcPointDocument
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcPreservedResourceDocument
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectController
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectExplorer
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectNavigationSession
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcSourceDocument
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.rememberProjectNavigationState
+import mx.youteachtk.epsonrasimulator.ui.rcplus.project.rememberProjectRuntimeState
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowContent
+import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowKind
+import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowRouting
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcLiveController
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcRuntimeStatus
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcMenuSection
@@ -58,14 +70,40 @@ fun RcTrainerScreen(
     runtime: SharedRuntime,
     simulator: SimulatorAdapter,
     workspaceSession: RcWorkspaceSession,
+    projectRuntime: ProjectRuntime,
+    projectNavigationSession: RcProjectNavigationSession,
     onExit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val workspaceState =
         rememberRcWorkspaceState(workspaceSession)
     val runtimeState = rememberRuntimeState(runtime)
+    val projectState =
+        rememberProjectRuntimeState(projectRuntime)
+    val projectNavigationState =
+        rememberProjectNavigationState(
+            projectNavigationSession
+        )
     val liveController = remember(runtime) {
         RcLiveController(runtime)
+    }
+    val pointController = remember(runtime) {
+        RcPointController(runtime)
+    }
+    val projectController = remember(
+        projectRuntime,
+        workspaceSession,
+        projectNavigationSession,
+        simulator.capabilities
+    ) {
+        RcProjectController(
+            projectRuntime = projectRuntime,
+            workspace = workspaceSession,
+            navigation = projectNavigationSession,
+            commandRegistry =
+                RcPlusWorkspaceCatalog.commandRegistry,
+            capabilities = simulator.capabilities
+        )
     }
     var compactProjectOpen by remember {
         mutableStateOf(false)
@@ -123,8 +161,12 @@ fun RcTrainerScreen(
                             .weight(1f)
                     ) {
                         presentation.docks.startTool?.let {
-                            RcFoundationPanel(
-                                tool = it,
+                            RcProjectExplorer(
+                                state = projectState,
+                                selectedNodeId =
+                                    projectNavigationState
+                                        .selectedNodeId,
+                                controller = projectController,
                                 modifier = Modifier
                                     .width(220.dp)
                                     .fillMaxHeight()
@@ -137,11 +179,20 @@ fun RcTrainerScreen(
                             session = workspaceSession,
                             toolRegistry =
                                 RcPlusWorkspaceCatalog.toolRegistry,
-                            content = { toolId, contentModifier ->
-                                RcCoreWindowContent(
-                                    toolId = toolId,
-                                    state = runtimeState,
-                                    controller = liveController,
+                            content = {
+                                    window,
+                                    contentModifier ->
+                                RcTrainerWindowContent(
+                                    window = window,
+                                    runtimeState = runtimeState,
+                                    liveController = liveController,
+                                    projectState = projectState,
+                                    projectNavigationState =
+                                        projectNavigationState,
+                                    projectController =
+                                        projectController,
+                                    pointController =
+                                        pointController,
                                     modifier = contentModifier
                                 )
                             },
@@ -176,11 +227,16 @@ fun RcTrainerScreen(
                                 Text(projectExplorer.title)
                             }
                             if (compactProjectOpen) {
-                                RcFoundationPanel(
-                                    tool = projectExplorer,
+                                RcProjectExplorer(
+                                    state = projectState,
+                                    selectedNodeId =
+                                        projectNavigationState
+                                            .selectedNodeId,
+                                    controller =
+                                        projectController,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(140.dp)
+                                        .height(180.dp)
                                 )
                             }
                         }
@@ -216,11 +272,20 @@ fun RcTrainerScreen(
                         session = workspaceSession,
                         toolRegistry =
                             RcPlusWorkspaceCatalog.toolRegistry,
-                        content = { toolId, contentModifier ->
-                            RcCoreWindowContent(
-                                toolId = toolId,
-                                state = runtimeState,
-                                controller = liveController,
+                        content = {
+                                window,
+                                contentModifier ->
+                            RcTrainerWindowContent(
+                                window = window,
+                                runtimeState = runtimeState,
+                                liveController = liveController,
+                                projectState = projectState,
+                                projectNavigationState =
+                                    projectNavigationState,
+                                projectController =
+                                    projectController,
+                                pointController =
+                                    pointController,
                                 modifier = contentModifier
                             )
                         },
@@ -430,6 +495,80 @@ private fun RcMinimizedBar(
                 Text(item.title)
             }
         }
+    }
+}
+
+
+@Composable
+private fun RcTrainerWindowContent(
+    window:
+        mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowInstance,
+    runtimeState:
+        mx.youteachtk.epsonrasimulator.runtime.SharedRuntimeState,
+    liveController: RcLiveController,
+    projectState:
+        mx.youteachtk.epsonrasimulator.project.ProjectRuntimeState,
+    projectNavigationState:
+        mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectNavigationState,
+    projectController: RcProjectController,
+    pointController: RcPointController,
+    modifier: Modifier = Modifier
+) {
+    val path = window.id.value.substringAfter(
+        ':',
+        missingDelimiterValue = ""
+    )
+
+    when (RcCoreWindowRouting.kind(window.toolId)) {
+        RcCoreWindowKind.IO,
+        RcCoreWindowKind.TASKS,
+        RcCoreWindowKind.STRUCTURAL ->
+            RcCoreWindowContent(
+                toolId = window.toolId,
+                state = runtimeState,
+                controller = liveController,
+                modifier = modifier
+            )
+
+        RcCoreWindowKind.SOURCE -> {
+            val document =
+                projectState.sourceDocuments[path]
+            if (document != null) {
+                RcSourceDocument(
+                    windowId = window.id,
+                    path = path,
+                    document = document,
+                    navigationRange =
+                        projectNavigationState
+                            .ranges[window.id],
+                    controller = projectController,
+                    modifier = modifier
+                )
+            } else {
+                RcPreservedResourceDocument(
+                    summary = projectState.resources
+                        .firstOrNull { it.path == path },
+                    path = path,
+                    modifier = modifier
+                )
+            }
+        }
+
+        RcCoreWindowKind.PRESERVED_RESOURCE ->
+            RcPreservedResourceDocument(
+                summary = projectState.resources
+                    .firstOrNull { it.path == path },
+                path = path,
+                modifier = modifier
+            )
+
+        RcCoreWindowKind.POINTS ->
+            RcPointDocument(
+                path = path,
+                state = runtimeState,
+                controller = pointController,
+                modifier = modifier
+            )
     }
 }
 

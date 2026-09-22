@@ -5,3 +5,9 @@ interface ProjectFormatAdapter {
     val displayName: String
     val fileExtensions: Set<String>
 }
+
+
+interface NativeProjectFormatAdapter : ProjectFormatAdapter {
+    val resourceClassifier:
+        mx.youteachtk.epsonrasimulator.project.ProjectResourceClassifier
+}

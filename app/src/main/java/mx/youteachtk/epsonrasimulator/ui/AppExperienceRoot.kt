@@ -42,6 +42,9 @@ fun AppExperienceRoot(
             runtime = session.bundle.runtime,
             simulator = session.simulator,
             workspaceSession = session.workspaceSession,
+            projectRuntime = session.bundle.projectRuntime,
+            projectNavigationSession =
+                session.projectNavigationSession,
             onExit = session::clearExperience,
             modifier = modifier
         )
