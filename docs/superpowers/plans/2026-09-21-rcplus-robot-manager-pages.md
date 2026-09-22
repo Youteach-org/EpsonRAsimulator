@@ -1,5 +1,7 @@
 # RC+ Robot Manager Functional Pages 6C — Implementation Plan
 
+**Execution status:** Tasks 1–5 implemented and acceptance-verified; final documentation-only exact-head CI pending. PR #14 remains Draft and must not be merged without explicit user instruction.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace the structural Robot Manager shell with a verified multi-page RC+ learning tool whose page registry matches the documented C4-class page families, whose Joint-mode training controls and Points page operate on the same canonical SharedRuntime used by Visual Lab, and whose unsupported controller/motion semantics remain visibly unavailable instead of being invented.

@@ -64,3 +64,33 @@ Ruling: retain the user's tracked GitHub ledger while keeping temporary reports 
 
 - Task 4 complete: GREEN `877449bb505b3db6cdd99490b085689cbf95934c`; Android CI #274 / run `35689571598` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Functional Robot Manager window compiles and the Task 4 RED routing/retention contract is green.
 - Task 5 acceptance prepared. This is acceptance coverage over already-implemented Tasks 1–4, so no fabricated RED is expected. It pins: canonical J2 training state across experience switches, shared Robot Manager/Phase-6B point authority, structural page/session retention through minimize/restore + compact/desktop projection without runtime mutation, and absence of public Robot Manager controller APIs for unverified MOTOR/POWER/Home/Reset/World/Tool/Local/ECP/Execute semantics.
+
+
+## Task 5 acceptance and whole-branch review — 2026-09-22
+- Task 5 acceptance head: `64e9b05fb5c596532911db31983d165c2865e9b5`.
+- Android CI #275 / run `35694028264` SUCCESS on that head: Unit tests SUCCESS, Build debug APK SUCCESS, Upload debug APK SUCCESS.
+- Task 5 acceptance passed on first execution because it pins behavior implemented by Tasks 1–4; it is acceptance coverage, not a fabricated RED.
+- Acceptance pins canonical J2 training state across RC+ Trainer -> Visual Lab -> RC+ Trainer; one shared teach-point authority through Robot Manager and Phase 6B point controllers; structural-page/session retention across minimize/restore plus compact/desktop workspace projection without runtime mutation; and absence of public Robot Manager controller APIs for unverified MOTOR/POWER/Home/Reset/World/Tool/Local/ECP/Execute semantics.
+- Device/emulator smoke remains UNVERIFIED in this GitHub-only harness. CI proves JVM behavior, Android compilation, debug APK creation and artifact upload; it does not prove physical touch/mouse/rotation behavior.
+
+### Whole-branch review
+- Review range: exact Phase 6B base `5dfc447ba999b72cf132a8483827c3f99e1b4e46` through Task 5 acceptance head `64e9b05fb5c596532911db31983d165c2865e9b5`.
+- Final review method in this harness: inline self-review; no independent reviewer/subagent runtime was available for this final pass, so this must not be described as independent review.
+- Critical findings: none.
+- Important findings: none established.
+- Scope diff is 11 commits ahead / 0 behind the Phase 6B base and contains only Robot Manager presentation/controller/session/tests, the shared point-editor refactor, retained app wiring, RC+ routing, and plan/ledger files.
+- Dependency/version boundary verified: `app/build.gradle.kts` has identical blob SHA `62cc0b600dfd9ad36dc8a35c76f255c8ce67bf89` at the Phase 6B base and Task 5 head; SceneView therefore remains pinned at `4.35.0`.
+- False-fidelity review: the PR production diff contains no `RuntimeCommand.ResetJoints` use, no `C4Kinematics` use, no `ToolRuntime` mapping, and no second production `RcCommandRegistry`. MOTOR/POWER/Home/Reset/Free/Lock and World/Tool/Local/ECP/Speed/Jog Distance/Teach/Execute are presentation-only disabled controls.
+- Joint authority review: `RcRobotManagerController` reads the current active `RobotDefinition`, rejects invalid index, rejects non-revolute degree nudging, validates target against configured min/max before dispatch, and uses existing `RuntimeCommand.SetJointValue`. Same-active robot selection is an explicit no-op.
+- Point authority review: Robot Manager Points and the Phase 6B point document both use `RcPointController` over `SharedRuntime.state.teachPoints`; no Robot Manager point map exists and native `.pts` preservation remains unchanged.
+- Presentation-state review: page/training-step state lives only in retained `RcRobotManagerSession`; selecting a structural page does not mutate `SharedRuntime`.
+- Window/experience review: F6/Tools still target the singleton `robot-manager` window in the existing global workspace catalog; both desktop and compact `RcTrainerScreen` paths receive the same retained session/controller; Visual Lab receives the same canonical `SharedRuntime`.
+- Deferred/nonblocking: device/emulator gesture/rotation smoke remains unverified; full Cartesian Robot Manager motion and RC+ coordinate/orientation semantics are deferred; controller/safety/Home/Reset semantics are deferred; additional structural page semantics are deferred; C4 self-collision remains Issue #7.
+
+### Phase 6C task completion
+- Task 1: RED `d31b51dbd89af2c6a708e95cb814dece3ebe199d` / CI #267 expected failure; GREEN `3221746da40f174e61fab8407cebd0d83248f24f` / CI #268 SUCCESS.
+- Task 2: RED `4220e1a7bc33b1bcbb84aaebe6f6c3ad2daceedd` / CI #269 expected failure; GREEN `d2ebfe3a25d6d879c639d3e630d8c6c062b1f599` / CI #270 SUCCESS.
+- Task 3: acceptance baseline `562b452a6967e0f9340198befd2aebcf96c518fc` / CI #271 SUCCESS; shared-point-editor refactor `076cfa3c9f991b3c670fab5345260770647ebff2` / CI #272 SUCCESS.
+- Task 4: RED `f24c42b12b57d6b83ea9ff382709aac954312ed0` / CI #273 expected failure; GREEN `877449bb505b3db6cdd99490b085689cbf95934c` / CI #274 SUCCESS.
+- Task 5 acceptance: `64e9b05fb5c596532911db31983d165c2865e9b5` / CI #275 SUCCESS.
+- Final exact-head gate: after the documentation-only checkpoint created from this review, require one fresh Android CI run with Unit tests + Build debug APK + Upload debug APK all SUCCESS. Then add the final Draft checkpoint/handoff comment to PR #14 without moving the branch again.
