@@ -58,3 +58,6 @@ Ruling: retain the user's tracked GitHub ledger while keeping temporary reports 
 
 - Task 3 complete: refactor head `076cfa3c9f991b3c670fab5345260770647ebff2`; Android CI #272 / run `35689098028` SUCCESS (Unit tests, Build debug APK, Upload debug APK). Shared editor compiles over unchanged canonical point semantics.
 - Task 4 RED prepared: Robot Manager must route to a dedicated `ROBOT_MANAGER` window kind instead of STRUCTURAL, while singleton F6/open/minimize/restore/experience switching preserves the retained Robot Manager session and selected page.
+
+- Task 4 RED: `f24c42b12b57d6b83ea9ff382709aac954312ed0`; Android CI #273 / run `35689332181` failed in Unit tests exactly on missing `RcCoreWindowKind.ROBOT_MANAGER`. Build/upload skipped. RED matches the routing requirement.
+- Task 4 GREEN candidate adds dedicated Robot Manager routing, retained Compose binding, responsive page shell, partial Control Panel, functional Joint-mode training controls, shared Points page and structural-only remaining verified page families. MOTOR/POWER/Home/Reset/Free/Lock and World/Tool/Local/ECP/Speed/Jog Distance/Teach/Execute remain visibly disabled and have no runtime command wiring.
