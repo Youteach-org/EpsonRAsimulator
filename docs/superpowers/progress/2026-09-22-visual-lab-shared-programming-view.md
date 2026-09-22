@@ -24,3 +24,13 @@ Planning head: 6c1a098bd5ef266348524faa6f69b9f59c182972
 
 ## Task 2
 - RED intent: retained Visual Lab programming session/controller do not exist yet; source convergence, stale-reference rejection, invalid-source read-only behavior and zero TaskRuntime mutation must fail before production implementation.
+
+- Initial RED commit `69e4e43010e10d53d94215aa79d3954f475f4889`, CI #297 / run `35781789402`, was rejected as TDD evidence because the test also contained an invalid member-import for `visualSourceLanguageFor`.
+- RED hygiene fix: `57b56fdacf7bd88fca2da7dd10551e00c75ff090` removed only that bad test import.
+- Valid RED CI: Android CI #298 / run `35782027204` FAILED at Unit tests exclusively on missing Task 2 contracts beginning with `VisualProgrammingSession` / `VisualProgrammingController`.
+- GREEN commit: `2ed97794212d004c43c40802e5b99e2bef245165`.
+- GREEN CI: Android CI #299 / run `35782263544` SUCCESS; Unit tests, Build debug APK and Upload debug APK all succeeded.
+- Task 2: complete (valid RED `57b56fd` -> GREEN `2ed9779`).
+
+## Task 3
+- RED intent: Visual Lab teach-point controller does not exist yet; canonical SharedRuntime mutation, input validation and native `.pts` preservation must fail before production implementation.
