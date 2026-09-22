@@ -92,7 +92,7 @@ class RcCoreWindowsIntegrationTest {
             )
         )
         assertEquals(
-            RcCoreWindowKind.STRUCTURAL,
+            RcCoreWindowKind.COMMAND,
             RcCoreWindowRouting.kind(
                 RcPlusWorkspaceTools.COMMAND_WINDOW
             )

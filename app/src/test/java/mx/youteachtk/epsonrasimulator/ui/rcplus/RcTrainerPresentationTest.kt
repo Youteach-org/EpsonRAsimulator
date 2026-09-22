@@ -30,7 +30,12 @@ class RcTrainerPresentationTest {
                 it.id ==
                     RcPlusWorkspaceCommands.OPEN_ROBOT_MANAGER
             }
-        val toolbarItem = presentation.toolbar.single()
+        val toolbarItem = presentation.toolbar.single {
+            it.commandId == RcPlusWorkspaceCommands.OPEN_ROBOT_MANAGER
+        }
+        assertTrue(presentation.toolbar.any {
+            it.commandId == RcPlusWorkspaceCommands.OPEN_COMMAND_WINDOW
+        })
         val shortcutItem =
             RcPlusWorkspaceCatalog.commandRegistry.commandFor(
                 RcShortcut(RcShortcutKey.F6),

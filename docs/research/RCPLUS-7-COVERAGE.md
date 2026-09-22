@@ -817,3 +817,12 @@ At architecture level, the remaining fidelity inventory is now sufficient to pro
 - Optional Full Learning domains: inventoried
 
 Future implementation work still requires per-screen field-level verification before each screen/module is marked High-fidelity.
+
+
+## Phase 6D verified Command Window Print boundary
+
+Phase 6D verified SPEL+ subset source:
+- EPSON RC+ 7.0 SPEL+ Language Reference Rev.4 documents Print as output to the current display and accepts numeric/string expressions.
+- Phase 6D intentionally implements only Print with no expression, one simple quoted string literal, or one finite numeric literal.
+- Variables, functions, multiple expressions, trailing-comma formatting and every other command remain unsupported until their evaluator/runtime semantics are implemented.
+- Trainer rejection codes are product codes, not Epson controller error numbers.

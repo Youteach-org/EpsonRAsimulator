@@ -5,6 +5,8 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcToolId
 
 enum class RcCoreWindowKind {
     ROBOT_MANAGER,
+    COMMAND,
+    RUN,
     IO,
     TASKS,
     SOURCE,
@@ -18,6 +20,12 @@ object RcCoreWindowRouting {
         when (toolId) {
             RcPlusWorkspaceTools.ROBOT_MANAGER ->
                 RcCoreWindowKind.ROBOT_MANAGER
+
+            RcPlusWorkspaceTools.COMMAND_WINDOW ->
+                RcCoreWindowKind.COMMAND
+
+            RcPlusWorkspaceTools.RUN_WINDOW ->
+                RcCoreWindowKind.RUN
 
             RcPlusWorkspaceTools.IO_MONITOR ->
                 RcCoreWindowKind.IO

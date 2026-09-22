@@ -36,6 +36,8 @@ fun RcCoreWindowContent(
             )
 
         RcCoreWindowKind.ROBOT_MANAGER,
+        RcCoreWindowKind.COMMAND,
+        RcCoreWindowKind.RUN,
         RcCoreWindowKind.SOURCE,
         RcCoreWindowKind.POINTS,
         RcCoreWindowKind.PRESERVED_RESOURCE,

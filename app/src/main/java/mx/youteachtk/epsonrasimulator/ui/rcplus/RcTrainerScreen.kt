@@ -29,7 +29,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -38,6 +40,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import mx.youteachtk.epsonrasimulator.adapters.SimulatorAdapter
 import mx.youteachtk.epsonrasimulator.project.ProjectRuntime
+import mx.youteachtk.epsonrasimulator.programming.build.LocalBuildRuntime
+import mx.youteachtk.epsonrasimulator.ui.rcplus.build.*
+import mx.youteachtk.epsonrasimulator.ui.rcplus.command.RcCommandWindow
+import mx.youteachtk.epsonrasimulator.ui.rcplus.command.RcCommandWindowSession
+import mx.youteachtk.epsonrasimulator.ui.rcplus.command.RcLocalSpelCommandGateway
 import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntime
 import mx.youteachtk.epsonrasimulator.ui.rememberRuntimeState
@@ -56,14 +63,17 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerProje
 import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerSession
 import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerSessionState
 import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.rememberRcRobotManagerState
+import mx.youteachtk.epsonrasimulator.ui.rcplus.run.RcRunCommandHandler
+import mx.youteachtk.epsonrasimulator.ui.rcplus.run.RcRunWindow
+import mx.youteachtk.epsonrasimulator.ui.rcplus.run.RcRunWindowSession
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowContent
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowKind
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowRouting
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcLiveController
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcRuntimeStatus
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcMenuSection
-import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcShortcut
-import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcShortcutKey
+import mx.youteachtk.epsonrasimulator.ui.rcplus.commands.RcTrainerCommandDispatcher
+import mx.youteachtk.epsonrasimulator.ui.rcplus.commands.rcShortcutFor
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcToolDescriptor
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowManagerState
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWorkspaceLayout
@@ -79,16 +89,54 @@ fun RcTrainerScreen(
     robots: RobotRegistry,
     workspaceSession: RcWorkspaceSession,
     projectRuntime: ProjectRuntime,
+    localBuildRuntime: LocalBuildRuntime,
     projectNavigationSession: RcProjectNavigationSession,
     robotManagerSession: RcRobotManagerSession,
+    commandWindowSession: RcCommandWindowSession,
+    runWindowSession: RcRunWindowSession,
     onExit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val workspaceState =
         rememberRcWorkspaceState(workspaceSession)
+    val buildHandler = remember(projectRuntime, localBuildRuntime) {
+        RcBuildCommandHandler(projectRuntime, localBuildRuntime)
+    }
+    val buildNavigator = remember(projectRuntime, localBuildRuntime, workspaceSession, projectNavigationSession) {
+        RcBuildDiagnosticNavigator(projectRuntime, localBuildRuntime, workspaceSession, projectNavigationSession)
+    }
+    val buildState = rememberLocalBuildState(localBuildRuntime)
+    val runHandler = remember(
+        projectRuntime,
+        localBuildRuntime,
+        workspaceSession
+    ) {
+        RcRunCommandHandler(
+            projectRuntime = projectRuntime,
+            buildRuntime = localBuildRuntime,
+            workspace = workspaceSession
+        )
+    }
+    val dispatcher = remember(
+        workspaceSession,
+        simulator.capabilities,
+        buildHandler,
+        runHandler
+    ) {
+        RcTrainerCommandDispatcher(
+            RcPlusWorkspaceCatalog.commandRegistry,
+            simulator.capabilities,
+            workspaceSession,
+            mapOf(
+                RcPlusWorkspaceCommands.PROJECT_BUILD to buildHandler,
+                RcPlusWorkspaceCommands.OPEN_RUN_WINDOW to runHandler
+            )
+        )
+    }
     val runtimeState = rememberRuntimeState(runtime)
     val projectState =
         rememberProjectRuntimeState(projectRuntime)
+    val buildStatus = localBuildRuntime.status(projectRuntime)
     val projectNavigationState =
         rememberProjectNavigationState(
             projectNavigationSession
@@ -99,6 +147,9 @@ fun RcTrainerScreen(
         )
     val liveController = remember(runtime) {
         RcLiveController(runtime)
+    }
+    val commandGateway = remember(runtime) {
+        RcLocalSpelCommandGateway(runtime)
     }
     val pointController = remember(runtime) {
         RcPointController(runtime)
@@ -143,17 +194,9 @@ fun RcTrainerScreen(
         modifier = modifier
             .fillMaxSize()
             .onPreviewKeyEvent { event ->
-                if (
-                    event.type == KeyEventType.KeyUp &&
-                    event.key == Key.F6
-                ) {
-                    workspaceSession.dispatch(
-                        RcShortcut(RcShortcutKey.F6)
-                    )
-                    true
-                } else {
-                    false
-                }
+                if (event.type != KeyEventType.KeyUp) false
+                else rcShortcutFor(event.key, event.isCtrlPressed, event.isAltPressed, event.isShiftPressed)
+                    ?.let(dispatcher::dispatch) ?: false
             }
             .focusable()
     ) {
@@ -175,12 +218,12 @@ fun RcTrainerScreen(
         Column(Modifier.fillMaxSize()) {
             RcMenuBar(
                 presentation = presentation,
-                workspaceSession = workspaceSession,
+                dispatcher = dispatcher,
                 onExit = onExit
             )
             RcToolbar(
                 presentation = presentation,
-                workspaceSession = workspaceSession
+                dispatcher = dispatcher
             )
 
             when (layoutMode) {
@@ -231,6 +274,16 @@ fun RcTrainerScreen(
                                         robotManagerSession,
                                     robotManagerController =
                                         robotManagerController,
+
+                                    commandWindowSession =
+                                        commandWindowSession,
+
+                                    commandGateway =
+                                        commandGateway,
+
+
+                                    runWindowSession =
+                                        runWindowSession,
                                     modifier = contentModifier
                                 )
                             },
@@ -245,6 +298,9 @@ fun RcTrainerScreen(
                             state = runtimeState,
                             controller = liveController,
                             compact = false,
+                            buildStatus = buildStatus,
+                            buildState = buildState,
+                            buildNavigator = buildNavigator,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -332,6 +388,16 @@ fun RcTrainerScreen(
                                     robotManagerSession,
                                 robotManagerController =
                                     robotManagerController,
+
+                                commandWindowSession =
+                                    commandWindowSession,
+
+                                commandGateway =
+                                    commandGateway,
+
+
+                                runWindowSession =
+                                    runWindowSession,
                                 modifier = contentModifier
                             )
                         },
@@ -345,6 +411,9 @@ fun RcTrainerScreen(
                             state = runtimeState,
                             controller = liveController,
                             compact = true,
+                            buildStatus = buildStatus,
+                            buildState = buildState,
+                            buildNavigator = buildNavigator,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -376,7 +445,7 @@ fun RcTrainerScreen(
 @Composable
 private fun RcMenuBar(
     presentation: RcTrainerPresentationModel,
-    workspaceSession: RcWorkspaceSession,
+    dispatcher: RcTrainerCommandDispatcher,
     onExit: () -> Unit
 ) {
     var expanded by remember {
@@ -421,9 +490,10 @@ private fun RcMenuBar(
                                     text = {
                                         Text(command.label)
                                     },
+                                    enabled = dispatcher.canExecute(command.id),
                                     onClick = {
                                         expanded = null
-                                        workspaceSession.dispatch(
+                                        dispatcher.dispatch(
                                             command.id
                                         )
                                     }
@@ -445,7 +515,7 @@ private fun RcMenuBar(
 @Composable
 private fun RcToolbar(
     presentation: RcTrainerPresentationModel,
-    workspaceSession: RcWorkspaceSession
+    dispatcher: RcTrainerCommandDispatcher
 ) {
     if (presentation.toolbar.isEmpty()) {
         return
@@ -459,8 +529,9 @@ private fun RcToolbar(
     ) {
         presentation.toolbar.forEach { item ->
             Button(
+                enabled = dispatcher.canExecute(item.commandId),
                 onClick = {
-                    workspaceSession.dispatch(item.commandId)
+                    dispatcher.dispatch(item.commandId)
                 }
             ) {
                 Text(item.label)
@@ -563,6 +634,9 @@ private fun RcTrainerWindowContent(
     robotManagerState: RcRobotManagerSessionState,
     robotManagerSession: RcRobotManagerSession,
     robotManagerController: RcRobotManagerController,
+    commandWindowSession: RcCommandWindowSession,
+    commandGateway: RcLocalSpelCommandGateway,
+    runWindowSession: RcRunWindowSession,
     modifier: Modifier = Modifier
 ) {
     val path = window.id.value.substringAfter(
@@ -577,6 +651,21 @@ private fun RcTrainerWindowContent(
             RcCoreWindowContent(
                 toolId = window.toolId,
                 state = runtimeState,
+                controller = liveController,
+                modifier = modifier
+            )
+
+        RcCoreWindowKind.COMMAND ->
+            RcCommandWindow(
+                session = commandWindowSession,
+                gateway = commandGateway,
+                modifier = modifier
+            )
+
+        RcCoreWindowKind.RUN ->
+            RcRunWindow(
+                runtimeState = runtimeState,
+                session = runWindowSession,
                 controller = liveController,
                 modifier = modifier
             )

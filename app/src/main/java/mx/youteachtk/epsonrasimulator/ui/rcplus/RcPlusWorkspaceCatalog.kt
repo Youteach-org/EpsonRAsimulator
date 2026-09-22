@@ -19,6 +19,7 @@ object RcPlusWorkspaceTools {
     val COMMAND_WINDOW = RcToolId("command-window")
     val IO_MONITOR = RcToolId("io-monitor")
     val TASK_MANAGER = RcToolId("task-manager")
+    val RUN_WINDOW = RcToolId("run-window")
     val STATUS = RcToolId("status")
     val SOURCE_DOCUMENT = RcToolId("source-document")
     val POINT_DOCUMENT = RcToolId("point-document")
@@ -26,6 +27,7 @@ object RcPlusWorkspaceTools {
 }
 
 object RcPlusWorkspaceCommands {
+    val PROJECT_BUILD = RcCommandId("rcplus.project.build")
     val OPEN_ROBOT_MANAGER =
         RcCommandId("rcplus.open.robot-manager")
     val OPEN_COMMAND_WINDOW =
@@ -34,6 +36,8 @@ object RcPlusWorkspaceCommands {
         RcCommandId("rcplus.open.io-monitor")
     val OPEN_TASK_MANAGER =
         RcCommandId("rcplus.open.task-manager")
+    val OPEN_RUN_WINDOW =
+        RcCommandId("rcplus.run.open-window")
     val CASCADE_WINDOWS =
         RcCommandId("rcplus.window.cascade")
     val TILE_WINDOWS =
@@ -96,6 +100,14 @@ object RcPlusWorkspaceCatalog {
                 )
             ),
             RcToolDescriptor(
+                id = RcPlusWorkspaceTools.RUN_WINDOW,
+                title = "Run Window",
+                surface = RcToolSurface.CHILD_WINDOW,
+                requiredCapabilities = setOf(
+                    RcPlusCapabilities.BUILD_RUN_STATUS
+                )
+            ),
+            RcToolDescriptor(
                 id = RcPlusWorkspaceTools.STATUS,
                 title = "Status",
                 surface = RcToolSurface.DOCKED_BOTTOM,
@@ -133,6 +145,15 @@ object RcPlusWorkspaceCatalog {
     val commandRegistry = RcCommandRegistry(
         listOf(
             RcCommandDescriptor(
+                id = RcPlusWorkspaceCommands.PROJECT_BUILD,
+                label = "Build",
+                menuSection = RcMenuSection.PROJECT,
+                toolbarOrder = null,
+                shortcut = RcShortcut(RcShortcutKey.B, ctrl = true),
+                requiredCapabilities = setOf(RcPlusCapabilities.BUILD_RUN_STATUS),
+                action = RcWorkspaceAction.ProjectBuild
+            ),
+            RcCommandDescriptor(
                 id = RcPlusWorkspaceCommands.OPEN_ROBOT_MANAGER,
                 label = "Robot Manager",
                 menuSection = RcMenuSection.TOOLS,
@@ -149,8 +170,8 @@ object RcPlusWorkspaceCatalog {
                 id = RcPlusWorkspaceCommands.OPEN_COMMAND_WINDOW,
                 label = "Command Window",
                 menuSection = RcMenuSection.TOOLS,
-                toolbarOrder = null,
-                shortcut = null,
+                toolbarOrder = 1,
+                shortcut = RcShortcut(RcShortcutKey.M, ctrl = true),
                 requiredCapabilities = setOf(
                     RcPlusCapabilities.COMMAND_WINDOW
                 ),
@@ -183,6 +204,17 @@ object RcPlusWorkspaceCatalog {
                 action = RcWorkspaceAction.OpenTool(
                     RcPlusWorkspaceTools.TASK_MANAGER
                 )
+            ),
+            RcCommandDescriptor(
+                id = RcPlusWorkspaceCommands.OPEN_RUN_WINDOW,
+                label = "Run Window",
+                menuSection = RcMenuSection.RUN,
+                toolbarOrder = null,
+                shortcut = RcShortcut(RcShortcutKey.F5),
+                requiredCapabilities = setOf(
+                    RcPlusCapabilities.BUILD_RUN_STATUS
+                ),
+                action = RcWorkspaceAction.OpenRunWindow
             ),
             RcCommandDescriptor(
                 id = RcPlusWorkspaceCommands.CASCADE_WINDOWS,

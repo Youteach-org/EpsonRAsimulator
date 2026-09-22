@@ -44,10 +44,15 @@ fun AppExperienceRoot(
             robots = session.bundle.robots,
             workspaceSession = session.workspaceSession,
             projectRuntime = session.bundle.projectRuntime,
+            localBuildRuntime = session.bundle.localBuildRuntime,
             projectNavigationSession =
                 session.projectNavigationSession,
             robotManagerSession =
                 session.robotManagerSession,
+            commandWindowSession =
+                session.commandWindowSession,
+            runWindowSession =
+                session.runWindowSession,
             onExit = session::clearExperience,
             modifier = modifier
         )
