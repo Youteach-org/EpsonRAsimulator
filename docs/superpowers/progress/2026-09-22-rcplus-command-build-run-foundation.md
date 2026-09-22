@@ -71,3 +71,12 @@
 - GREEN fix 2 / final Task 4 head: `34b9fe152a3bfb41fa13ed17a7f5cf53ef996a9e`; CI #287 exposed one legacy test still expecting structural Command Window routing, then CI #288 / run `35769364403` passed Unit tests, Build debug APK and Upload debug APK.
 - Task 4 boundary remains explicit: unsupported commands return trainer code `TRN-CMD-001`; no Epson controller error numbers, motion, variables or general expression evaluation are claimed.
 - Task 5 RED starts next: F5/Run Window registry, Training Build gate, singleton Run child, TaskId-only selection reconciliation, and canonical RcLiveController task control.
+
+
+## Task 5: complete
+- RED: `823c52e9108434feac5a94cef46508efdf17853c`; Android CI #289 / run `35769810818` failed on the intentionally missing Run Window registry, handler and session contracts.
+- GREEN foundation: `7a583f53692c4f7cb7b21aef2ee7f4810f292bb5`; added the global F5/Run Window command+tool descriptors, build-gated external handler, direct-workspace bypass rejection, TaskId-only retained session and dedicated RUN routing.
+- GREEN final: `a7f0fc31267bc5f0a1f179a4b1aa12b7b3c714df`; wired the retained Run session into AppSessionViewModel/RC+ Trainer, reused the canonical RcLiveController/RcLiveProjection, and added the dedicated Run Window body with explicit no-source-mapper boundary copy.
+- Exact-head Android CI #291 / run `35774906456` SUCCESS: Unit tests, Build debug APK and Upload debug APK all passed.
+- No source-to-task mapping, native Epson Build/Run, second task authority, bridge or hardware path was added.
+- Task 6 starts with acceptance coverage over the already implemented behavior; per plan, acceptance that already passes is not given an artificial RED.

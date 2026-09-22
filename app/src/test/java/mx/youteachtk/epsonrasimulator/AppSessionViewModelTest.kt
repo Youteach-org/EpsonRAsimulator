@@ -356,4 +356,28 @@ class AppSessionViewModelTest {
         )
     }
 
+    @Test
+    fun commandBuildRunSessionsAndRuntimeStaySingleAcrossExperienceSwitches() {
+        val session = AppSessionViewModel(
+            initialBundle = AppRuntimeFactory.createDefault()
+        )
+        val runtimeBefore = session.bundle.runtime
+        val buildBefore = session.bundle.localBuildRuntime
+        val workspaceBefore = session.workspaceSession
+        val commandBefore = session.commandWindowSession
+        val runBefore = session.runWindowSession
+
+        session.selectExperience(AppExperience.RCPLUS_TRAINER)
+        session.selectExperience(AppExperience.VISUAL_LAB)
+        session.selectExperience(AppExperience.RCPLUS_TRAINER)
+        session.clearExperience()
+
+        assertSame(runtimeBefore, session.bundle.runtime)
+        assertSame(buildBefore, session.bundle.localBuildRuntime)
+        assertSame(workspaceBefore, session.workspaceSession)
+        assertSame(commandBefore, session.commandWindowSession)
+        assertSame(runBefore, session.runWindowSession)
+    }
+
+
 }
