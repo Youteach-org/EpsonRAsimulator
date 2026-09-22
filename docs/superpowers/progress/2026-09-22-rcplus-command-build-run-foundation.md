@@ -35,3 +35,9 @@
 - Preflight: Task 1 neutral build models consume ProjectRuntime exact bytes; Task 2 dispatcher routes the existing registry; Task 3 build/status consumes Task 1/2; Task 4 console remains presentation-only; Task 5 Run consumes Task 1/2 and existing RcLiveController; Task 6 verifies cross-window retention. No additional runtime authority or dependency is introduced.
 - Local runner adaptation: exclude RcRobotManagerAcceptanceTest alongside AppSessionViewModelTest because both require the Android ViewModel excluded by this pure-JVM runner. Full Android CI remains mandatory. The initial local harness failure was unresolved ViewModel imports, not a production regression.
 - Task 1 started: six tests cover attempt publication/cancellation, sorted fingerprint, invalid bytes/current syntax, preserved Direct Code, stale results and malformed-byte fingerprinting. Production implementation not started.
+
+## Task 1: complete
+- RED: 865db994698e98a6cd9016bb221a6eada3d40b9b, local unresolved new Build API; Android CI #278/run35763511604 failed Unit tests as expected.
+- GREEN: 9dac3ebd0f85d97865929e0d24c693eea46e6282, local 298 tests PASS; Android CI #279/run35763770268 Unit tests, Build debug APK and Upload debug APK SUCCESS.
+- Implemented neutral validation, exact-byte SHA-256 fingerprint, retained previous result/stale derivation, observable attempts and cancellation, one build runtime per AppRuntimeBundle.
+- Task 2 started: missing dispatcher/M shortcut RED confirmed locally. Presentation test now selects Robot Manager by identity and requires Command Window toolbar presence instead of assuming exactly one toolbar item.
