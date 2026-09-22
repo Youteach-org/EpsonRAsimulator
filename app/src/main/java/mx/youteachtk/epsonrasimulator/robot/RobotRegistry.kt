@@ -19,6 +19,9 @@ class RobotRegistry(providers: List<RobotProvider>) {
         robotsById = definitions.associateBy { it.id }
     }
 
+    fun definitions(): List<RobotDefinition> =
+        robotsById.values.toList()
+
     fun find(robotId: String): RobotDefinition? = robotsById[robotId]
 
     fun require(robotId: String): RobotDefinition =

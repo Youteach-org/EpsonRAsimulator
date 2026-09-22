@@ -41,10 +41,13 @@ fun AppExperienceRoot(
         AppExperience.RCPLUS_TRAINER -> RcTrainerScreen(
             runtime = session.bundle.runtime,
             simulator = session.simulator,
+            robots = session.bundle.robots,
             workspaceSession = session.workspaceSession,
             projectRuntime = session.bundle.projectRuntime,
             projectNavigationSession =
                 session.projectNavigationSession,
+            robotManagerSession =
+                session.robotManagerSession,
             onExit = session::clearExperience,
             modifier = modifier
         )

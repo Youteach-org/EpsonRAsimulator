@@ -4,6 +4,7 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceTools
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcToolId
 
 enum class RcCoreWindowKind {
+    ROBOT_MANAGER,
     IO,
     TASKS,
     SOURCE,
@@ -15,6 +16,9 @@ enum class RcCoreWindowKind {
 object RcCoreWindowRouting {
     fun kind(toolId: RcToolId): RcCoreWindowKind =
         when (toolId) {
+            RcPlusWorkspaceTools.ROBOT_MANAGER ->
+                RcCoreWindowKind.ROBOT_MANAGER
+
             RcPlusWorkspaceTools.IO_MONITOR ->
                 RcCoreWindowKind.IO
 

@@ -30,6 +30,28 @@ fun RcPointDocument(
     controller: RcPointController,
     modifier: Modifier = Modifier
 ) {
+    val rows = remember(state.teachPoints) {
+        controller.rows()
+    }
+
+    RcPointEditorContent(
+        rows = rows,
+        controller = controller,
+        title = path,
+        boundaryText =
+            "Local Simulation points — native .pts resource is preserved and is not rewritten by this editor.",
+        modifier = modifier
+    )
+}
+
+@Composable
+fun RcPointEditorContent(
+    rows: List<RcPointRow>,
+    controller: RcPointController,
+    title: String,
+    boundaryText: String,
+    modifier: Modifier = Modifier
+) {
     var name by remember {
         mutableStateOf("")
     }
@@ -55,10 +77,6 @@ fun RcPointDocument(
         mutableStateOf<String?>(null)
     }
 
-    val rows = remember(state.teachPoints) {
-        controller.rows()
-    }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -67,13 +85,12 @@ fun RcPointDocument(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Text(
-            text = path,
+            text = title,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleSmall
         )
         Text(
-            text =
-                "Local Simulation points — native .pts resource is preserved and is not rewritten by this editor.",
+            text = boundaryText,
             style = MaterialTheme.typography.bodySmall
         )
 

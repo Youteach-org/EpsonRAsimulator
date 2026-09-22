@@ -38,6 +38,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import mx.youteachtk.epsonrasimulator.adapters.SimulatorAdapter
 import mx.youteachtk.epsonrasimulator.project.ProjectRuntime
+import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntime
 import mx.youteachtk.epsonrasimulator.ui.rememberRuntimeState
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcPointController
@@ -49,6 +50,12 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectNavigationSessi
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcSourceDocument
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.rememberProjectNavigationState
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.rememberProjectRuntimeState
+import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManager
+import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerController
+import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerProjection
+import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerSession
+import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerSessionState
+import mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.rememberRcRobotManagerState
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowContent
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowKind
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowRouting
@@ -69,9 +76,11 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.rememberRcWorkspaceSta
 fun RcTrainerScreen(
     runtime: SharedRuntime,
     simulator: SimulatorAdapter,
+    robots: RobotRegistry,
     workspaceSession: RcWorkspaceSession,
     projectRuntime: ProjectRuntime,
     projectNavigationSession: RcProjectNavigationSession,
+    robotManagerSession: RcRobotManagerSession,
     onExit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -84,11 +93,26 @@ fun RcTrainerScreen(
         rememberProjectNavigationState(
             projectNavigationSession
         )
+    val robotManagerState =
+        rememberRcRobotManagerState(
+            robotManagerSession
+        )
     val liveController = remember(runtime) {
         RcLiveController(runtime)
     }
     val pointController = remember(runtime) {
         RcPointController(runtime)
+    }
+    val robotManagerController = remember(
+        runtime,
+        robots,
+        robotManagerSession
+    ) {
+        RcRobotManagerController(
+            runtime = runtime,
+            robots = robots,
+            session = robotManagerSession
+        )
     }
     val projectController = remember(
         projectRuntime,
@@ -105,6 +129,12 @@ fun RcTrainerScreen(
             capabilities = simulator.capabilities
         )
     }
+    val robotManagerProjection =
+        RcRobotManagerProjection.build(
+            state = runtimeState,
+            robot = runtime.activeRobot(),
+            capabilities = simulator.capabilities
+        )
     var compactProjectOpen by remember {
         mutableStateOf(false)
     }
@@ -193,6 +223,14 @@ fun RcTrainerScreen(
                                         projectController,
                                     pointController =
                                         pointController,
+                                    robotManagerProjection =
+                                        robotManagerProjection,
+                                    robotManagerState =
+                                        robotManagerState,
+                                    robotManagerSession =
+                                        robotManagerSession,
+                                    robotManagerController =
+                                        robotManagerController,
                                     modifier = contentModifier
                                 )
                             },
@@ -286,6 +324,14 @@ fun RcTrainerScreen(
                                     projectController,
                                 pointController =
                                     pointController,
+                                robotManagerProjection =
+                                    robotManagerProjection,
+                                robotManagerState =
+                                    robotManagerState,
+                                robotManagerSession =
+                                    robotManagerSession,
+                                robotManagerController =
+                                    robotManagerController,
                                 modifier = contentModifier
                             )
                         },
@@ -512,6 +558,11 @@ private fun RcTrainerWindowContent(
         mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectNavigationState,
     projectController: RcProjectController,
     pointController: RcPointController,
+    robotManagerProjection:
+        mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerProjectionModel,
+    robotManagerState: RcRobotManagerSessionState,
+    robotManagerSession: RcRobotManagerSession,
+    robotManagerController: RcRobotManagerController,
     modifier: Modifier = Modifier
 ) {
     val path = window.id.value.substringAfter(
@@ -527,6 +578,17 @@ private fun RcTrainerWindowContent(
                 toolId = window.toolId,
                 state = runtimeState,
                 controller = liveController,
+                modifier = modifier
+            )
+
+        RcCoreWindowKind.ROBOT_MANAGER ->
+            RcRobotManager(
+                runtimeState = runtimeState,
+                projection = robotManagerProjection,
+                sessionState = robotManagerState,
+                session = robotManagerSession,
+                controller = robotManagerController,
+                pointController = pointController,
                 modifier = modifier
             )
 

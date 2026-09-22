@@ -115,6 +115,21 @@ Phase 6B adds a retained canonical native-project service plus functional RC+ Tr
 
 Phase 6B does **not** execute source, translate source into TaskRuntime, implement native RC+ Build/Run, parse or serialize `.pts`, import projects from Android storage, persist projects/windows across process death, bridge to RC+, or control physical hardware. Robot Manager functional pages remain Phase 6C; Command Window and the verified supported Build/Run subset remain Phase 6D. C4 self-collision remains separate Issue #7.
 
+## Implemented Core RC+ Windows 6C — Robot Manager functional pages
+
+Phase 6C replaces the structural Robot Manager shell with a verified C4-class learning surface while keeping robot and point truth in the same canonical `SharedRuntime` used by Visual Lab:
+
+- `RcRobotManagerPageRegistry` owns the verified page family order: Control Panel, Jog & Teach, Points, Hands, Arch, Locals, Tools, Pallets, ECP, Boxes, Planes, and Weight;
+- Control Panel is partially functional for canonical robot selection and Local Simulation context only; controller/safety concepts such as Emergency Stop, Safeguard, Motors, Power, MOTOR ON/OFF, POWER HIGH/LOW, Reset, Home, and Free/Lock are visible training references but remain disabled because no authoritative controller/safety state exists yet;
+- Jog & Teach makes only the Joint training subset functional. A presentation-only `RcRobotManagerSession` retains the selected page and an explicitly labelled Android learning adaptation, `Training step (deg)`; joint nudges validate finite input, revolute-joint type, index, and configured limits before dispatching the existing canonical joint command;
+- RC+ World/Tool/Local/ECP jogging, Speed, Jog Distance Continuous/Long/Medium/Short, World/Pulse current-position views, Teach Points, and Execute Motion remain visibly unavailable. The provisional C4 CAD-to-RC coordinate conversion is not presented as official RC+ motion semantics;
+- Points reuses the same `RcPointController` and `SharedRuntime.state.teachPoints` already used by Phase 6B; Robot Manager does not create another point map and never parses or rewrites native `.pts` resources;
+- Hands, Arch, Locals, Tools, Pallets, ECP, Boxes, Planes, and Weight are registered structural page families with explicit implementation status and no editable/runtime state;
+- the existing singleton Robot Manager child window remains opened by the same global command registry, including the verified F6 shortcut; desktop and compact layouts observe the same retained Robot Manager session;
+- RC+ Trainer and Visual Lab continue sharing the same `SharedRuntime`; switching experiences retains the Robot Manager session, canonical joints, and canonical teach points.
+
+Phase 6C deliberately does **not** map `RuntimeCommand.ResetJoints` to RC+ Reset/Home, map the physical gripper `ToolRuntime` to RC+ Tools, expose fake motor/power/safety state, or claim verified Cartesian RC+ jogging. Command Window execution and the verified supported Build/Run subset remain Phase 6D. Digital Twin/bridge behavior, physical hardware control, durable persistence, full Cartesian Robot Manager semantics, and C4 self-collision Issue #7 remain deferred.
+
 ## Layering
 
 ### UI

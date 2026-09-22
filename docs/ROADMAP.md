@@ -79,6 +79,17 @@ This is **Phase 6A, not all of Phase 6**. Project Explorer/source/point document
 
 Phase 6B intentionally does not add source execution, native Build/Run, Android project import/file-picker persistence, native `.pts` semantic editing, Robot Manager functional pages, Command Window execution, bridge/digital-twin behavior or physical control. Next Core RC+ Windows blocks remain **6C Robot Manager** and **6D Command Window + verified Build/Run subset**.
 
+## Core RC+ Windows 6C — Robot Manager functional pages implemented
+- verified C4-class Robot Manager page registry now drives Control Panel, Jog & Teach, Points, Hands, Arch, Locals, Tools, Pallets, ECP, Boxes, Planes, and Weight;
+- canonical robot selection is available without resetting the already-active robot;
+- Joint-mode training nudges use an explicitly labelled Android learning step, prevalidate revolute type/index/finite target/joint limits, and dispatch only to canonical `SharedRuntime` joint state;
+- Robot Manager Points reuses the same canonical `RcPointController` / `SharedRuntime.state.teachPoints` as Phase 6B and does not rewrite native `.pts`;
+- Robot Manager page selection/training-step state is retained as presentation state across singleton reopen, compact/desktop projection, Activity retention, and RC+ Trainer / Visual Lab switching;
+- controller/safety actions, Home/Reset, World/Tool/Local/ECP motion, Speed/Jog Distance, World/Pulse positions, Teach/Execute Motion, and Hands/Arch/Locals/Tools/Pallets/ECP/Boxes/Planes/Weight semantics remain disabled/structural instead of being guessed;
+- no new dependency or SceneView change was introduced.
+
+Next Core RC+ Windows block: **6D — Command Window + verified supported Build/Run subset**. Full Cartesian Robot Manager motion, controller/safety state, native `.pts` editing, durable persistence, bridge/digital-twin/hardware behavior, and C4 self-collision Issue #7 remain future work.
+
 ## Phase 0 — Foundation
 - repository;
 - architecture;

@@ -35,6 +35,7 @@ fun RcCoreWindowContent(
                 modifier = modifier
             )
 
+        RcCoreWindowKind.ROBOT_MANAGER,
         RcCoreWindowKind.SOURCE,
         RcCoreWindowKind.POINTS,
         RcCoreWindowKind.PRESERVED_RESOURCE,
