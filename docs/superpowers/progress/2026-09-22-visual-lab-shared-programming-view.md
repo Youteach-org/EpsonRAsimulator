@@ -15,3 +15,12 @@ Planning head: 6c1a098bd5ef266348524faa6f69b9f59c182972
 
 ## Task 1
 - RED intent: visual SPEL+ projection/edit contracts do not exist yet; tests must fail before production implementation.
+
+- RED commit: `6468fb8b30a84506018ddbdfeebf332f50784172`.
+- RED CI: Android CI #295 / run `35780965528` FAILED at Unit tests as expected; compiler reported missing Phase 7 visual contracts including `AdapterRegistry.visualSourceLanguageFor`.
+- GREEN commit: `b7118dac2a6163b04711e689e966aa46ea41cd47`.
+- GREEN CI: Android CI #296 / run `35781447742` SUCCESS; Unit tests, Build debug APK and Upload debug APK all succeeded.
+- Task 1: complete (RED `6468fb8` -> GREEN `b7118da`).
+
+## Task 2
+- RED intent: retained Visual Lab programming session/controller do not exist yet; source convergence, stale-reference rejection, invalid-source read-only behavior and zero TaskRuntime mutation must fail before production implementation.
