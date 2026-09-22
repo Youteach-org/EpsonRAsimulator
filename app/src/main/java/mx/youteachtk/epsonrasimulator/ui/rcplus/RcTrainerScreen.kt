@@ -29,7 +29,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -62,8 +64,8 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcCoreWindowRouting
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcLiveController
 import mx.youteachtk.epsonrasimulator.ui.rcplus.windows.RcRuntimeStatus
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcMenuSection
-import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcShortcut
-import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcShortcutKey
+import mx.youteachtk.epsonrasimulator.ui.rcplus.commands.RcTrainerCommandDispatcher
+import mx.youteachtk.epsonrasimulator.ui.rcplus.commands.rcShortcutFor
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcToolDescriptor
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowManagerState
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWorkspaceLayout
@@ -86,6 +88,13 @@ fun RcTrainerScreen(
 ) {
     val workspaceState =
         rememberRcWorkspaceState(workspaceSession)
+    val dispatcher = remember(workspaceSession, simulator.capabilities) {
+        RcTrainerCommandDispatcher(
+            RcPlusWorkspaceCatalog.commandRegistry,
+            simulator.capabilities,
+            workspaceSession
+        )
+    }
     val runtimeState = rememberRuntimeState(runtime)
     val projectState =
         rememberProjectRuntimeState(projectRuntime)
@@ -143,17 +152,9 @@ fun RcTrainerScreen(
         modifier = modifier
             .fillMaxSize()
             .onPreviewKeyEvent { event ->
-                if (
-                    event.type == KeyEventType.KeyUp &&
-                    event.key == Key.F6
-                ) {
-                    workspaceSession.dispatch(
-                        RcShortcut(RcShortcutKey.F6)
-                    )
-                    true
-                } else {
-                    false
-                }
+                if (event.type != KeyEventType.KeyUp) false
+                else rcShortcutFor(event.key, event.isCtrlPressed, event.isAltPressed, event.isShiftPressed)
+                    ?.let(dispatcher::dispatch) ?: false
             }
             .focusable()
     ) {
@@ -175,12 +176,12 @@ fun RcTrainerScreen(
         Column(Modifier.fillMaxSize()) {
             RcMenuBar(
                 presentation = presentation,
-                workspaceSession = workspaceSession,
+                dispatcher = dispatcher,
                 onExit = onExit
             )
             RcToolbar(
                 presentation = presentation,
-                workspaceSession = workspaceSession
+                dispatcher = dispatcher
             )
 
             when (layoutMode) {
@@ -376,7 +377,7 @@ fun RcTrainerScreen(
 @Composable
 private fun RcMenuBar(
     presentation: RcTrainerPresentationModel,
-    workspaceSession: RcWorkspaceSession,
+    dispatcher: RcTrainerCommandDispatcher,
     onExit: () -> Unit
 ) {
     var expanded by remember {
@@ -421,9 +422,10 @@ private fun RcMenuBar(
                                     text = {
                                         Text(command.label)
                                     },
+                                    enabled = dispatcher.canExecute(command.id),
                                     onClick = {
                                         expanded = null
-                                        workspaceSession.dispatch(
+                                        dispatcher.dispatch(
                                             command.id
                                         )
                                     }
@@ -445,7 +447,7 @@ private fun RcMenuBar(
 @Composable
 private fun RcToolbar(
     presentation: RcTrainerPresentationModel,
-    workspaceSession: RcWorkspaceSession
+    dispatcher: RcTrainerCommandDispatcher
 ) {
     if (presentation.toolbar.isEmpty()) {
         return
@@ -459,8 +461,9 @@ private fun RcToolbar(
     ) {
         presentation.toolbar.forEach { item ->
             Button(
+                enabled = dispatcher.canExecute(item.commandId),
                 onClick = {
-                    workspaceSession.dispatch(item.commandId)
+                    dispatcher.dispatch(item.commandId)
                 }
             ) {
                 Text(item.label)

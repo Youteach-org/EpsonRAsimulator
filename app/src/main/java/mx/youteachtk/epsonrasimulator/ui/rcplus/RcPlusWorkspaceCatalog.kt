@@ -149,8 +149,8 @@ object RcPlusWorkspaceCatalog {
                 id = RcPlusWorkspaceCommands.OPEN_COMMAND_WINDOW,
                 label = "Command Window",
                 menuSection = RcMenuSection.TOOLS,
-                toolbarOrder = null,
-                shortcut = null,
+                toolbarOrder = 1,
+                shortcut = RcShortcut(RcShortcutKey.M, ctrl = true),
                 requiredCapabilities = setOf(
                     RcPlusCapabilities.COMMAND_WINDOW
                 ),

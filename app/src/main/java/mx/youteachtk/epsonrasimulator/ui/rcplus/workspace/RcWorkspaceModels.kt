@@ -34,7 +34,7 @@ enum class RcMenuSection {
 }
 
 enum class RcShortcutKey {
-    F6
+    F5, F6, B, M
 }
 
 data class RcShortcut(
