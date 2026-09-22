@@ -40,6 +40,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import mx.youteachtk.epsonrasimulator.adapters.SimulatorAdapter
 import mx.youteachtk.epsonrasimulator.project.ProjectRuntime
+import mx.youteachtk.epsonrasimulator.programming.build.LocalBuildRuntime
+import mx.youteachtk.epsonrasimulator.ui.rcplus.build.*
 import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntime
 import mx.youteachtk.epsonrasimulator.ui.rememberRuntimeState
@@ -81,6 +83,7 @@ fun RcTrainerScreen(
     robots: RobotRegistry,
     workspaceSession: RcWorkspaceSession,
     projectRuntime: ProjectRuntime,
+    localBuildRuntime: LocalBuildRuntime,
     projectNavigationSession: RcProjectNavigationSession,
     robotManagerSession: RcRobotManagerSession,
     onExit: () -> Unit,
@@ -88,16 +91,25 @@ fun RcTrainerScreen(
 ) {
     val workspaceState =
         rememberRcWorkspaceState(workspaceSession)
-    val dispatcher = remember(workspaceSession, simulator.capabilities) {
+    val buildHandler = remember(projectRuntime, localBuildRuntime) {
+        RcBuildCommandHandler(projectRuntime, localBuildRuntime)
+    }
+    val buildNavigator = remember(projectRuntime, localBuildRuntime, workspaceSession, projectNavigationSession) {
+        RcBuildDiagnosticNavigator(projectRuntime, localBuildRuntime, workspaceSession, projectNavigationSession)
+    }
+    val buildState = rememberLocalBuildState(localBuildRuntime)
+    val dispatcher = remember(workspaceSession, simulator.capabilities, buildHandler) {
         RcTrainerCommandDispatcher(
             RcPlusWorkspaceCatalog.commandRegistry,
             simulator.capabilities,
-            workspaceSession
+            workspaceSession,
+            mapOf(RcPlusWorkspaceCommands.PROJECT_BUILD to buildHandler)
         )
     }
     val runtimeState = rememberRuntimeState(runtime)
     val projectState =
         rememberProjectRuntimeState(projectRuntime)
+    val buildStatus = localBuildRuntime.status(projectRuntime)
     val projectNavigationState =
         rememberProjectNavigationState(
             projectNavigationSession
@@ -246,6 +258,9 @@ fun RcTrainerScreen(
                             state = runtimeState,
                             controller = liveController,
                             compact = false,
+                            buildStatus = buildStatus,
+                            buildState = buildState,
+                            buildNavigator = buildNavigator,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -346,6 +361,9 @@ fun RcTrainerScreen(
                             state = runtimeState,
                             controller = liveController,
                             compact = true,
+                            buildStatus = buildStatus,
+                            buildState = buildState,
+                            buildNavigator = buildNavigator,
                             modifier = Modifier.fillMaxWidth()
                         )
                     }

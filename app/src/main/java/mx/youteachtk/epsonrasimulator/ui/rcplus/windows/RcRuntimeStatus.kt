@@ -1,6 +1,8 @@
 package mx.youteachtk.epsonrasimulator.ui.rcplus.windows
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,12 +26,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntimeState
 import mx.youteachtk.epsonrasimulator.runtime.task.TaskStatus
+import mx.youteachtk.epsonrasimulator.programming.build.LocalBuildState
+import mx.youteachtk.epsonrasimulator.programming.build.LocalBuildStatus
+import mx.youteachtk.epsonrasimulator.ui.rcplus.build.RcBuildDiagnosticNavigator
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RcRuntimeStatus(
     state: SharedRuntimeState,
     controller: RcLiveController,
     compact: Boolean,
+    buildStatus: LocalBuildStatus,
+    buildState: LocalBuildState,
+    buildNavigator: RcBuildDiagnosticNavigator,
     modifier: Modifier = Modifier
 ) {
     val status = RcLiveProjection.status(state)
@@ -102,6 +111,33 @@ fun RcRuntimeStatus(
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 1
             )
+
+            Text("Training Build: " + when (buildStatus) {
+                LocalBuildStatus.NEVER_BUILT -> "Not built"
+                LocalBuildStatus.CURRENT_SUCCESS -> "Success"
+                LocalBuildStatus.CURRENT_FAILURE -> "Failed"
+                LocalBuildStatus.STALE -> "Stale"
+            })
+            buildState.lastResult?.let { result ->
+                Text("Local validation only; source execution is not implied. Attempt ${result.attempt}",
+                    style = MaterialTheme.typography.bodySmall)
+                result.diagnostics.forEach { diagnostic ->
+                    val canOpen = buildNavigator.canOpen(diagnostic)
+                    Column(Modifier.fillMaxWidth().combinedClickable(
+                        enabled = canOpen,
+                        onClick = {},
+                        onDoubleClick = { buildNavigator.open(diagnostic) }
+                    )) {
+                        Text("${diagnostic.path ?: "Project"} • ${diagnostic.code}: ${diagnostic.message}",
+                            style = MaterialTheme.typography.bodySmall)
+                        if (diagnostic.path != null && diagnostic.range != null) {
+                            TextButton(enabled = canOpen, onClick = { buildNavigator.open(diagnostic) }) {
+                                Text("Open source")
+                            }
+                        }
+                    }
+                }
+            }
 
             if (expanded) {
                 Text(

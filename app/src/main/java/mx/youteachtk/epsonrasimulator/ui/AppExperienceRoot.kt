@@ -44,6 +44,7 @@ fun AppExperienceRoot(
             robots = session.bundle.robots,
             workspaceSession = session.workspaceSession,
             projectRuntime = session.bundle.projectRuntime,
+            localBuildRuntime = session.bundle.localBuildRuntime,
             projectNavigationSession =
                 session.projectNavigationSession,
             robotManagerSession =

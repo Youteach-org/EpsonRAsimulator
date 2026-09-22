@@ -26,6 +26,7 @@ object RcPlusWorkspaceTools {
 }
 
 object RcPlusWorkspaceCommands {
+    val PROJECT_BUILD = RcCommandId("rcplus.project.build")
     val OPEN_ROBOT_MANAGER =
         RcCommandId("rcplus.open.robot-manager")
     val OPEN_COMMAND_WINDOW =
@@ -132,6 +133,15 @@ object RcPlusWorkspaceCatalog {
 
     val commandRegistry = RcCommandRegistry(
         listOf(
+            RcCommandDescriptor(
+                id = RcPlusWorkspaceCommands.PROJECT_BUILD,
+                label = "Build",
+                menuSection = RcMenuSection.PROJECT,
+                toolbarOrder = null,
+                shortcut = RcShortcut(RcShortcutKey.B, ctrl = true),
+                requiredCapabilities = setOf(RcPlusCapabilities.BUILD_RUN_STATUS),
+                action = RcWorkspaceAction.ProjectBuild
+            ),
             RcCommandDescriptor(
                 id = RcPlusWorkspaceCommands.OPEN_ROBOT_MANAGER,
                 label = "Robot Manager",

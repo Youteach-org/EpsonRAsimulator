@@ -128,6 +128,7 @@ class RcWorkspaceSession(
     ): RcWindowManagerState =
         mutate { current ->
             when (action) {
+                RcWorkspaceAction.ProjectBuild -> error("Trainer command requires RcTrainerCommandDispatcher")
                 is RcWorkspaceAction.OpenTool -> {
                     val tool = toolRegistry.descriptor(
                         action.toolId

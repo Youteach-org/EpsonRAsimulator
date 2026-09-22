@@ -45,6 +45,7 @@ data class RcShortcut(
 )
 
 sealed interface RcWorkspaceAction {
+    data object ProjectBuild : RcWorkspaceAction
     data class OpenTool(val toolId: RcToolId) : RcWorkspaceAction
     data object CascadeWindows : RcWorkspaceAction
     data object TileWindows : RcWorkspaceAction
