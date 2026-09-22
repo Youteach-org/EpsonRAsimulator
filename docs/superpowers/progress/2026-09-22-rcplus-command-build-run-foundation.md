@@ -41,3 +41,9 @@
 - GREEN: 9dac3ebd0f85d97865929e0d24c693eea46e6282, local 298 tests PASS; Android CI #279/run35763770268 Unit tests, Build debug APK and Upload debug APK SUCCESS.
 - Implemented neutral validation, exact-byte SHA-256 fingerprint, retained previous result/stale derivation, observable attempts and cancellation, one build runtime per AppRuntimeBundle.
 - Task 2 started: missing dispatcher/M shortcut RED confirmed locally. Presentation test now selects Robot Manager by identity and requires Command Window toolbar presence instead of assuming exactly one toolbar item.
+
+## Task 2: complete
+- RED: 2ad4a44d2e9176e625664dc157a16c7d89d1c0df; missing dispatcher/shortcut contracts confirmed locally.
+- GREEN: 830ac5a80d1c57b98e7128d93a3bf21e18376c27; 303 local tests PASS. Android CI #281/run35764322342 Unit tests, APK build and upload SUCCESS.
+- One dispatcher now handles menu, toolbar and keyboard; exact Ctrl+M and preserved F6; capabilities, disabled handlers and targetless commands tested.
+- Task 3 RED observed locally: missing PROJECT_BUILD, build handler and diagnostic navigator.
