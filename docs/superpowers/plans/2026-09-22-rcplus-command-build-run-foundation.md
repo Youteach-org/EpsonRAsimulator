@@ -22,7 +22,7 @@
 - Training Build success means only: project loaded, editable source decodes under the Phase 6B strict UTF-8 rule, and there are no current source syntax/error diagnostics. It does not imply that preserved Direct Code or all recognized source can execute locally.
 - `PARTIALLY_SUPPORTED` / preserved Direct Code is buildable with a warning because preservation is valid; it must never be silently treated as locally executable.
 - Invalid UTF-8 editable source and `SYNTAX_INVALID` source are Training Build failures.
-- Build fingerprint is deterministic SHA-256 over the project name plus sorted editable-source path/access/availability/current exact source bytes using length-prefixed fields. Native preserved/opaque bytes do not become editable/build input in 6D.
+- Build fingerprint is deterministic SHA-256 over the project name plus sorted editable-source path/availability and exact raw bytes read from `ProjectRuntime.resourceBytes`, using length-prefixed fields. This includes malformed UTF-8 bytes without decoding them. Native preserved/opaque bytes do not become editable/build input in 6D.
 - Explicit Build attempts are observable even if the same source snapshot is built twice; increment an attempt number instead of suppressing identical requests.
 - Source edits after a completed build derive `STALE` status from fingerprint mismatch; they do not mutate or delete the previous build result.
 - Do not implement Rebuild semantics in 6D: verified RC+ Rebuild includes full recompilation/relink/controller point transfer behavior that this Local Simulation runtime does not have.
@@ -101,9 +101,9 @@ class LocalBuildRuntime {
     var state: LocalBuildState
         private set
 
-    fun build(project: ProjectRuntimeState): LocalBuildResult
-    fun status(project: ProjectRuntimeState): LocalBuildStatus
-    fun currentFingerprint(project: ProjectRuntimeState): String
+    fun build(project: ProjectRuntime): LocalBuildResult
+    fun status(project: ProjectRuntime): LocalBuildStatus
+    fun currentFingerprint(project: ProjectRuntime): String
     fun subscribe(
         listener: (LocalBuildState) -> Unit
     ): LocalBuildSubscription
@@ -124,8 +124,9 @@ fun noProjectBuildFailsWithTrainerDiagnosticAndPublishesEachAttempt() {
     var calls = 0
     val sub = build.subscribe { calls++ }
 
-    val first = build.build(ProjectRuntimeState())
-    val second = build.build(ProjectRuntimeState())
+    val project = AppRuntimeFactory.createDefault().projectRuntime
+    val first = build.build(project)
+    val second = build.build(project)
 
     assertEquals(LocalBuildOutcome.FAILURE, first.outcome)
     assertEquals("TRAINING_BUILD_NO_PROJECT", first.diagnostics.single().code)
@@ -155,13 +156,13 @@ fun supportedSourceBuildsAndFingerprintUsesSortedExactSource() {
     )
     val build = LocalBuildRuntime()
 
-    val resultA = build.build(a.state)
-    val fingerprintB = build.currentFingerprint(b.state)
+    val resultA = build.build(a)
+    val fingerprintB = build.currentFingerprint(b)
 
     assertEquals(LocalBuildOutcome.SUCCESS, resultA.outcome)
     assertEquals(fingerprintB, resultA.fingerprint)
     assertEquals(2, resultA.sourceCount)
-    assertEquals(LocalBuildStatus.CURRENT_SUCCESS, build.status(a.state))
+    assertEquals(LocalBuildStatus.CURRENT_SUCCESS, build.status(a))
 }
 ```
 
@@ -179,7 +180,7 @@ fun invalidUtf8AndSyntaxErrorAreTrainingBuildFailures() {
         )
     )
 
-    val result = LocalBuildRuntime().build(project.state)
+    val result = LocalBuildRuntime().build(project)
 
     assertEquals(LocalBuildOutcome.FAILURE, result.outcome)
     assertTrue(result.diagnostics.any {
@@ -209,7 +210,7 @@ fun partiallySupportedSourceBuildsWithExplicitLocalExecutionWarning() {
         )
     )
 
-    val result = LocalBuildRuntime().build(project.state)
+    val result = LocalBuildRuntime().build(project)
 
     assertEquals(LocalBuildOutcome.SUCCESS, result.outcome)
     assertTrue(result.diagnostics.any {
@@ -234,14 +235,14 @@ fun sourceEditMakesLastBuildStaleWithoutReplacingIt() {
         )
     )
     val build = LocalBuildRuntime()
-    val built = build.build(project.state)
+    val built = build.build(project)
 
     project.replaceSource(
         "Main.prg",
         "Function main\n  Wait 1\nFend\n"
     )
 
-    assertEquals(LocalBuildStatus.STALE, build.status(project.state))
+    assertEquals(LocalBuildStatus.STALE, build.status(project))
     assertSame(built, build.state.lastResult)
 }
 ```
@@ -267,20 +268,29 @@ private fun MessageDigest.putField(bytes: ByteArray) {
     update(bytes)
 }
 
-private fun fingerprint(project: ProjectRuntimeState): String {
+private fun fingerprint(project: ProjectRuntime): String {
+    val state = project.state
     val digest = MessageDigest.getInstance("SHA-256")
     digest.putField(
-        (project.projectName ?: "").toByteArray(StandardCharsets.UTF_8)
+        (state.projectName ?: "")
+            .toByteArray(StandardCharsets.UTF_8)
     )
-    project.resources
-        .filter { it.access == ProjectResourceAccess.EDITABLE_SOURCE }
+    state.resources
+        .filter {
+            it.access ==
+                ProjectResourceAccess.EDITABLE_SOURCE
+        }
         .sortedBy { it.path }
         .forEach { summary ->
-            digest.putField(summary.path.toByteArray(StandardCharsets.UTF_8))
-            digest.putField(summary.sourceAvailability.name.toByteArray(StandardCharsets.UTF_8))
-            val source = project.sourceDocuments[summary.path]?.sourceText
             digest.putField(
-                source?.toByteArray(StandardCharsets.UTF_8)
+                summary.path.toByteArray(StandardCharsets.UTF_8)
+            )
+            digest.putField(
+                summary.sourceAvailability.name
+                    .toByteArray(StandardCharsets.UTF_8)
+            )
+            digest.putField(
+                project.resourceBytes(summary.path)
                     ?: byteArrayOf()
             )
         }
@@ -289,13 +299,13 @@ private fun fingerprint(project: ProjectRuntimeState): String {
     }
 }
 ```
-
 - [ ] **Implement build diagnostics without mutating ProjectRuntime.**
 
 Rules implemented literally:
 ```kotlin
+val state = project.state
 when {
-    project.projectName == null ->
+    state.projectName == null ->
         error("TRAINING_BUILD_NO_PROJECT")
 
     summary.sourceAvailability ==
@@ -313,11 +323,19 @@ when {
             message =
                 "Source is preserved but contains statements outside the Local Simulation execution subset."
         )
+
+    document.supportState ==
+        ProgramSupportState.NATIVE_VALID_NOT_LOCALLY_SIMULATABLE ->
+        warning(
+            code = "TRAINING_BUILD_NOT_LOCALLY_SIMULATABLE",
+            path = summary.path,
+            message =
+                "Source remains preserved but is not locally executable in this training build."
+        )
 }
 ```
 
 Copy current `ProgramDiagnostic` ERROR/WARNING entries into `LocalBuildDiagnostic` with their current path/range. Outcome is FAILURE iff any emitted diagnostic has `DiagnosticSeverity.ERROR`.
-
 - [ ] **Wire one neutral build runtime into AppRuntimeBundle.**
 
 ```kotlin
@@ -550,6 +568,8 @@ class RcBuildCommandHandler(
 }
 
 class RcBuildDiagnosticNavigator(
+    private val projectRuntime: ProjectRuntime,
+    private val buildRuntime: LocalBuildRuntime,
     private val workspace: RcWorkspaceSession,
     private val navigation: RcProjectNavigationSession
 ) {
@@ -604,7 +624,7 @@ Trainer command requires RcTrainerCommandDispatcher
 
 - [ ] **Write RED: current build diagnostic opens exact source/range; pathless diagnostic and missing source return false.**
 
-Construct a current `LocalBuildDiagnostic(path="Main.prg", range=SourceRange(10, 14), ...)`, call navigator, assert `source:Main.prg` window active and navigation range equals `10..14`. Do not use last-valid/stale ranges.
+Construct a current `LocalBuildDiagnostic(path="Main.prg", range=SourceRange(10, 14), ...)`, call navigator, assert `source:Main.prg` window active and navigation range equals `10..14`. Then edit the source so `buildRuntime.status(projectRuntime) == STALE` and assert the same old diagnostic returns false. The navigator also verifies the current document still contains that range.
 
 - [ ] **Run RED.**
 
@@ -677,7 +697,7 @@ For the last result, list diagnostics with path/code/message. Add a double-tap/d
 The Compose call computes:
 ```kotlin
 val buildStatus =
-    localBuildRuntime.status(projectState)
+    localBuildRuntime.status(projectRuntime)
 ```
 after observing both `rememberProjectRuntimeState(projectRuntime)` and `rememberLocalBuildState(localBuildRuntime)`. Do not copy project source into build session state.
 
@@ -974,14 +994,20 @@ assertEquals(
     descriptor.shortcut
 )
 assertEquals(
-    RcPlusWorkspaceTools.RUN_WINDOW,
-    (descriptor.action as RcWorkspaceAction.OpenRunWindow)
-        .toolId // if action carries tool id
+    RcWorkspaceAction.OpenRunWindow,
+    descriptor.action
+)
+val tool =
+    RcPlusWorkspaceCatalog.toolRegistry.descriptor(
+        RcPlusWorkspaceTools.RUN_WINDOW
+    )
+assertEquals("Run Window", tool.title)
+assertEquals(RcToolSurface.CHILD_WINDOW, tool.surface)
+assertEquals(
+    setOf(RcPlusCapabilities.BUILD_RUN_STATUS),
+    tool.requiredCapabilities
 )
 ```
-
-If `OpenRunWindow` is a parameterless object instead, assert action equality and separately assert `RUN_WINDOW` tool descriptor has title `Run Window`, `CHILD_WINDOW`, and BUILD_RUN_STATUS capability. Use one representation consistently in implementation.
-
 - [ ] **Write RED: invalid source F5 build fails and does not open Run Window.**
 
 ```kotlin
@@ -1065,7 +1091,7 @@ RcWorkspaceAction.OpenRunWindow ->
 
 ```kotlin
 override fun execute(): RcTrainerCommandResult {
-    val result = buildRuntime.build(projectRuntime.state)
+    val result = buildRuntime.build(projectRuntime)
     if (result.outcome == LocalBuildOutcome.FAILURE) {
         return RcTrainerCommandResult.Rejected(
             "Training Build failed; Run Window was not opened."
@@ -1134,20 +1160,20 @@ gradle assembleDebug --stacktrace
 
 ```kotlin
 val first = buildHandler.execute()
-assertEquals(LocalBuildStatus.CURRENT_SUCCESS, buildRuntime.status(project.state))
+assertEquals(LocalBuildStatus.CURRENT_SUCCESS, buildRuntime.status(project))
 
 project.replaceSource(
     "Main.prg",
     "Function main\n  Wait 1\nFend\n"
 )
-assertEquals(LocalBuildStatus.STALE, buildRuntime.status(project.state))
+assertEquals(LocalBuildStatus.STALE, buildRuntime.status(project))
 
 project.replaceSource(
     "Main.prg",
     "Function main\n"
 )
 buildHandler.execute()
-assertEquals(LocalBuildStatus.CURRENT_FAILURE, buildRuntime.status(project.state))
+assertEquals(LocalBuildStatus.CURRENT_FAILURE, buildRuntime.status(project))
 ```
 
 Assert exact source bytes remain what the user entered after every build.
@@ -1156,7 +1182,7 @@ Assert exact source bytes remain what the user entered after every build.
 
 Use a current syntax diagnostic; invoke `RcBuildDiagnosticNavigator`; assert exact source window/range. Then edit source so the prior diagnostic fingerprint is stale and assert the UI/controller does not navigate that old result as a current diagnostic.
 
-Implementation requirement: diagnostic open is enabled only when `buildRuntime.status(projectState)` is `CURRENT_FAILURE` or `CURRENT_SUCCESS`, never `STALE`.
+Implementation requirement: diagnostic open is enabled only when `buildRuntime.status(projectRuntime)` is `CURRENT_FAILURE` or `CURRENT_SUCCESS`, never `STALE`.
 
 - [ ] **Acceptance: Command Window Print subset + unsupported command share same retained session without runtime mutation.**
 
@@ -1185,13 +1211,11 @@ Require Android CI Unit tests + Build debug APK + Upload debug APK all SUCCESS o
 
 - [ ] **Whole-branch review against exact Phase 6C base.**
 
-Compare:
+Compare the exact Phase 6C base:
 ```text
-5dfc? NO — do not use the Phase 6B base.
-Correct Phase 6D review base:
 015f63694e5c581e10e194c87e74a09ef601a1d4
 ```
-
+through the final Phase 6D head.
 Review requirements:
 - no source-to-task mapper added;
 - no native compiler/linker/controller-transfer claim;
