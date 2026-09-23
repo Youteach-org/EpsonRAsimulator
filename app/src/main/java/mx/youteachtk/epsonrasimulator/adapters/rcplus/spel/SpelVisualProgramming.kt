@@ -115,6 +115,7 @@ object SpelVisualProgramming {
                         function ->
                     VisualProgramFunction(
                         name = function.name,
+                        sourceRange = function.sourceRange,
                         actions =
                             function.statements.mapIndexed {
                                     statementIndex,

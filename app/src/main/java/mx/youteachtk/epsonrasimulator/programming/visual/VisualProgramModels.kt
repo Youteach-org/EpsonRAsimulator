@@ -25,6 +25,7 @@ data class VisualProgramAction(
 
 data class VisualProgramFunction(
     val name: String,
+    val sourceRange: SourceRange,
     val actions: List<VisualProgramAction>
 )
 
