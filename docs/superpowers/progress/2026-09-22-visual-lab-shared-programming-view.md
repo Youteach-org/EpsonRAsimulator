@@ -42,3 +42,17 @@ Planning head: 6c1a098bd5ef266348524faa6f69b9f59c182972
 - Local pure JVM suite after point-controller implementation: 332 tests PASS. Android/ViewModel acceptance is excluded from this local runner and covered by Android CI.
 - Added cross-experience acceptance for exact source convergence/Direct Code, invalid source rejection, no task creation, retained session/adapter, canonical point convergence/native byte preservation and shared joints. Joint convergence pins existing behavior (acceptance, no invented RED).
 - Shared-runtime/ProjectRuntime authority and disabled candidate TCP controls remain unchanged. No new dependency or source execution.
+
+## Verified integration and independent review — 2026-09-23
+- Tasks 3–4 integration head: 0771bdbd256c6177bc8706872190be3e88f2f3bd. Android CI #302/run35872001762 Unit tests, Build debug APK and Upload debug APK all SUCCESS. Local pure JVM suite: 332 PASS; Android CI includes retained ViewModel acceptance omitted by local runner.
+- Final independent review: completed by fresh-context reviewer. Report: docs/superpowers/progress/2026-09-23-visual-lab-independent-review.md.
+- Gate remains OPEN: three Important findings, no Critical or additional Minor findings. Phase 7 is NOT complete.
+- F1: same-length source replacements/reordering collide with action IDs (ordinal/range/kind only), allowing stale edits of a different statement. Bind references to source snapshot/content and selected-document identity; add same-length replacement/reorder regression tests.
+- F2: VisualProgrammingPanel hides Direct Code argumentText; render preserved source read-only and verify visible content through an appropriate presentation/render test.
+- F3: topLevelActions render before all functions. Add function source-range/ordered-block representation, interleave by original position, and test between-function and trailing Direct Code.
+- Next exact step: one bounded fix wave for F1–F3 with RED -> GREEN regression coverage, then full Android CI. No second reviewer dispatch is required by the preserved inline workflow. Then finish Task 5 documentation/ledger, docs-only final commit and exact-head CI, final PR handoff. Drafts remain unmerged.
+- Final: Ruling: keep durable persistence/native .pts rewriting, source execution/native compiler/bridge/hardware and unchanged C4 calibration/self-collision deferred as the review set aside; these match explicit plan exclusions. Cost: those workflows remain unavailable until later phases.
+- Final: Ruling: device/layout/input/configuration smoke remains unverified; static review and CI do not substitute for it. Cost: device-specific UI issues may remain.
+- Final: Ruling: final phase-completion docs deferred until fixes pass; uncommitted completion drafts were reverted. Cost: Phase 7 cannot yet be called complete.
+- Quota handoff at 90% primary usage. Preserve completed independent review and do not repeat Tasks 1–4 from scratch. Read remote HEAD first because another session can advance it.
+- Device/emulator smoke UNVERIFIED in this GitHub-only harness; CI proves JVM behavior, Android compilation, debug APK creation and artifact upload only.
