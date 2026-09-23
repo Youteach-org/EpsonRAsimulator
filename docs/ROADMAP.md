@@ -100,7 +100,17 @@ Next Core RC+ Windows block: **6D — Command Window + verified supported Build/
 
 No source-to-task mapper, native Epson Build/Run semantics, bridge/hardware path, durable file-picker persistence, Rebuild/Operator/debug semantics, or C4 self-collision work is included in 6D.
 
-**Next shared-runtime sequence item: Phase 7 — Visual Lab Migration + Shared Programming View.** This phase will provide the verified shared programming path needed before source can become neutral runnable tasks.
+## Phase 7 — Visual Lab Migration + Shared Programming View implemented
+- Visual Lab programming now projects the same canonical `ProjectRuntime` source documents used by RC+ Trainer;
+- recognized SPEL+ `Call`, `Go`, `Move`, `Speed`, and `Wait` statements have an adapter-owned visual representation;
+- visual argument edits preserve exact surrounding source and commit back through `ProjectRuntime`;
+- stale visual references are bound to source snapshot and selected source path, so same-length edits/reorders/source switches reject instead of mutating the wrong instruction;
+- Direct Code remains visible, exact and read-only, including correct ordering between/trailing functions;
+- syntax-invalid source keeps the exact current text while the last valid visual representation is read-only;
+- Visual Lab and RC+ Trainer share canonical joints and teach points through one `SharedRuntime`; native `.pts` bytes remain unchanged;
+- no source-to-`TaskRuntime` mapping, source execution, new dependency, bridge/hardware path or native Epson compiler/runtime claim was introduced.
+
+**Next shared-runtime sequence item: Phase 8 — Persistence + Round-Trip.** Durable project resource storage, app-sidecar metadata, autosave/session restore and round-trip persistence remain the next planned block.
 
 ## Phase 0 — Foundation
 - repository;

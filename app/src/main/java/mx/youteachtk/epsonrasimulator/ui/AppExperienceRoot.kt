@@ -61,7 +61,10 @@ fun AppExperienceRoot(
             modifier = modifier.fillMaxSize()
         ) {
             RobotTrainerScreen(
-                runtime = session.bundle.runtime
+                runtime = session.bundle.runtime,
+                projectRuntime = session.bundle.projectRuntime,
+                visualProgrammingAdapter = session.visualProgrammingAdapter,
+                visualProgrammingSession = session.visualProgrammingSession
             )
             OutlinedButton(
                 onClick = session::clearExperience,

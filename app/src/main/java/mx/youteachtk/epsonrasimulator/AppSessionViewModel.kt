@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import mx.youteachtk.epsonrasimulator.ui.visual.programming.VisualProgrammingSession
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeBundle
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
 import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceCatalog
@@ -22,6 +23,10 @@ class AppSessionViewModel(
     initialBundle: AppRuntimeBundle = AppRuntimeFactory.createDefault()
 ) : ViewModel() {
     val bundle: AppRuntimeBundle = initialBundle
+    val visualProgrammingSession = VisualProgrammingSession()
+    val visualProgrammingAdapter = bundle.adapters.visualSourceLanguageFor(
+        bundle.runtime.state.simulatorAdapterId
+    )
 
     val simulator = bundle.adapters.requireSimulator(
         bundle.runtime.state.simulatorAdapterId

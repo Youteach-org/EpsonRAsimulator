@@ -21,14 +21,22 @@ class AdapterRegistry(
     }
 
     fun requireSimulator(id: SimulatorAdapterId): SimulatorAdapter =
-        requireNotNull(simulatorsById[id]) { "Unknown simulator adapter: ${id.value}" }
+        requireNotNull(simulatorsById[id]) {
+            "Unknown simulator adapter: ${id.value}"
+        }
 
-    fun languageFor(id: SimulatorAdapterId): ProgrammingLanguageAdapter {
+    fun languageFor(
+        id: SimulatorAdapterId
+    ): ProgrammingLanguageAdapter {
         val simulator = requireSimulator(id)
-        return requireNotNull(languagesById[simulator.programmingLanguageId])
+        return requireNotNull(
+            languagesById[simulator.programmingLanguageId]
+        )
     }
 
-    fun sourceLanguageFor(id: SimulatorAdapterId): SourceProgrammingLanguageAdapter {
+    fun sourceLanguageFor(
+        id: SimulatorAdapterId
+    ): SourceProgrammingLanguageAdapter {
         val language = languageFor(id)
         require(language is SourceProgrammingLanguageAdapter) {
             "Language adapter ${language.id.value} does not provide source-document support"
@@ -36,9 +44,23 @@ class AdapterRegistry(
         return language
     }
 
-    fun projectFormatFor(id: SimulatorAdapterId): ProjectFormatAdapter {
+    fun visualSourceLanguageFor(
+        id: SimulatorAdapterId
+    ): VisualProgrammingLanguageAdapter {
+        val language = languageFor(id)
+        require(language is VisualProgrammingLanguageAdapter) {
+            "Language adapter ${language.id.value} does not provide visual-program support"
+        }
+        return language
+    }
+
+    fun projectFormatFor(
+        id: SimulatorAdapterId
+    ): ProjectFormatAdapter {
         val simulator = requireSimulator(id)
-        return requireNotNull(formatsById[simulator.projectFormatId])
+        return requireNotNull(
+            formatsById[simulator.projectFormatId]
+        )
     }
 
     fun nativeProjectFormatFor(
