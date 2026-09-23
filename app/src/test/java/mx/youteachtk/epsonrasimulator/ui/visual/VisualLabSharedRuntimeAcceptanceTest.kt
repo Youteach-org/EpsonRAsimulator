@@ -10,6 +10,19 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class VisualLabSharedRuntimeAcceptanceTest {
+    @Test fun robotManagerAndVisualSliderShareJoints() {
+        val app = AppSessionViewModel()
+        val runtime = app.bundle.runtime
+        val manager = mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerController(
+            runtime, app.bundle.robots, app.robotManagerSession)
+        manager.nudgeJoint(0, mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcJogDirection.POSITIVE)
+        assertTrue(runtime.state.jointState.values[0] > 0.0)
+        runtime.dispatch(mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand.SetJointValue(0, 12.0))
+        val projection = mx.youteachtk.epsonrasimulator.ui.rcplus.robotmanager.RcRobotManagerProjection.build(
+            runtime.state, runtime.activeRobot(), app.simulator.capabilities)
+        assertEquals(12.0, projection.joints[0].value, 0.0)
+    }
+
     @Test fun retainedSessionSharesExactSourceAndNeverCreatesTasks() {
         val app = AppSessionViewModel()
         val session = app.visualProgrammingSession

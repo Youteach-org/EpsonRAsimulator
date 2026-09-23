@@ -34,3 +34,11 @@ Planning head: 6c1a098bd5ef266348524faa6f69b9f59c182972
 
 ## Task 3
 - RED intent: Visual Lab teach-point controller does not exist yet; canonical SharedRuntime mutation, input validation and native `.pts` preservation must fail before production implementation.
+
+## Resume — 2026-09-23
+- Remote state checked before writes: Phase 6D is complete at 90b69a4; Phase 7 Tasks 1–2 complete, Task 3 RED at 7b3f6f877af7bf8b4a7469e6759814af4b296fbb / CI #300.
+- Task 3 RED reproduced locally: missing VisualLabPointController/VisualLabPointResult. Task 4 retention RED published at fcac99e98f9e86de3d46343719a1acd38d175758; CI #301/run35871588361 logs confirm missing visualProgrammingSession/visualProgrammingAdapter as well as Task 3 contracts.
+- Ruling: implement Tasks 3–4 as one compiling integration checkpoint; Task 3 changes the RobotTrainerScreen signature while Task 4 supplies its retained arguments. Cost: combined Android CI gate instead of an independently compiling intermediate UI commit.
+- Local pure JVM suite after point-controller implementation: 332 tests PASS. Android/ViewModel acceptance is excluded from this local runner and covered by Android CI.
+- Added cross-experience acceptance for exact source convergence/Direct Code, invalid source rejection, no task creation, retained session/adapter, canonical point convergence/native byte preservation and shared joints. Joint convergence pins existing behavior (acceptance, no invented RED).
+- Shared-runtime/ProjectRuntime authority and disabled candidate TCP controls remain unchanged. No new dependency or source execution.

@@ -23,6 +23,12 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import mx.youteachtk.epsonrasimulator.project.ProjectRuntime
+import mx.youteachtk.epsonrasimulator.adapters.VisualProgrammingLanguageAdapter
+import mx.youteachtk.epsonrasimulator.ui.visual.VisualLabPointController
+import mx.youteachtk.epsonrasimulator.ui.visual.VisualLabPointsPanel
+import mx.youteachtk.epsonrasimulator.ui.visual.programming.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,7 +42,17 @@ import mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntime
 
 @Composable
-fun RobotTrainerScreen(runtime: SharedRuntime) {
+fun RobotTrainerScreen(
+    runtime: SharedRuntime,
+    projectRuntime: ProjectRuntime,
+    visualProgrammingAdapter: VisualProgrammingLanguageAdapter,
+    visualProgrammingSession: VisualProgrammingSession
+) {
+    val pointController = remember(runtime) { VisualLabPointController(runtime) }
+    val programmingController = remember(projectRuntime, visualProgrammingAdapter, visualProgrammingSession) {
+        VisualProgrammingController(projectRuntime, visualProgrammingAdapter, visualProgrammingSession)
+    }
+    val programmingState = rememberVisualProgrammingState(projectRuntime, visualProgrammingSession, programmingController)
     val runtimeState = rememberRuntimeState(runtime)
     val robot = runtime.activeRobot()
     val jointValues = runtimeState.jointState.values.map(Double::toFloat)
@@ -177,6 +193,10 @@ fun RobotTrainerScreen(runtime: SharedRuntime) {
                     Button(onClick = {}, enabled = false) { Text("TOUCH") }
                     Button(onClick = {}, enabled = false) { Text("SAVE P1") }
                 }
+                Spacer(Modifier.height(16.dp))
+                VisualLabPointsPanel(runtimeState, pointController)
+                Spacer(Modifier.height(16.dp))
+                VisualProgrammingPanel(programmingState, programmingController)
             }
         }
     }
