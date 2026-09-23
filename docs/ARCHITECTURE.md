@@ -140,7 +140,22 @@ Phase 6D adds a deliberately bounded local training workflow without claiming Ep
 - F5 Run, Ctrl+B Build, Ctrl+M Command Window, and F6 Robot Manager resolve through the same global RC+ command registry.
 - Current build diagnostics navigate only while their build fingerprint is current; stale diagnostics do not navigate as current errors.
 
-Phase 6D does **not** add a SPEL+ source-to-task mapper, native compiler/linker/controller transfer, Rebuild/Operator/debug semantics, disk persistence/file picking, bridge/digital-twin transport, or physical hardware control. Source-to-neutral-task mapping and the shared programming view remain the next shared-runtime implementation sequence.
+Phase 6D does **not** add a SPEL+ source-to-task mapper, native compiler/linker/controller transfer, Rebuild/Operator/debug semantics, disk persistence/file picking, bridge/digital-twin transport, or physical hardware control. Source-to-neutral-task mapping remains deferred; Phase 7 below adds the shared programming view without turning source into runnable tasks.
+
+## Phase 7 — Visual Lab Migration + Shared Programming View
+
+Phase 7 keeps Visual Lab as an independent touch-first interface while moving its programming and teach-point workflows onto the same retained canonical services already used by RC+ Trainer:
+
+- `AppSessionViewModel` retains one `SharedRuntime`, one `ProjectRuntime`, and one presentation-only `VisualProgrammingSession`; switching RC+ Trainer / Visual Lab does not duplicate source, joints, points, tasks, I/O, workcell or tool state.
+- visual programming is an adapter capability over the current `ProgramDocument`; the SPEL+ adapter projects the already-recognized `Call`, `Go`, `Move`, `Speed`, and `Wait` statements rather than introducing a second pseudo-language.
+- visual edits replace only the argument range of a currently recognized statement and commit the resulting exact source through `ProjectRuntime.replaceSource`; comments, whitespace, newline style and unsupported code outside that range remain untouched.
+- visual action references are bound to the exact source snapshot and selected source path. Same-length edits, statement reordering, or switching to another source invalidate old references instead of allowing a stale visual action to mutate a different instruction.
+- unsupported Direct Code remains visible with its exact preserved text and is read-only. Top-level Direct Code and functions are interleaved by source range so the Visual Lab presentation keeps source order.
+- syntax-invalid current source remains exact and exportable; the last valid visual representation may remain visible only as a clearly read-only stale view.
+- Visual Lab teach-point controls dispatch only canonical `SharedRuntime` point commands, so RC+ point views and Visual Lab converge immediately; native `.pts` bytes remain preserved and are not semantically rewritten.
+- the existing Visual Lab joint controls continue to dispatch to the same canonical `SharedRuntime` joint state, and the existing 3D SceneView experience remains presentation over that runtime.
+
+Phase 7 does **not** map source to `TaskRuntime`, auto-load tasks, execute SPEL+, emulate Epson compilation/runtime semantics, rewrite native `.pts`, add durable file-picker persistence, add bridge/digital-twin transport, control physical hardware, or address C4 self-collision Issue #7.
 
 ## Layering
 

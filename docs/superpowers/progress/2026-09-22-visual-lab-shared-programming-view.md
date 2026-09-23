@@ -56,3 +56,22 @@ Planning head: 6c1a098bd5ef266348524faa6f69b9f59c182972
 - Final: Ruling: final phase-completion docs deferred until fixes pass; uncommitted completion drafts were reverted. Cost: Phase 7 cannot yet be called complete.
 - Quota handoff at 90% primary usage. Preserve completed independent review and do not repeat Tasks 1–4 from scratch. Read remote HEAD first because another session can advance it.
 - Device/emulator smoke UNVERIFIED in this GitHub-only harness; CI proves JVM behavior, Android compilation, debug APK creation and artifact upload only.
+
+
+## Independent review fix wave — 2026-09-23
+- F1 RED commit: `ce36a6ae4902c7ec14f328b030bb45d0b461e0c4`.
+- F1 RED CI: Android CI #304 / run `35904748254` FAILED at Unit tests exactly as intended: 354 tests completed, with only `sameLengthSourceMutationInvalidatesActionId`, `sameLengthStatementReorderInvalidatesActionId`, and `actionReferenceRejectsAfterSelectingAnotherIdenticalSource` failing.
+- F1 GREEN commit: `447de279b27dcd3c5bd6f9307eec46888d77e27c`.
+- F1 GREEN CI: Android CI #305 / run `35905236558` SUCCESS; Unit tests, Build debug APK and Upload debug APK all succeeded.
+- Final: fixed stale-action collision — adapter action IDs now include SHA-256 identity of exact current source; controller-projected IDs are additionally bound to the selected source path. Same-length source replacements, statement reorder and identical-source selection switches now fail closed.
+- F2/F3 RED commit: `dc5014360e53a71201edad1feeb3a835b5f9a96c`.
+- F2/F3 RED CI: Android CI #306 / run `35905597151` FAILED at Unit-test compilation exclusively on the intentionally missing `VisualProgrammingPresentation` / `VisualProgrammingBlock` contracts.
+- F2/F3 GREEN commit: `561c4a99ac639e7bbd7b5277804ba5238686fb0f`.
+- F2/F3 GREEN CI: Android CI #307 / run `35906003389` SUCCESS; Unit tests, Build debug APK and Upload debug APK all succeeded.
+- Final: fixed hidden Direct Code — the exact preserved `argumentText` is now part of the read-only presentation used by Compose, with the explicit `Direct Code — preserved, read-only` label.
+- Final: fixed top-level source ordering — `VisualProgramFunction` now carries its source range, and the shared presentation interleaves functions and top-level Direct Code by exact source position, including between-function and trailing Direct Code cases.
+- The fresh independent review remains recorded in `docs/superpowers/progress/2026-09-23-visual-lab-independent-review.md`. Per the preserved inline-execution workflow, the three Important findings were addressed in one TDD fix wave and no second reviewer dispatch was performed.
+- Whole-branch review range for the implementation checkpoint: exact Phase 6D base `90b69a4d33fffd51434d5a1931c14ba318f1bd1c` through GREEN implementation head `561c4a99ac639e7bbd7b5277804ba5238686fb0f`.
+- Review boundaries rechecked after fixes: no `RuntimeCommand.LoadTask` or source-to-task mapper was added; candidate `TOUCH` / `SAVE P1` controls remain disabled; native `.pts` mutation is absent; `app/build.gradle.kts` is unchanged and SceneView remains `4.35.0`; Issue #7 remains untouched.
+- Task 5 pre-documentation verification: Android CI #307 / run `35906003389` SUCCESS on `561c4a99ac639e7bbd7b5277804ba5238686fb0f`.
+- Device/emulator smoke UNVERIFIED in this GitHub-only harness; CI proves JVM behavior, Android compilation, debug APK creation and artifact upload only.
