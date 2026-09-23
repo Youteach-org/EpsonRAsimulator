@@ -1,6 +1,7 @@
 package mx.youteachtk.epsonrasimulator.ui.visual.programming
 
 import mx.youteachtk.epsonrasimulator.adapters.VisualProgrammingLanguageAdapter
+import mx.youteachtk.epsonrasimulator.programming.visual.VisualProgramAction
 import mx.youteachtk.epsonrasimulator.programming.visual.VisualProgramActionId
 import mx.youteachtk.epsonrasimulator.programming.visual.VisualProgramEditResult
 import mx.youteachtk.epsonrasimulator.programming.visual.VisualProgramProjection
@@ -62,6 +63,7 @@ class VisualProgrammingController(
         val projection = selectedPath
             ?.let(projectRuntime.state.sourceDocuments::get)
             ?.let(adapter::projectVisual)
+            ?.let { bindProjection(selectedPath, it) }
 
         return VisualProgrammingViewState(
             sourcePaths = sourcePaths,
@@ -78,6 +80,16 @@ class VisualProgrammingController(
             ?: return VisualProgrammingResult.Rejected(
                 "No editable source is selected"
             )
+        val boundAction = unbindActionId(actionId)
+            ?: return VisualProgrammingResult.Rejected(
+                "Visual action is stale or unavailable"
+            )
+        if (boundAction.sourcePath != path) {
+            return VisualProgrammingResult.Rejected(
+                "Visual action belongs to a different source"
+            )
+        }
+
         val document =
             projectRuntime.state.sourceDocuments[path]
                 ?: return VisualProgrammingResult.Rejected(
@@ -87,7 +99,7 @@ class VisualProgrammingController(
         return when (
             val edit = adapter.replaceVisualArgument(
                 document = document,
-                actionId = actionId,
+                actionId = boundAction.adapterActionId,
                 replacement = replacement
             )
         ) {
@@ -114,4 +126,79 @@ class VisualProgrammingController(
                 }
         }
     }
+
+    private fun bindProjection(
+        sourcePath: String,
+        projection: VisualProgramProjection
+    ): VisualProgramProjection =
+        projection.copy(
+            functions =
+                projection.functions.map { function ->
+                    function.copy(
+                        actions =
+                            function.actions.map { action ->
+                                bindAction(sourcePath, action)
+                            }
+                    )
+                },
+            topLevelActions =
+                projection.topLevelActions.map { action ->
+                    bindAction(sourcePath, action)
+                }
+        )
+
+    private fun bindAction(
+        sourcePath: String,
+        action: VisualProgramAction
+    ): VisualProgramAction =
+        action.copy(
+            id = bindActionId(sourcePath, action.id)
+        )
+
+    private fun bindActionId(
+        sourcePath: String,
+        adapterActionId: VisualProgramActionId
+    ): VisualProgramActionId =
+        VisualProgramActionId(
+            sourcePath.length.toString() + ":" +
+                sourcePath + adapterActionId.value
+        )
+
+    private fun unbindActionId(
+        actionId: VisualProgramActionId
+    ): BoundActionId? {
+        val value = actionId.value
+        val separator = value.indexOf(':')
+        if (separator <= 0) {
+            return null
+        }
+        val pathLength =
+            value.substring(0, separator)
+                .toIntOrNull()
+                ?: return null
+        val pathStart = separator + 1
+        val pathEnd = pathStart + pathLength
+        if (
+            pathLength < 0 ||
+            pathEnd > value.length
+        ) {
+            return null
+        }
+
+        return BoundActionId(
+            sourcePath = value.substring(
+                pathStart,
+                pathEnd
+            ),
+            adapterActionId =
+                VisualProgramActionId(
+                    value.substring(pathEnd)
+                )
+        )
+    }
+
+    private data class BoundActionId(
+        val sourcePath: String,
+        val adapterActionId: VisualProgramActionId
+    )
 }

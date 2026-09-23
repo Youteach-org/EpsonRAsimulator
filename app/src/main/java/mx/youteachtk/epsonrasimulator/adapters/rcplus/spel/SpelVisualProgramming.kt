@@ -1,5 +1,7 @@
 package mx.youteachtk.epsonrasimulator.adapters.rcplus.spel
 
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import mx.youteachtk.epsonrasimulator.programming.ProgramDocument
 import mx.youteachtk.epsonrasimulator.programming.visual.VisualProgramAction
 import mx.youteachtk.epsonrasimulator.programming.visual.VisualProgramActionId
@@ -55,6 +57,8 @@ object SpelVisualProgramming {
                 ?: return VisualProgramEditResult.Rejected(
                     "Current source has no editable semantic model"
                 )
+        val sourceFingerprint =
+            sourceFingerprint(document.sourceText)
 
         model.functions.forEachIndexed {
                 functionIndex,
@@ -63,6 +67,7 @@ object SpelVisualProgramming {
                     statementIndex,
                     statement ->
                 val expectedId = actionId(
+                    sourceFingerprint = sourceFingerprint,
                     functionIndex = functionIndex,
                     statementIndex = statementIndex,
                     statement = statement
@@ -97,8 +102,11 @@ object SpelVisualProgramming {
         document: ProgramDocument,
         status: VisualProgramProjectionStatus,
         editable: Boolean
-    ): VisualProgramProjection =
-        VisualProgramProjection(
+    ): VisualProgramProjection {
+        val sourceFingerprint =
+            sourceFingerprint(document.sourceText)
+
+        return VisualProgramProjection(
             status = status,
             supportState = document.supportState,
             functions =
@@ -112,6 +120,8 @@ object SpelVisualProgramming {
                                     statementIndex,
                                     statement ->
                                 action(
+                                    sourceFingerprint =
+                                        sourceFingerprint,
                                     functionIndex =
                                         functionIndex,
                                     statementIndex =
@@ -128,16 +138,19 @@ object SpelVisualProgramming {
                         statement ->
                     directAction(
                         id = VisualProgramActionId(
-                            "top:$statementIndex:" +
-                                "${statement.sourceRange.start}:" +
-                                "${statement.sourceRange.endExclusive}"
+                            "snapshot:" + sourceFingerprint +
+                                ":top:" + statementIndex + ":" +
+                                statement.sourceRange.start + ":" +
+                                statement.sourceRange.endExclusive
                         ),
                         statement = statement
                     )
                 }
         )
+    }
 
     private fun action(
+        sourceFingerprint: String,
         functionIndex: Int,
         statementIndex: Int,
         statement: SpelStatement,
@@ -147,6 +160,7 @@ object SpelVisualProgramming {
             is SpelStatement.Recognized ->
                 VisualProgramAction(
                     id = actionId(
+                        sourceFingerprint,
                         functionIndex,
                         statementIndex,
                         statement
@@ -161,6 +175,7 @@ object SpelVisualProgramming {
             is SpelStatement.DirectCode ->
                 directAction(
                     id = actionId(
+                        sourceFingerprint,
                         functionIndex,
                         statementIndex,
                         statement
@@ -183,16 +198,29 @@ object SpelVisualProgramming {
         )
 
     private fun actionId(
+        sourceFingerprint: String,
         functionIndex: Int,
         statementIndex: Int,
         statement: SpelStatement
     ): VisualProgramActionId =
         VisualProgramActionId(
-            "$functionIndex:$statementIndex:" +
-                "${statement.sourceRange.start}:" +
-                "${statement.sourceRange.endExclusive}:" +
+            "snapshot:" + sourceFingerprint + ":" +
+                functionIndex + ":" + statementIndex + ":" +
+                statement.sourceRange.start + ":" +
+                statement.sourceRange.endExclusive + ":" +
                 statementKind(statement)
         )
+
+    private fun sourceFingerprint(
+        source: String
+    ): String =
+        MessageDigest.getInstance("SHA-256")
+            .digest(
+                source.toByteArray(StandardCharsets.UTF_8)
+            )
+            .joinToString("") { byte ->
+                "%02x".format(byte.toInt() and 0xff)
+            }
 
     private fun statementKind(
         statement: SpelStatement
