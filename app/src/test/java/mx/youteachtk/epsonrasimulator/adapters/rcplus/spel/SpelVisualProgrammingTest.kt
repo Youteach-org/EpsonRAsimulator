@@ -150,4 +150,50 @@ class SpelVisualProgrammingTest {
 
         assertTrue(result is VisualProgramEditResult.Rejected)
     }
+    @Test
+    fun sameLengthSourceMutationInvalidatesActionId() {
+        val original = SpelAnalyzer.analyze(
+            "Function main\n  Speed 50\nFend\n",
+            null
+        )
+        val oldAction =
+            SpelVisualProgramming.project(original)
+                .functions.single().actions.single()
+        val changed = SpelAnalyzer.analyze(
+            "Function main\n  Speed 60\nFend\n",
+            null
+        )
+
+        val result = SpelVisualProgramming.replaceArgument(
+            changed,
+            oldAction.id,
+            "75"
+        )
+
+        assertTrue(result is VisualProgramEditResult.Rejected)
+    }
+
+    @Test
+    fun sameLengthStatementReorderInvalidatesActionId() {
+        val original = SpelAnalyzer.analyze(
+            "Function main\n  Go P1\n  Go P2\nFend\n",
+            null
+        )
+        val oldFirst =
+            SpelVisualProgramming.project(original)
+                .functions.single().actions.first()
+        val reordered = SpelAnalyzer.analyze(
+            "Function main\n  Go P2\n  Go P1\nFend\n",
+            null
+        )
+
+        val result = SpelVisualProgramming.replaceArgument(
+            reordered,
+            oldFirst.id,
+            "P9"
+        )
+
+        assertTrue(result is VisualProgramEditResult.Rejected)
+    }
+
 }

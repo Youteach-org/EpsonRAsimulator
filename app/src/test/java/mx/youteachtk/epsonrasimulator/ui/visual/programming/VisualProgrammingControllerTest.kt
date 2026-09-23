@@ -233,5 +233,54 @@ class VisualProgrammingControllerTest {
                 .getValue("Main.prg")
         )
     }
+    @Test
+    fun actionReferenceRejectsAfterSelectingAnotherIdenticalSource() {
+        val (bundle, _, controller) = fixture()
+        val source = "Function main\n  Speed 50\nFend\n"
+        bundle.projectRuntime.loadProject(
+            "Demo",
+            linkedMapOf(
+                "A.prg" to source.toByteArray(),
+                "B.prg" to source.toByteArray()
+            )
+        )
+        controller.reconcile()
+        val actionFromA =
+            controller.viewState().projection!!
+                .functions.single().actions.single()
+                .id
+
+        assertEquals(
+            VisualProgrammingResult.Applied,
+            controller.selectSource("B.prg")
+        )
+        val bBefore =
+            bundle.projectRuntime.export()
+                .getValue("B.prg")
+                .copyOf()
+
+        val result =
+            controller.replaceArgument(actionFromA, "75")
+
+        assertTrue(result is VisualProgrammingResult.Rejected)
+        assertEquals(
+            source,
+            bundle.projectRuntime.state.sourceDocuments
+                .getValue("B.prg")
+                .sourceText
+        )
+        assertArrayEquals(
+            bBefore,
+            bundle.projectRuntime.export()
+                .getValue("B.prg")
+        )
+        assertEquals(
+            source,
+            bundle.projectRuntime.state.sourceDocuments
+                .getValue("A.prg")
+                .sourceText
+        )
+    }
+
 }
 
