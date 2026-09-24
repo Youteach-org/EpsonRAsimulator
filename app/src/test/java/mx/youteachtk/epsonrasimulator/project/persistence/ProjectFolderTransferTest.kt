@@ -1,7 +1,6 @@
 package mx.youteachtk.epsonrasimulator.project.persistence
 
 import java.io.ByteArrayInputStream
-import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
@@ -9,13 +8,32 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ProjectFolderTransferTest {
+    private class TrackingCursor(
+        entries: List<FolderEntry>,
+        private val onClose: () -> Unit,
+        private val onNext: (FolderEntry) -> Unit = {}
+    ) : FolderEntryCursor {
+        private val delegate = entries.iterator()
+        private var closed = false
+        override fun hasNext(): Boolean = delegate.hasNext()
+        override fun next(): FolderEntry = delegate.next().also(onNext)
+        override fun close() {
+            if (!closed) {
+                closed = true
+                onClose()
+            }
+        }
+    }
+
     private class Source(
         val directories: Map<String, List<FolderEntry>>,
         val contents: Map<String, ByteArray> = emptyMap()
     ) : ProjectFolderSource {
         var closed = 0
         var reads = 0
-        override fun children(parentId: String) = directories[parentId].orEmpty().asSequence()
+        var enumerationsClosed = 0
+        override fun children(parentId: String): FolderEntryCursor =
+            TrackingCursor(directories[parentId].orEmpty(), onClose = { enumerationsClosed++ })
         override fun openFile(id: String): InputStream =
             object : ByteArrayInputStream(contents.getValue(id)) {
                 override fun read(b: ByteArray, off: Int, len: Int): Int {
@@ -24,26 +42,6 @@ class ProjectFolderTransferTest {
                 }
                 override fun close() { closed++; super.close() }
             }
-    }
-    private class TrackingSequence(
-        private val entries: List<FolderEntry>,
-        private val onClose: () -> Unit,
-        private val onNext: (FolderEntry) -> Unit = {}
-    ) : Sequence<FolderEntry>, Closeable {
-        private var closed = false
-        override fun iterator(): Iterator<FolderEntry> {
-            val delegate = entries.iterator()
-            return object : Iterator<FolderEntry> {
-                override fun hasNext(): Boolean = delegate.hasNext()
-                override fun next(): FolderEntry = delegate.next().also(onNext)
-            }
-        }
-        override fun close() {
-            if (!closed) {
-                closed = true
-                onClose()
-            }
-        }
     }
 
     private class Destination(val failAt: String? = null, val rootConflict: Boolean = false) : NewProjectFolderDestination {
@@ -119,9 +117,16 @@ class ProjectFolderTransferTest {
         rejects(PersistenceFailure.LIMIT_EXCEEDED) { imported(deep, PersistenceLimits(maxDepth = 1)) }
         var enumerated = 0
         val endless = object : ProjectFolderSource {
-            override fun children(parentId: String): Sequence<FolderEntry> = if (parentId != "root") emptySequence() else sequence {
-                while (true) { enumerated++; yield(FolderEntry("d$enumerated", "d$enumerated", true)) }
-            }
+            override fun children(parentId: String): FolderEntryCursor =
+                if (parentId != "root") TrackingCursor(emptyList(), onClose = {})
+                else object : FolderEntryCursor {
+                    override fun hasNext(): Boolean = true
+                    override fun next(): FolderEntry {
+                        enumerated++
+                        return FolderEntry("d$enumerated", "d$enumerated", true)
+                    }
+                    override fun close() = Unit
+                }
             override fun openFile(id: String): InputStream = error("No files")
         }
         rejects(PersistenceFailure.LIMIT_EXCEEDED) { imported(endless, PersistenceLimits(maxEntries = 2)) }
@@ -142,14 +147,14 @@ class ProjectFolderTransferTest {
     @Test fun cancellationClosesSuspendedFolderEnumeration() {
         var closes = 0
         var cancel = false
-        val rootEntries = TrackingSequence(
+        val rootEntries = TrackingCursor(
             listOf(FolderEntry("d", "dir", true)),
             onClose = { closes++ },
             onNext = { cancel = true }
         )
         val source = object : ProjectFolderSource {
-            override fun children(parentId: String): Sequence<FolderEntry> =
-                if (parentId == "root") rootEntries else emptySequence()
+            override fun children(parentId: String): FolderEntryCursor =
+                if (parentId == "root") rootEntries else TrackingCursor(emptyList(), onClose = {})
             override fun openFile(id: String): InputStream = error("No files")
         }
 
@@ -159,13 +164,13 @@ class ProjectFolderTransferTest {
 
     @Test fun entryLimitClosesSuspendedFolderEnumeration() {
         var closes = 0
-        val rootEntries = TrackingSequence(
+        val rootEntries = TrackingCursor(
             listOf(FolderEntry("a", "a", false), FolderEntry("b", "b", false)),
             onClose = { closes++ }
         )
         val source = object : ProjectFolderSource {
-            override fun children(parentId: String): Sequence<FolderEntry> =
-                if (parentId == "root") rootEntries else emptySequence()
+            override fun children(parentId: String): FolderEntryCursor =
+                if (parentId == "root") rootEntries else TrackingCursor(emptyList(), onClose = {})
             override fun openFile(id: String): InputStream = ByteArrayInputStream(byteArrayOf())
         }
 
@@ -177,19 +182,19 @@ class ProjectFolderTransferTest {
 
     @Test fun nestedFailureClosesChildAndParentEnumerations() {
         var closes = 0
-        val rootEntries = TrackingSequence(
+        val rootEntries = TrackingCursor(
             listOf(FolderEntry("d", "dir", true)),
             onClose = { closes++ }
         )
-        val childEntries = TrackingSequence(
+        val childEntries = TrackingCursor(
             listOf(FolderEntry("bad", "bad/name", false)),
             onClose = { closes++ }
         )
         val source = object : ProjectFolderSource {
-            override fun children(parentId: String): Sequence<FolderEntry> = when (parentId) {
+            override fun children(parentId: String): FolderEntryCursor = when (parentId) {
                 "root" -> rootEntries
                 "d" -> childEntries
-                else -> emptySequence()
+                else -> TrackingCursor(emptyList(), onClose = {})
             }
             override fun openFile(id: String): InputStream = error("No files")
         }
@@ -200,7 +205,7 @@ class ProjectFolderTransferTest {
 
     @Test fun ioAndPermissionFailuresAreRecoverableImportErrors() {
         val source = object : ProjectFolderSource {
-            override fun children(parentId: String): Sequence<FolderEntry> = throw SecurityException("Revoked")
+            override fun children(parentId: String): FolderEntryCursor = throw SecurityException("Revoked")
             override fun openFile(id: String): InputStream = error("No access")
         }
         rejects(PersistenceFailure.IO) { imported(source) }

@@ -104,7 +104,7 @@ internal class ResourcePaths(private val limits: PersistenceLimits) {
             prefix = if (prefix.isEmpty()) part else "$prefix/$part"
             val last = index == parts.lastIndex
             val isDirectory = !last || directory
-            val key = Normalizer.normalize(prefix, Normalizer.Form.NFC).lowercase(Locale.ROOT)
+            val key = caselessPathIdentity(prefix)
             val existing = entries[key]
             if (existing != null) {
                 if (existing.spelling != prefix || existing.directory != isDirectory ||
@@ -114,6 +114,12 @@ internal class ResourcePaths(private val limits: PersistenceLimits) {
             } else entries[key] = Entry(prefix, isDirectory, last)
         }
     }
+}
+
+private fun caselessPathIdentity(value: String): String {
+    val normalized = Normalizer.normalize(value, Normalizer.Form.NFC)
+    val folded = normalized.uppercase(Locale.ROOT).lowercase(Locale.ROOT)
+    return Normalizer.normalize(folded, Normalizer.Form.NFC)
 }
 
 internal fun validateMetadata(value: String, maxBytes: Int) {
