@@ -516,7 +516,8 @@ class ProjectPersistenceCoordinatorTest {
         h.coordinator.requestImport(readSelection("content://tree/new"))
         h.execution.runWorkerAll()
 
-        val record = assertNotNull(h.records.record)
+        assertNotNull(h.records.record)
+        val record = requireNotNull(h.records.record)
         assertNull(h.project.state.projectName)
         assertTrue(h.slots.load(record.projectId) is StoreLoad.Loaded)
 
@@ -659,7 +660,8 @@ class ProjectPersistenceCoordinatorTest {
         h.execution.drain()
 
         assertEquals(before, h.coordinator.state.saveStatus)
-        val result = assertNotNull(h.coordinator.state.lastExport)
+        assertNotNull(h.coordinator.state.lastExport)
+        val result = requireNotNull(h.coordinator.state.lastExport)
         assertFalse(result.complete)
         assertEquals("Main.prg", result.failedPath)
         assertEquals(PersistenceFailure.IO, result.failure)
