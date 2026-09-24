@@ -364,6 +364,46 @@ class ProjectPersistenceCoordinatorTest {
         assertNull(h.project.state.projectName)
     }
 
+    @Test fun corruptCurrentWithValidPreviousRestoresRecoveredGeneration() {
+        val h = harness()
+        val id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        val token = h.seed(id = id)
+        val newer = ProjectSnapshot(
+            id,
+            "Saved Demo",
+            h.bundle.runtime.state.simulatorAdapterId.value,
+            h.bundle.runtime.state.activeRobotId,
+            2,
+            mapOf("Main.prg" to "Function main\n  Speed 88\nFend\n".toByteArray())
+        )
+        assertTrue(h.slots.open(id).save(newer, token) is StoreSave.Saved)
+        h.slots.files.getValue(id).data["current.snapshot"] = byteArrayOf(9, 9, 9)
+
+        h.start()
+
+        assertEquals(PersistenceStartupStatus.READY, h.coordinator.state.startup)
+        assertEquals(PersistenceSaveStatus.RECOVERED, h.coordinator.state.saveStatus)
+        assertEquals(
+            "Function main\nFend\n",
+            h.project.resourceBytes("Main.prg")!!.toString(Charsets.UTF_8)
+        )
+    }
+
+    @Test fun noOpSourceReplacementDoesNotCreateAutosaveRevision() {
+        val h = harness()
+        val id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = id)
+        h.start()
+
+        h.project.replaceSource("Main.prg", "Function main\nFend\n")
+        h.execution.advanceBy(1000)
+        h.execution.drain()
+
+        assertEquals(1L, h.savedSnapshot(id).revision)
+        assertEquals(0, h.execution.scheduledCount())
+        assertEquals(PersistenceSaveStatus.SAVED, h.coordinator.state.saveStatus)
+    }
+
     @Test fun nativeEditsDebounceAndOnlyNewestRevisionIsSaved() {
         val h = harness()
         val id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
@@ -589,6 +629,22 @@ class ProjectPersistenceCoordinatorTest {
 
         assertEquals("B", h.project.state.projectName)
         assertEquals("22222222-2222-4222-8222-222222222222", h.records.record?.projectId)
+    }
+
+    @Test fun exportWithoutProjectOrWriteGrantIsRejectedWithoutStorageMutation() {
+        val empty = harness()
+        empty.start()
+        empty.coordinator.exportTo(writeSelection("content://tree/export"))
+        assertNull(empty.coordinator.state.lastExport)
+        assertNotNull(empty.coordinator.state.message)
+
+        val saved = harness()
+        saved.seed()
+        saved.start()
+        saved.coordinator.exportTo(readSelection("content://tree/export"))
+        assertNull(saved.coordinator.state.lastExport)
+        assertNotNull(saved.coordinator.state.message)
+        assertTrue(saved.gateway.exported.isEmpty())
     }
 
     @Test fun exportPartialFailureDoesNotChangeDirtyOrSavedState() {
