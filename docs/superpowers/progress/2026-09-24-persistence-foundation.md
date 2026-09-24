@@ -14,4 +14,6 @@ Remote base: 794e62c96133b0eb4a138d8e589941006b3385d0; product base PR16 95f2130
 - Task1: local RED missing new snapshot APIs observed; GREEN complete pure suite 347 tests. Remote RED bf10226 CI310/run36001040561 failed unit compilation as expected; GREEN awaiting full CI.
 - Task1: complete — remote GREEN e8e12aa, Android CI311/run36001275956 unit tests, debug APK, upload SUCCESS. Local suite 347/347.
 - Task2: complete — RED 8993106, CI312/run36001666759 failed missing folder APIs; GREEN 1d508cd, Android CI313/run36001939304 unit tests, APK, upload SUCCESS. Local whole suite 357/357. Task3 local RED missing store APIs observed; local GREEN whole suite371/371; remote checkpoints follow.
+- Task3: complete — REDcef541ff CI314/run36002336479 failed missing store APIs; GREEN793e1f25544670fac328a4de7fd3fa7a90705668 CI315/run36002612539 tests/APK/upload SUCCESS; local371/371. Product tasks complete; final review fixes pending.
+- Final review: one independent gpt-6-astra/high pass completed. F1 Unicode aliases, F2 enumerable close lifecycle, F3 last-write cancellation accepted Important. No Critical/Minor. ONE RED-GREEN fix wave pending; no re-review. See 2026-09-24-persistence-independent-review.md for all declined-to-judge rulings and costs.
 
