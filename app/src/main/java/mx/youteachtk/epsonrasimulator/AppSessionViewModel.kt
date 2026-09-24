@@ -4,6 +4,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import mx.youteachtk.epsonrasimulator.project.persistence.DocumentTreeSelection
+import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceController
+import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceState
+import mx.youteachtk.epsonrasimulator.project.persistence.PersistenceStartupStatus
+import mx.youteachtk.epsonrasimulator.project.persistence.ProjectReplacementDecision
 import mx.youteachtk.epsonrasimulator.ui.visual.programming.VisualProgrammingSession
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeBundle
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
@@ -20,7 +25,8 @@ enum class AppExperience {
 }
 
 class AppSessionViewModel(
-    initialBundle: AppRuntimeBundle = AppRuntimeFactory.createDefault()
+    initialBundle: AppRuntimeBundle = AppRuntimeFactory.createDefault(),
+    val persistence: ProjectPersistenceController? = null
 ) : ViewModel() {
     val bundle: AppRuntimeBundle = initialBundle
     val visualProgrammingSession = VisualProgrammingSession()
@@ -53,6 +59,39 @@ class AppSessionViewModel(
     var activeExperience: AppExperience? by mutableStateOf(null)
         private set
 
+    var persistenceState: ProjectPersistenceState by mutableStateOf(
+        persistence?.state ?: ProjectPersistenceState(startup = PersistenceStartupStatus.READY)
+    )
+        private set
+
+    private val persistenceSubscription = persistence?.subscribe { persistenceState = it }
+
+    init {
+        persistence?.start()
+    }
+
+    fun importTreeSelected(selection: DocumentTreeSelection) {
+        persistence?.requestImport(selection)
+    }
+
+    fun exportTreeSelected(selection: DocumentTreeSelection) {
+        persistence?.exportTo(selection)
+    }
+
+    fun saveProject() { persistence?.saveNow() }
+
+    fun resolveProjectReplacement(decision: ProjectReplacementDecision) {
+        persistence?.resolveReplacement(decision)
+    }
+
+    fun dismissPersistenceMessage() { persistence?.dismissMessage() }
+
+    override fun onCleared() {
+        persistenceSubscription?.cancel()
+        persistence?.close()
+        super.onCleared()
+    }
+
     fun selectExperience(experience: AppExperience) {
         activeExperience = experience
     }
@@ -61,3 +100,4 @@ class AppSessionViewModel(
         activeExperience = null
     }
 }
+

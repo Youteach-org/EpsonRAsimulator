@@ -1,6 +1,6 @@
 # Phase 8 — Persistence + Round-Trip: proposed design
 
-Status: Phase 8A implementation underway after the user selected folders and instructed continued execution on 2026-09-24. Phase 7 is complete. Android UI integration remains Phase 8B.
+Status: Phase 8A persistence foundation is complete with final review fixes verified by Android CI319/run36005882108. Phase 8B Android persistence integration is planned on feature/android-persistence-integration; product implementation has not started on that branch. Phase 7 remains complete.
 Base: 95f21308ca7b845416fe89edd1260b4621fae8fa (PR16 Draft), Android CI308/run35906624796 tests/APK/upload SUCCESS.
 Authority: docs/superpowers/specs/2026-09-16-rcplus-trainer-shared-runtime-design.md, sections12–13,31,35,41; approved implementation sequence item8.
 
@@ -77,7 +77,7 @@ Each slice gets a concrete TDD implementation plan and a stacked Draft checkpoin
 ## Scope review
 The design preserves the approved single-authority and byte-preservation constraints. It narrows full simulation persistence to explicit learner project/session data for the first slices. The user selected folders on 2026-09-24; archive transport is excluded. Storage layout/version/limits must be pinned by the written implementation plan before coding.
 
-Next: write the detailed 8A implementation plan using Superpowers writing-plans with folders as the selected transport. Submit the concrete plan for review before product implementation. Do not merge PR16.
+Next: review `docs/superpowers/plans/2026-09-24-android-persistence-integration.md`, then execute Phase 8B with TDD on the stacked Draft branch. Keep PR17 and PR16 unmerged; do not change `main`.
 
 ## Additional folder acceptance
 - Revoked permissions or a disconnected provider leave the private project recoverable.

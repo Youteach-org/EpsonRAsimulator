@@ -1,5 +1,10 @@
 package mx.youteachtk.epsonrasimulator.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.material3.CircularProgressIndicator
+import mx.youteachtk.epsonrasimulator.ProjectPersistenceBar
+import mx.youteachtk.epsonrasimulator.project.persistence.PersistenceStartupStatus
+import mx.youteachtk.epsonrasimulator.project.persistence.android.PersistableDocumentTreeContract
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +28,37 @@ fun AppExperienceRoot(
     session: AppSessionViewModel,
     modifier: Modifier = Modifier
 ) {
+    val importLauncher = rememberLauncherForActivityResult(PersistableDocumentTreeContract()) { selection ->
+        if (selection != null) session.importTreeSelected(selection)
+    }
+    val exportLauncher = rememberLauncherForActivityResult(PersistableDocumentTreeContract()) { selection ->
+        if (selection != null) session.exportTreeSelected(selection)
+    }
+    Column(modifier = modifier.fillMaxSize()) {
+        ProjectPersistenceBar(
+            state = session.persistenceState,
+            available = session.persistence != null,
+            onImport = { importLauncher.launch(Unit) },
+            onSave = session::saveProject,
+            onExport = { exportLauncher.launch(Unit) },
+            onDismissMessage = session::dismissPersistenceMessage,
+            onReplacement = session::resolveProjectReplacement
+        )
+        Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+            when (session.persistenceState.startup) {
+                PersistenceStartupStatus.LOADING -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                PersistenceStartupStatus.ERROR -> Text(
+                    text = session.persistenceState.message ?: "Project storage is unavailable. Reopen the app after resolving the storage problem.",
+                    modifier = Modifier.align(Alignment.Center).padding(24.dp)
+                )
+                PersistenceStartupStatus.READY -> ExperienceContent(session, Modifier.fillMaxSize())
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExperienceContent(session: AppSessionViewModel, modifier: Modifier) {
     when (session.activeExperience) {
         null -> ExperienceChooser(
             onRcPlusTrainer = {
@@ -106,3 +142,4 @@ private fun ExperienceChooser(
         }
     }
 }
+
