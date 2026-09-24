@@ -1,6 +1,6 @@
 # Phase 8 — Persistence + Round-Trip: proposed design
 
-Status: DESIGN PROPOSAL ONLY. Phase 7 is complete; Phase 8 product code is not authorized by this document.
+Status: Phase 8A implementation underway after the user selected folders and instructed continued execution on 2026-09-24. Phase 7 is complete. Android UI integration remains Phase 8B.
 Base: 95f21308ca7b845416fe89edd1260b4621fae8fa (PR16 Draft), Android CI308/run35906624796 tests/APK/upload SUCCESS.
 Authority: docs/superpowers/specs/2026-09-16-rcplus-trainer-shared-runtime-design.md, sections12–13,31,35,41; approved implementation sequence item8.
 
@@ -83,3 +83,4 @@ Next: write the detailed 8A implementation plan using Superpowers writing-plans 
 - Revoked permissions or a disconnected provider leave the private project recoverable.
 - Partial export failures identify affected resources and never report a complete export.
 - Existing changed files and unrelated destination resources are not silently overwritten or removed.
+
