@@ -1,6 +1,7 @@
 package mx.youteachtk.epsonrasimulator.project.persistence
 
 import java.io.ByteArrayInputStream
+import java.io.Closeable
 import java.io.IOException
 import java.io.InputStream
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
@@ -24,6 +25,27 @@ class ProjectFolderTransferTest {
                 override fun close() { closed++; super.close() }
             }
     }
+    private class TrackingSequence(
+        private val entries: List<FolderEntry>,
+        private val onClose: () -> Unit,
+        private val onNext: (FolderEntry) -> Unit = {}
+    ) : Sequence<FolderEntry>, Closeable {
+        private var closed = false
+        override fun iterator(): Iterator<FolderEntry> {
+            val delegate = entries.iterator()
+            return object : Iterator<FolderEntry> {
+                override fun hasNext(): Boolean = delegate.hasNext()
+                override fun next(): FolderEntry = delegate.next().also(onNext)
+            }
+        }
+        override fun close() {
+            if (!closed) {
+                closed = true
+                onClose()
+            }
+        }
+    }
+
     private class Destination(val failAt: String? = null, val rootConflict: Boolean = false) : NewProjectFolderDestination {
         val files = linkedMapOf("unrelated.bin" to byteArrayOf(99))
         val directories = mutableSetOf<String>()
@@ -117,6 +139,65 @@ class ProjectFolderTransferTest {
         assertEquals(setOf("Old.prg"), project.export().keys)
     }
 
+    @Test fun cancellationClosesSuspendedFolderEnumeration() {
+        var closes = 0
+        var cancel = false
+        val rootEntries = TrackingSequence(
+            listOf(FolderEntry("d", "dir", true)),
+            onClose = { closes++ },
+            onNext = { cancel = true }
+        )
+        val source = object : ProjectFolderSource {
+            override fun children(parentId: String): Sequence<FolderEntry> =
+                if (parentId == "root") rootEntries else emptySequence()
+            override fun openFile(id: String): InputStream = error("No files")
+        }
+
+        rejects(PersistenceFailure.CANCELLED) { imported(source, cancelled = { cancel }) }
+        assertEquals(1, closes)
+    }
+
+    @Test fun entryLimitClosesSuspendedFolderEnumeration() {
+        var closes = 0
+        val rootEntries = TrackingSequence(
+            listOf(FolderEntry("a", "a", false), FolderEntry("b", "b", false)),
+            onClose = { closes++ }
+        )
+        val source = object : ProjectFolderSource {
+            override fun children(parentId: String): Sequence<FolderEntry> =
+                if (parentId == "root") rootEntries else emptySequence()
+            override fun openFile(id: String): InputStream = ByteArrayInputStream(byteArrayOf())
+        }
+
+        rejects(PersistenceFailure.LIMIT_EXCEEDED) {
+            imported(source, PersistenceLimits(maxEntries = 1))
+        }
+        assertEquals(1, closes)
+    }
+
+    @Test fun nestedFailureClosesChildAndParentEnumerations() {
+        var closes = 0
+        val rootEntries = TrackingSequence(
+            listOf(FolderEntry("d", "dir", true)),
+            onClose = { closes++ }
+        )
+        val childEntries = TrackingSequence(
+            listOf(FolderEntry("bad", "bad/name", false)),
+            onClose = { closes++ }
+        )
+        val source = object : ProjectFolderSource {
+            override fun children(parentId: String): Sequence<FolderEntry> = when (parentId) {
+                "root" -> rootEntries
+                "d" -> childEntries
+                else -> emptySequence()
+            }
+            override fun openFile(id: String): InputStream = error("No files")
+        }
+
+        rejects(PersistenceFailure.INVALID_PATH) { imported(source) }
+        assertEquals(2, closes)
+    }
+
     @Test fun ioAndPermissionFailuresAreRecoverableImportErrors() {
         val source = object : ProjectFolderSource {
             override fun children(parentId: String): Sequence<FolderEntry> = throw SecurityException("Revoked")
@@ -162,6 +243,48 @@ class ProjectFolderTransferTest {
         assertNull(result.rootId)
         assertEquals(listOf("A.prg", "B.pts", "C.bin"), result.remaining)
         assertEquals(setOf("unrelated.bin"), destination.files.keys)
+    }
+
+    @Test fun cancellationDuringFinalWriteNeverReportsComplete() {
+        var cancel = false
+        val destination = object : NewProjectFolderDestination {
+            override fun createProjectFolder(name: String): String = "new"
+            override fun createDirectory(parentId: String, name: String): String = error("No directories")
+            override fun writeNewFile(parentId: String, name: String, bytes: ByteArray) {
+                cancel = true
+            }
+        }
+        val oneFile = ProjectSnapshot("id", "Demo", "s", "r", 1, mapOf("A.prg" to byteArrayOf(1)))
+
+        val result = ProjectFolderTransfer().exportProject(oneFile, destination) { cancel }
+
+        assertFalse(result.complete)
+        assertEquals(PersistenceFailure.CANCELLED, result.failure)
+        assertEquals(listOf("A.prg"), result.completed)
+        assertNull(result.failedPath)
+        assertTrue(result.remaining.isEmpty())
+    }
+
+    @Test fun cancellationDuringEmptyRootCreationNeverReportsComplete() {
+        var cancel = false
+        val destination = object : NewProjectFolderDestination {
+            override fun createProjectFolder(name: String): String {
+                cancel = true
+                return "new"
+            }
+            override fun createDirectory(parentId: String, name: String): String = error("No directories")
+            override fun writeNewFile(parentId: String, name: String, bytes: ByteArray) = error("No files")
+        }
+        val empty = ProjectSnapshot("id", "Demo", "s", "r", 1, emptyMap())
+
+        val result = ProjectFolderTransfer().exportProject(empty, destination) { cancel }
+
+        assertFalse(result.complete)
+        assertEquals(PersistenceFailure.CANCELLED, result.failure)
+        assertEquals("new", result.rootId)
+        assertTrue(result.completed.isEmpty())
+        assertNull(result.failedPath)
+        assertTrue(result.remaining.isEmpty())
     }
 
     @Test fun cancellationAfterOneFileNeverReportsComplete() {
