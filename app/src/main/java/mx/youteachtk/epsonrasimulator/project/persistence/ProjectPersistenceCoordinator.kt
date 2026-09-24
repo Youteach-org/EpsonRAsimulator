@@ -96,13 +96,20 @@ class ProjectPersistenceCoordinator(
     private var projectSubscription: ProjectRuntimeSubscription? = null
     private var applyingOwnedProject = false
     private var currentToken: SnapshotToken? = null
+
+    @Volatile
     private var currentRevision = 0L
+
     private var pendingSnapshot: ProjectSnapshot? = null
     private var debounce: PersistenceCancellation? = null
     private var saveInFlight = false
     private var activeRecordPublished = false
     private var pendingImport: DocumentTreeSelection? = null
     private var importAfterSave = false
+    private var queuedImportAfterPublication: DocumentTreeSelection? = null
+    private var importPublicationRequestId: Long? = null
+    private var importPublicationInvalidatedByEdit = false
+    private var importPublicationSuperseded = false
 
     @Volatile
     private var importGeneration = 0L
@@ -129,6 +136,16 @@ class ProjectPersistenceCoordinator(
             publish(state.copy(message = "Project storage is not ready"))
             return
         }
+        val queuedBehindPublishedImport = synchronized(importLock) {
+            if (importPublicationRequestId != null) {
+                queuedImportAfterPublication = selection
+                importPublicationSuperseded = true
+                true
+            } else {
+                false
+            }
+        }
+        if (queuedBehindPublishedImport) return
         if (hasUnsavedWork()) {
             pendingImport = selection
             publish(
@@ -162,7 +179,6 @@ class ProjectPersistenceCoordinator(
                 publish(state.copy(replacementDecisionRequired = false))
                 debounce?.cancel()
                 debounce = null
-                pendingSnapshot = null
                 if (saveInFlight) {
                     importAfterSave = true
                 } else {
@@ -310,7 +326,11 @@ class ProjectPersistenceCoordinator(
         projectSubscription = null
         synchronized(importLock) {
             importGeneration++
+            importPublicationRequestId = null
+            importPublicationInvalidatedByEdit = false
+            importPublicationSuperseded = false
         }
+        queuedImportAfterPublication = null
         listeners.clear()
         execution.close()
     }
@@ -450,6 +470,11 @@ class ProjectPersistenceCoordinator(
         }
 
         currentRevision += 1
+        synchronized(importLock) {
+            if (importPublicationRequestId != null) {
+                importPublicationInvalidatedByEdit = true
+            }
+        }
         val snapshot = captureSnapshot(projectId, projectName, currentRevision)
         pendingSnapshot = snapshot
         publish(
@@ -628,12 +653,22 @@ class ProjectPersistenceCoordinator(
         validateCanonicalProjectId(newProjectId)
         val adapterId = runtime.state.simulatorAdapterId.value
         val robotId = runtime.state.activeRobotId
-        val previousOrigin = state.origin
+        val authorizedRevision = currentRevision
+        val previousRecord =
+            if (activeRecordPublished && state.projectId != null) {
+                ActiveProjectRecord(
+                    requireNotNull(state.projectId),
+                    state.origin
+                )
+            } else {
+                null
+            }
 
         execution.execute {
             if (!isCurrentImport(requestId)) return@execute
             val result = try {
-                val source = DocumentTreeProjectSource(selection, documentGateway)
+                val source =
+                    DocumentTreeProjectSource(selection, documentGateway)
                 val snapshot = folderTransfer.importProject(
                     source = source,
                     rootId = source.rootId,
@@ -648,7 +683,8 @@ class ProjectPersistenceCoordinator(
                     return@execute
 
                 val saved = when (
-                    val save = slotStores.open(newProjectId).save(snapshot, null)
+                    val save =
+                        slotStores.open(newProjectId).save(snapshot, null)
                 ) {
                     is StoreSave.Saved -> save
                     StoreSave.Conflict ->
@@ -667,18 +703,26 @@ class ProjectPersistenceCoordinator(
                     return@execute
 
                 val newOrigin = documentGateway.persist(selection)
+                var needsDecision = false
                 try {
                     synchronized(importLock) {
-                        if (requestId != importGeneration) {
+                        if (requestId != importGeneration || closed) {
                             try {
                                 documentGateway.release(newOrigin)
                             } catch (_: Exception) {
                             }
                             return@execute
                         }
-                        activeRecordStore.write(
-                            ActiveProjectRecord(newProjectId, newOrigin)
-                        )
+                        if (currentRevision != authorizedRevision) {
+                            needsDecision = true
+                        } else {
+                            importPublicationRequestId = requestId
+                            importPublicationInvalidatedByEdit = false
+                            importPublicationSuperseded = false
+                            activeRecordStore.write(
+                                ActiveProjectRecord(newProjectId, newOrigin)
+                            )
+                        }
                     }
                 } catch (e: Exception) {
                     try {
@@ -688,32 +732,43 @@ class ProjectPersistenceCoordinator(
                     throw e
                 }
 
-                var warning: String? = null
-                if (
-                    previousOrigin != null &&
-                    previousOrigin.uri != newOrigin.uri
-                ) {
+                if (needsDecision) {
                     try {
-                        documentGateway.release(previousOrigin)
+                        documentGateway.release(newOrigin)
                     } catch (_: Exception) {
-                        warning =
-                            "New project opened, but the previous folder permission could not be released"
                     }
+                    ImportResult.NeedsDecision(
+                        requestId = requestId,
+                        selection = selection
+                    )
+                } else {
+                    ImportResult.Success(
+                        requestId = requestId,
+                        selection = selection,
+                        snapshot = snapshot,
+                        token = saved.token,
+                        origin = newOrigin,
+                        previousRecord = previousRecord
+                    )
                 }
-
-                ImportResult.Success(
-                    requestId,
-                    snapshot,
-                    saved.token,
-                    newOrigin,
-                    warning
-                )
             } catch (e: PersistenceException) {
-                ImportResult.Failed(requestId, e.reason, "Import failed: ${e.reason}")
+                ImportResult.Failed(
+                    requestId,
+                    e.reason,
+                    "Import failed: ${e.reason}"
+                )
             } catch (_: IOException) {
-                ImportResult.Failed(requestId, PersistenceFailure.IO, "Import failed: IO")
+                ImportResult.Failed(
+                    requestId,
+                    PersistenceFailure.IO,
+                    "Import failed: IO"
+                )
             } catch (_: SecurityException) {
-                ImportResult.Failed(requestId, PersistenceFailure.IO, "Import failed: IO")
+                ImportResult.Failed(
+                    requestId,
+                    PersistenceFailure.IO,
+                    "Import failed: IO"
+                )
             }
 
             execution.dispatchUi {
@@ -727,6 +782,26 @@ class ProjectPersistenceCoordinator(
         when (result) {
             is ImportResult.Success -> {
                 if (!isCurrentImport(result.requestId)) return
+
+                val invalidation = synchronized(importLock) {
+                    val ownsPublication =
+                        importPublicationRequestId == result.requestId
+                    if (!ownsPublication) {
+                        ImportInvalidation.SUPERSEDED
+                    } else if (importPublicationInvalidatedByEdit) {
+                        ImportInvalidation.EDIT
+                    } else if (importPublicationSuperseded) {
+                        ImportInvalidation.SUPERSEDED
+                    } else {
+                        ImportInvalidation.NONE
+                    }
+                }
+
+                if (invalidation != ImportInvalidation.NONE) {
+                    rollbackPublishedImport(result, invalidation)
+                    return
+                }
+
                 try {
                     applyingOwnedProject = true
                     projectRuntime.loadProject(
@@ -735,6 +810,13 @@ class ProjectPersistenceCoordinator(
                     )
                 } finally {
                     applyingOwnedProject = false
+                }
+                synchronized(importLock) {
+                    if (importPublicationRequestId == result.requestId) {
+                        importPublicationRequestId = null
+                        importPublicationInvalidatedByEdit = false
+                        importPublicationSuperseded = false
+                    }
                 }
                 currentToken = result.token
                 currentRevision = result.snapshot.revision
@@ -749,9 +831,27 @@ class ProjectPersistenceCoordinator(
                         projectName = result.snapshot.projectName,
                         origin = result.origin,
                         saveStatus = PersistenceSaveStatus.SAVED,
-                        message = result.warning,
+                        message = null,
                         replacementDecisionRequired = false,
                         lastExport = null
+                    )
+                )
+
+                releasePreviousOriginAsync(
+                    previous = result.previousRecord?.origin,
+                    current = result.origin
+                )
+                continueQueuedImportAfterPublication()
+            }
+
+            is ImportResult.NeedsDecision -> {
+                if (!isCurrentImport(result.requestId)) return
+                pendingImport = result.selection
+                importAfterSave = false
+                publish(
+                    state.copy(
+                        replacementDecisionRequired = true,
+                        message = null
                     )
                 )
             }
@@ -772,6 +872,113 @@ class ProjectPersistenceCoordinator(
                         replacementDecisionRequired = false
                     )
                 )
+                if (
+                    pendingSnapshot != null &&
+                    !saveInFlight &&
+                    state.projectId != null
+                ) {
+                    scheduleAutosave()
+                }
+            }
+        }
+    }
+
+    private fun rollbackPublishedImport(
+        result: ImportResult.Success,
+        invalidation: ImportInvalidation
+    ) {
+        execution.execute {
+            val rollbackFailure = try {
+                if (result.previousRecord == null) {
+                    activeRecordStore.clear()
+                } else {
+                    activeRecordStore.write(result.previousRecord)
+                }
+                try {
+                    documentGateway.release(result.origin)
+                } catch (_: Exception) {
+                }
+                null
+            } catch (_: Exception) {
+                PersistenceFailure.IO
+            }
+
+            execution.dispatchUi {
+                if (closed) return@dispatchUi
+                synchronized(importLock) {
+                    if (importPublicationRequestId == result.requestId) {
+                        importPublicationRequestId = null
+                        importPublicationInvalidatedByEdit = false
+                        importPublicationSuperseded = false
+                    }
+                }
+                if (rollbackFailure != null) {
+                    publish(
+                        state.copy(
+                            saveStatus = PersistenceSaveStatus.ERROR,
+                            message =
+                                "Import could not restore the previous active-project metadata"
+                        )
+                    )
+                    return@dispatchUi
+                }
+
+                when (invalidation) {
+                    ImportInvalidation.EDIT -> {
+                        val replacement =
+                            queuedImportAfterPublication ?: result.selection
+                        queuedImportAfterPublication = null
+                        pendingImport = replacement
+                        importAfterSave = false
+                        publish(
+                            state.copy(
+                                replacementDecisionRequired = true,
+                                message = null
+                            )
+                        )
+                    }
+
+                    ImportInvalidation.SUPERSEDED -> {
+                        val replacement = queuedImportAfterPublication
+                        queuedImportAfterPublication = null
+                        if (replacement != null) {
+                            beginImport(replacement)
+                        }
+                    }
+
+                    ImportInvalidation.NONE -> Unit
+                }
+            }
+        }
+    }
+
+    private fun continueQueuedImportAfterPublication() {
+        val queued = queuedImportAfterPublication
+        queuedImportAfterPublication = null
+        if (queued != null) {
+            requestImport(queued)
+        }
+    }
+
+    private fun releasePreviousOriginAsync(
+        previous: DocumentTreeOrigin?,
+        current: DocumentTreeOrigin
+    ) {
+        if (previous == null || previous.uri == current.uri) return
+        execution.execute {
+            try {
+                documentGateway.release(previous)
+            } catch (_: Exception) {
+                execution.dispatchUi {
+                    if (!closed) {
+                        publish(
+                            state.copy(
+                                message =
+                                    "New project opened, but the previous folder permission could not be released"
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -850,15 +1057,27 @@ class ProjectPersistenceCoordinator(
         data class Rejected(val reason: PersistenceFailure) : SaveResult
     }
 
+    private enum class ImportInvalidation {
+        NONE,
+        EDIT,
+        SUPERSEDED
+    }
+
     private sealed interface ImportResult {
         val requestId: Long
 
         data class Success(
             override val requestId: Long,
+            val selection: DocumentTreeSelection,
             val snapshot: ProjectSnapshot,
             val token: SnapshotToken,
             val origin: DocumentTreeOrigin,
-            val warning: String?
+            val previousRecord: ActiveProjectRecord?
+        ) : ImportResult
+
+        data class NeedsDecision(
+            override val requestId: Long,
+            val selection: DocumentTreeSelection
         ) : ImportResult
 
         data class Failed(
