@@ -41,9 +41,15 @@ class DocumentTreeProjectAdaptersTest {
         var renamedTo: String? = null
         var failRead = false
         var failWriteAfterCreate = false
+        var rootDisplayName = "Imported Demo"
         private var nextId = 0
 
         override fun rootDocumentId(selection: DocumentTreeSelection): String = "root"
+
+        override fun displayName(
+            selection: DocumentTreeSelection,
+            documentId: String
+        ): String = if (documentId == "root") rootDisplayName else documentId
 
         override fun children(
             selection: DocumentTreeSelection,
@@ -131,6 +137,15 @@ class DocumentTreeProjectAdaptersTest {
         write = true,
         persistable = true
     )
+
+    @Test fun sourceExposesSelectedFolderDisplayNameAsProjectName() {
+        val gateway = FakeGateway().apply {
+            rootDisplayName = "Robot Training Project"
+        }
+        val source = DocumentTreeProjectSource(readSelection(), gateway)
+
+        assertEquals("Robot Training Project", source.rootName)
+    }
 
     @Test fun nestedImportPreservesBytesAndClosesProviderCursors() {
         val gateway = FakeGateway()
