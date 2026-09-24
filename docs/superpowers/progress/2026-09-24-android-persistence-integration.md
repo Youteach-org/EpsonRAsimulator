@@ -23,3 +23,7 @@ Branch: feature/android-persistence-integration.
 - Task3 resumed: remote1fe4743b CI333/run36021503487 failed on missing AppSessionViewModel persistence parameter/state/commands, confirmed in job107707309908 logs. This is the active RED; do not repeat8A fixes.
 - Ruling: Existing ViewModel unit callers keep optional null persistence; production MainActivity always supplies one coordinator bound to the same bundle — cost if wrong: a nonproduction caller could render disabled persistence rather than durable storage.
 - Ruling: Local Windows Java cannot reserve memory (pagefile error1455), including512MiB capped retry. Use full Android CI as authoritative validation, retain local failure evidence separately — cost if wrong: slower feedback and no local device claim.
+
+- Task3: complete — implementation c03ff73b757ff585519341cc0dbb85fa71ff431d, Android CI334/run36063296052 unit tests, debug APK and artifact upload SUCCESS. RED1fe4743b/CI333 verified. Production factory, retained ViewModel lifecycle, picker callbacks, status bar, startup gate, replacement dialog and export details connected.
+- Device acceptance: UNVERIFIED. adb devices failed before enumeration with Cannot mkdir \\.android / permission denied. No installation/interaction was claimed.
+- Final8B independent review pending; do not confuse with completed8A review. Product tasks implemented, not final-reviewed yet.

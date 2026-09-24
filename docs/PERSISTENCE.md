@@ -1,6 +1,6 @@
-# Project persistence foundation (Phase 8A)
+# Project persistence (Phases 8A–8B)
 
-This package is a foundation, not a connected Android save/import UI. Phase8B owns the document-tree picker, URI permissions, autosave orchestration and saved/dirty/error feedback. Phase8C owns the validated session schema/application. Nothing here starts tasks, executes imported source, connects hardware, or changes ProjectRuntime's authority.
+Phase8A supplies the foundation; Phase8B connects the Android document-tree picker, URI permissions, retained autosave and saved/dirty/error UI. Phase8C still owns the validated session schema/application. Nothing here starts tasks, executes imported source, connects hardware, or changes ProjectRuntime's authority.
 
 ## API boundaries
 - ProjectSnapshot captures exact copied native resources plus a separate opaque application sidecar.
@@ -47,3 +47,29 @@ These guarantees cover whole-generation visibility and process interruptions bet
 
 ## Next integration
 8B must validate SAF permissions/provider behavior, cancellation, process restart and UI threading on a device. It must retain only granted URI permissions, preserve private data on revoked access, use one serialized revision-aware writer, and never clear dirty state for edits newer than a completed save.8C must validate restored targets/capabilities and restore paused Local Simulation.
+
+
+## Android integration (Phase 8B)
+MainActivity supplies a production ViewModel factory using application context only. One AppRuntimeBundle, coordinator, serialized worker and state subscription live for the retained AppSessionViewModel lifetime. Experience switches keep them; ViewModel clearing cancels its subscription and closes the coordinator. Existing non-Android test callers may omit persistence; their persistence controls are disabled.
+
+The global project bar appears above the experience chooser, RC+ Trainer and Visual Lab. Import opens a folder picker; Cancel returns no selection and leaves the active project unchanged. Save flushes the private working copy. Export selects a destination and writes a new project subfolder; it never silently updates the import origin. Save/Export use coordinator eligibility. The replacement dialog routes Save, Discard and Cancel to the coordinator, never directly loading the runtime.
+
+The main experience waits while private startup restoration is Loading. A startup error is shown without exposing a default project as a successful restore. The bar distinguishes Saved, Unsaved changes, Saving, Recovered, Save error and Save conflict. Export details distinguish completed/failed/untouched paths and warn that partial external files can remain. A failed export does not erase the private project.
+
+One active-project record identifies a canonical UUID private slot plus the actually persisted origin grant rights. The source tree URI is never a private path. Native edits are captured on the UI dispatcher and saved by one serialized worker after a750ms debounce; a completed older revision cannot clear newer Dirty edits. Only native project bytes and infrastructure metadata are included in8B. Source execution, task/motion/clock resumption, hardware connections, and semantic workspace/teach-point restoration are not part of this save.
+
+### Device acceptance — not executed in this environment
+| Check | Status |
+| --- | --- |
+| Cancel picker leaves active project unchanged | UNVERIFIED |
+| Import nested editable/opaque/malformed UTF-8 fixture without executing it | UNVERIFIED |
+| Edit displays Dirty, then Saving and Saved for latest revision | UNVERIFIED |
+| Force-stop/relaunch restores private bytes before project UI | UNVERIFIED |
+| Revoke origin permission; private restore remains available | UNVERIFIED |
+| Export to new subfolder preserves untouched bytes | UNVERIFIED |
+| Existing-name/provider rename reports conflict | UNVERIFIED |
+| Partial provider write reports honest paths | UNVERIFIED |
+| Dirty replacement Save / Discard / Cancel | UNVERIFIED |
+| Rotate while saving retains one coordinator/writer | UNVERIFIED |
+
+Record device model, API and provider alongside results. JVM/CI evidence does not establish these checks. Measure project-size heap behavior before claiming device support at all maximum bounds.
