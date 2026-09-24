@@ -634,6 +634,116 @@ class ProjectPersistenceCoordinatorTest {
         assertEquals("22222222-2222-4222-8222-222222222222", h.records.record?.projectId)
     }
 
+    @Test fun editDuringImportRequiresReplacementDecisionBeforeSwitchingProject() {
+        val h = harness()
+        val oldId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = oldId)
+        h.start()
+        h.gateway.trees["content://tree/new"] =
+            Tree(
+                "New",
+                linkedMapOf(
+                    "Main.prg" to
+                        "Function main\n  Speed 99\nFend\n".toByteArray()
+                )
+            )
+
+        h.coordinator.requestImport(
+            readSelection("content://tree/new")
+        )
+        h.execution.runWorkerAll()
+
+        h.project.replaceSource(
+            "Main.prg",
+            "Function main\n  Speed 7\nFend\n"
+        )
+        h.execution.runUiAll()
+
+        assertEquals(
+            "Function main\n  Speed 7\nFend\n",
+            h.project.resourceBytes("Main.prg")!!
+                .toString(Charsets.UTF_8)
+        )
+        assertTrue(
+            h.coordinator.state.replacementDecisionRequired
+        )
+        assertEquals(oldId, h.records.record?.projectId)
+        assertEquals(oldId, h.coordinator.state.projectId)
+    }
+
+    @Test fun obsoleteImportCannotPublishDurablePointerWhenNewerImportFails() {
+        val h = harness()
+        val oldId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = oldId)
+        h.start()
+        h.gateway.trees["content://tree/a"] =
+            Tree(
+                "A",
+                linkedMapOf(
+                    "Main.prg" to
+                        "Function main\n  Speed 1\nFend\n".toByteArray()
+                )
+            )
+        h.gateway.trees["content://tree/bad"] =
+            Tree(
+                "Bad",
+                linkedMapOf("../escape.prg" to byteArrayOf(1))
+            )
+
+        h.coordinator.requestImport(
+            readSelection("content://tree/a")
+        )
+        h.execution.runWorkerAll()
+
+        h.coordinator.requestImport(
+            readSelection("content://tree/bad")
+        )
+        h.execution.runWorkerAll()
+        h.execution.runUiAll()
+        h.execution.drain()
+
+        assertEquals("Saved Demo", h.project.state.projectName)
+        assertEquals(oldId, h.records.record?.projectId)
+        assertEquals(oldId, h.coordinator.state.projectId)
+    }
+
+    @Test fun failedDiscardImportRetainsDirtySnapshotForExplicitSave() {
+        val h = harness()
+        val oldId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = oldId)
+        h.start()
+        h.gateway.trees["content://tree/bad"] =
+            Tree(
+                "Bad",
+                linkedMapOf("../escape.prg" to byteArrayOf(1))
+            )
+        h.project.replaceSource(
+            "Main.prg",
+            "Function main\n  Speed 7\nFend\n"
+        )
+
+        h.coordinator.requestImport(
+            readSelection("content://tree/bad")
+        )
+        h.coordinator.resolveReplacement(
+            ProjectReplacementDecision.DISCARD
+        )
+        h.execution.drain()
+
+        assertEquals(PersistenceSaveStatus.DIRTY, h.coordinator.state.saveStatus)
+        h.coordinator.saveNow()
+        h.execution.drain()
+
+        val saved = h.savedSnapshot(oldId)
+        assertEquals(
+            "Function main\n  Speed 7\nFend\n",
+            saved.exportResources()
+                .getValue("Main.prg")
+                .toString(Charsets.UTF_8)
+        )
+        assertEquals(PersistenceSaveStatus.SAVED, h.coordinator.state.saveStatus)
+    }
+
     @Test fun exportWithoutProjectOrWriteGrantIsRejectedWithoutStorageMutation() {
         val empty = harness()
         empty.start()
