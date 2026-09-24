@@ -46,7 +46,7 @@ Missing current with valid previous is an explicit recovered load, and can be sa
 These guarantees cover whole-generation visibility and process interruptions between operations. They do not claim storage-device power-loss durability or directory fsync guarantees across platforms. Do not apply this private-filesystem protocol to document providers, where multi-file export is non-atomic.
 
 ## Next integration
-8B must validate SAF permissions/provider behavior, cancellation, process restart and UI threading on a device. It must retain only granted URI permissions, preserve private data on revoked access, use one serialized revision-aware writer, and never clear dirty state for edits newer than a completed save.8C must validate restored targets/capabilities and restore paused Local Simulation.
+Phase8B product integration is implemented and CI-verified; Android device/provider acceptance remains explicitly unverified. Phase8C must define and validate the semantic sidecar, reconcile restored targets/capabilities, and restore a paused Local Simulation session without resuming execution or hardware authority.
 
 
 ## Android integration (Phase 8B)
@@ -73,3 +73,5 @@ One active-project record identifies a canonical UUID private slot plus the actu
 | Rotate while saving retains one coordinator/writer | UNVERIFIED |
 
 Record device model, API and provider alongside results. JVM/CI evidence does not establish these checks. Measure project-size heap behavior before claiming device support at all maximum bounds.
+
+The final8B review fix wave also guarantees that edits made while an import is in progress cannot be silently discarded: replacement authorization is revision-bound, published imports retain ownership until runtime application or rollback, superseded imports restore the previous active pointer before the newer request proceeds, and a failed Discard replacement keeps the old dirty snapshot savable.
