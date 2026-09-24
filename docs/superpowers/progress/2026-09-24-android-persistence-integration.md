@@ -10,3 +10,8 @@ Branch: feature/android-persistence-integration.
 - No pre-existing 8B plan or branch was found. Created feature/android-persistence-integration from 13bef96c.
 - Plan drafted at ebe704a6 and self-review tightened at 3d2827f: picker records persistable capability, durable origin stores only actually retained rights, active-record publication failure cannot half-switch the live project.
 - Spec status advanced at e0e73fb. Product code has not started. Awaiting required plan review gate before TDD execution.
+- Task1 RED: d3a91b4, Android CI322/run36017167160 failed unit-test compilation on missing ActiveProjectRecord/DocumentTreeGateway/adapter APIs as expected.
+- Task1 GREEN foundation: dcd983d, Android CI323/run36017647549 unit tests, debug APK and artifact upload SUCCESS.
+- Task1 Ruling: pre-completion plan audit found the required document display-name operation was not yet represented; added source root-name regression before declaring Task1 complete — cost if wrong: one small gateway method that 8B import would otherwise have to infer incorrectly.
+- Task1 display-name RED: 12be290, Android CI324/run36018059895 failed on missing displayName/rootName exactly as expected.
+- Task1 complete: 13d6232, Android CI325/run36018377062 unit tests, debug APK and artifact upload SUCCESS. SAF adapters now expose selected-folder project name, exact byte streams, closeable cursors, create-new output, provider rename conflict, persisted grant operations and AtomicFile active-project metadata backend.
