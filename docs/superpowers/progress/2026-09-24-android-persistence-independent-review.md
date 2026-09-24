@@ -30,3 +30,13 @@ Remedy: retain pending snapshot until replacement succeeds; failure restores sav
 - Ruling:8A internals already reviewed; no repeat review/fixes — cost if wrong: new integration evidence may later warrant a targeted regression.
 
 Reviewer inspected code; no suite rerun or file edits. The earlier preliminary suggestion about RecordFailed was superseded by this final report. Only F1,F2,F3 above are accepted Important.
+
+## Resolution — 2026-09-24
+The required single RED→GREEN fix wave is complete.
+- RED: 5950a0f; Android CI337/run36073706383 failed exactly F1, F2 and F3 regressions.
+- F1: fixed by revision authorization plus rollback-before-replacement when an edit invalidates a published import.
+- F2: fixed by an import-publication ownership barrier; superseding requests cannot leave an obsolete durable pointer behind.
+- F3: fixed by retaining the dirty pending snapshot until replacement actually succeeds.
+- GREEN production: 9baed71; test-harness ordering correction: 2a83a0e.
+- Android CI339/run36074384654 passed unit tests, debug APK build and artifact upload.
+No second independent review was launched, per the review contract. The Minor and declined-to-judge items above remain unchanged.
