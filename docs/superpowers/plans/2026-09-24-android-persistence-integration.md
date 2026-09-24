@@ -18,7 +18,7 @@
 - Never synthesize native `.pts`/`.sprj` contents from simulator/session state.
 - Never execute imported source, auto-start tasks, resume motion/clock, or establish physical connection while restoring/importing.
 - Android document tree URIs are opaque provider identities, never filesystem paths.
-- Persist only URI read/write flags actually returned by the picker. Store at most one active origin tree grant; release the replaced active grant after a new project becomes durable.
+- The picker result records URI read/write flags plus whether FLAG_GRANT_PERSISTABLE_URI_PERMISSION was actually returned. Persist only read/write rights that the provider allows; store at most one active origin record, including whether those rights were successfully persisted. Failure to retain a long-lived grant is a recoverable warning, not permission to discard the private project.
 - Import is isolated: a cancelled/failed/over-limit candidate never replaces the active project or active-project record.
 - Export snapshots resources once and writes to a newly created project subfolder. No overwrite/delete/recurse-clear behavior; provider rename/collision is a conflict.
 - Private autosave never silently writes back to the external import tree.
@@ -77,24 +77,26 @@ Documentation:
 - Test: `app/src/test/java/mx/youteachtk/epsonrasimulator/project/persistence/android/DocumentTreeProjectAdaptersTest.kt`
 
 **Interfaces:**
-- Produces `DocumentTreeGrant(uri: String, read: Boolean, write: Boolean)`.
-- Produces `ActiveProjectRecord(projectId: String, origin: DocumentTreeGrant?)`.
+- Produces `DocumentTreeSelection(uri: String, read: Boolean, write: Boolean, persistable: Boolean)` from the picker.
+- Produces `DocumentTreeOrigin(uri: String, persistedRead: Boolean, persistedWrite: Boolean)` for durable active-project metadata.
+- Produces `ActiveProjectRecord(projectId: String, origin: DocumentTreeOrigin?)`.
 - Produces `ActiveProjectRecordStore.read(): ActiveProjectRecord?`, `write(record)`, `clear()`.
 - Produces `ProjectSlotStoreFactory.open(projectId: String): PrivateProjectStore`.
 - Produces `DocumentTreeGateway` with root/children/read/create/write/display-name/persist-grant/release-grant operations.
-- Produces `DocumentTreeProjectSource(grant, gateway): ProjectFolderSource` and `DocumentTreeProjectDestination(grant, gateway): NewProjectFolderDestination`.
-- Android `PersistableDocumentTreeContract` returns the URI plus exactly the READ/WRITE bits present in the activity result.
+- Produces `DocumentTreeProjectSource(selection, gateway): ProjectFolderSource` and `DocumentTreeProjectDestination(selection, gateway): NewProjectFolderDestination`.
+- Android `PersistableDocumentTreeContract` returns the URI, exactly the READ/WRITE bits present in the activity result, and whether the PERSISTABLE bit was returned.
+- `DocumentTreeGateway.persist(selection): DocumentTreeOrigin` attempts `takePersistableUriPermission` only when the result actually allows it; otherwise the origin records no persisted rights.
 
 - [ ] **Step 1: Write failing active-record tests**
 
-Test binary round-trip; canonical UUID requirement; URI UTF-8 bound; malformed/truncated/trailing record; illegal grant bits; unknown schema; and defensive behavior where corruption returns an explicit decode failure rather than an empty record.
+Test binary round-trip; canonical UUID requirement; URI UTF-8 bound; malformed/truncated/trailing record; impossible persisted-right combinations; unknown schema; and defensive behavior where corruption returns an explicit decode failure rather than an empty record.
 
 ```kotlin
 @Test fun recordRoundTripPreservesOnlyGrantedFlags() {
     val id = "c0a8012e-7f61-4b2d-9b4d-1cd48d6bc56d"
     val record = ActiveProjectRecord(
         id,
-        DocumentTreeGrant("content://provider/tree/root", read = true, write = false)
+        DocumentTreeOrigin("content://provider/tree/root", persistedRead = true, persistedWrite = false)
     )
     assertEquals(record, ActiveProjectRecordCodec().decode(ActiveProjectRecordCodec().encode(record)))
 }
@@ -138,7 +140,7 @@ Use strict UTF-8 and a small versioned binary active-record envelope. Android ac
 - verify the returned provider display name equals the requested spelling;
 - open new-file output only after exact-name verification;
 - convert SecurityException/IO/null-provider returns to the existing persistence failures;
-- call `takePersistableUriPermission`/`releasePersistableUriPermission` using only READ/WRITE bits actually granted.
+- call `takePersistableUriPermission` only when the picker result included the persistable flag, using only READ/WRITE bits actually granted; return which rights were actually retained. Release only previously persisted READ/WRITE rights.
 
 - [ ] **Step 6: Run complete Task 1 tests and the full JVM suite**
 
@@ -230,13 +232,14 @@ Pin 750 ms debounce and single-writer behavior:
 
 Cases:
 - valid import fully validates and commits a new private slot before replacing runtime + active record;
+- failure while atomically publishing the new active-project record leaves the old runtime/record active and only an unreachable orphan private slot; it never half-switches the live project;
 - cancelled/failed import leaves runtime, active record and old token unchanged;
 - dirty current project sets `replacementDecisionRequired`;
 - SAVE flushes current revision before import; failed Save blocks import;
 - DISCARD imports without saving current dirty revision;
 - CANCEL releases the pending request and leaves current project unchanged;
 - late completion from an obsolete import request cannot apply;
-- replaced active external grant is released only after new active record commits.
+- replaced active external grant is released only after new active record commits; a non-persistable picker result may complete the immediate operation but records no long-lived rights and surfaces a recoverable warning.
 
 - [ ] **Step 5: Add failing export tests**
 
