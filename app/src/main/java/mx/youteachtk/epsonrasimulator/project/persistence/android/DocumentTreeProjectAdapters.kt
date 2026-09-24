@@ -19,6 +19,7 @@ data class CreatedDocument(
 
 interface DocumentTreeGateway {
     fun rootDocumentId(selection: DocumentTreeSelection): String
+    fun displayName(selection: DocumentTreeSelection, documentId: String): String
     fun children(selection: DocumentTreeSelection, parentId: String): FolderEntryCursor
     fun openFile(selection: DocumentTreeSelection, documentId: String): InputStream
     fun createDirectory(
@@ -50,6 +51,13 @@ class DocumentTreeProjectSource(
     }.also {
         if (it.isBlank())
             fail(PersistenceFailure.INVALID_PATH, "Document tree has no root identity")
+    }
+
+    val rootName: String = providerCall {
+        gateway.displayName(selection, rootId)
+    }.also {
+        if (it.isBlank())
+            fail(PersistenceFailure.INVALID_METADATA, "Document tree has no display name")
     }
 
     override fun children(parentId: String): FolderEntryCursor =
