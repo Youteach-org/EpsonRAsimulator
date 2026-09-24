@@ -31,3 +31,11 @@ Branch: feature/android-persistence-integration.
 - Final8B review: one isolated gpt-6-astra/high review COMPLETE. Accepted Important F1 edits during import lost, F2 obsolete import leaves wrong active pointer, F3 failed Discard import erases pending save. ONE RED→GREEN fix wave remains; do not launch second review. No fixes applied yet.
 - Final: minor (deferred): no warning after successful import without persisted read grant; private durability intact.
 - Final declined-to-judge rulings and exact reproductions: docs/superpowers/progress/2026-09-24-android-persistence-independent-review.md. Preliminary RecordFailed suggestion superseded by final report; retain only as follow-up risk.
+
+- Final RED fix wave: 5950a0f, Android CI337/run36073706383 failed exactly the three accepted regressions: editDuringImportRequiresReplacementDecisionBeforeSwitchingProject, obsoleteImportCannotPublishDurablePointerWhenNewerImportFails, failedDiscardImportRetainsDirtySnapshotForExplicitSave.
+- Final F1 fixed: import publication now records the authorized revision; an edit before publication yields a fresh Save/Discard/Cancel decision, and an edit after publication rolls the active record back before replacement proceeds.
+- Final F2 fixed: durable active-record publication is guarded by an import-publication ownership barrier. A superseding request arriving after publication rolls A back before B runs, so runtime and durable pointer cannot diverge after B fails.
+- Final F3 fixed: Discard no longer deletes the dirty pending snapshot before replacement succeeds; a failed import leaves the old project explicitly savable (and autosave-eligible).
+- GREEN fix wave: production 9baed71 plus harness-order correction 2a83a0e; Android CI339/run36074384654 unit tests, debug APK and artifact upload SUCCESS.
+- Phase8B final review contract complete. No second independent review was launched. Deferred Minor remains: no warning after successful import without persisted read grant.
+- Device acceptance remains UNVERIFIED and is not claimed by CI. PR18 stays Draft stacked on PR17; no merge/main changes.
