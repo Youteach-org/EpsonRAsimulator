@@ -1,5 +1,15 @@
 package mx.youteachtk.epsonrasimulator
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import mx.youteachtk.epsonrasimulator.project.persistence.DocumentTreeSelection
+import mx.youteachtk.epsonrasimulator.project.persistence.PersistenceSaveStatus
+import mx.youteachtk.epsonrasimulator.project.persistence.PersistenceStartupStatus
+import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceController
+import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceState
+import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceSubscription
+import mx.youteachtk.epsonrasimulator.project.persistence.ProjectReplacementDecision
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
 import mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand
 import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
@@ -377,6 +387,208 @@ class AppSessionViewModelTest {
         assertSame(workspaceBefore, session.workspaceSession)
         assertSame(commandBefore, session.commandWindowSession)
         assertSame(runBefore, session.runWindowSession)
+    }
+
+
+    private class FakePersistence : ProjectPersistenceController {
+        override var state: ProjectPersistenceState = ProjectPersistenceState(
+            startup = PersistenceStartupStatus.READY,
+            saveStatus = PersistenceSaveStatus.NO_PROJECT
+        )
+            private set
+
+        private val listeners =
+            linkedSetOf<(ProjectPersistenceState) -> Unit>()
+
+        var starts = 0
+        var saves = 0
+        var imports = 0
+        var exports = 0
+        var dismisses = 0
+        var closes = 0
+        var lastDecision: ProjectReplacementDecision? = null
+
+        override fun start() {
+            starts++
+        }
+
+        override fun requestImport(selection: DocumentTreeSelection) {
+            imports++
+            publish(
+                state.copy(
+                    replacementDecisionRequired = true,
+                    message = null
+                )
+            )
+        }
+
+        override fun resolveReplacement(decision: ProjectReplacementDecision) {
+            lastDecision = decision
+            publish(state.copy(replacementDecisionRequired = false))
+        }
+
+        override fun saveNow() {
+            saves++
+        }
+
+        override fun exportTo(selection: DocumentTreeSelection) {
+            exports++
+        }
+
+        override fun dismissMessage() {
+            dismisses++
+            publish(state.copy(message = null))
+        }
+
+        override fun subscribe(
+            listener: (ProjectPersistenceState) -> Unit
+        ): ProjectPersistenceSubscription {
+            listeners += listener
+            listener(state)
+            return ProjectPersistenceSubscription {
+                listeners -= listener
+            }
+        }
+
+        override fun close() {
+            closes++
+        }
+
+        fun publish(next: ProjectPersistenceState) {
+            state = next
+            listeners.toList().forEach { it(next) }
+        }
+    }
+
+    @Test
+    fun persistenceControllerIsRetainedAcrossExperienceSwitchesAndStartedOnce() {
+        val persistence = FakePersistence()
+        val session = AppSessionViewModel(
+            initialBundle = AppRuntimeFactory.createDefault(),
+            persistence = persistence
+        )
+
+        session.selectExperience(AppExperience.RCPLUS_TRAINER)
+        session.selectExperience(AppExperience.VISUAL_LAB)
+        session.clearExperience()
+
+        assertSame(persistence, session.persistence)
+        assertEquals(1, persistence.starts)
+    }
+
+    @Test
+    fun persistenceStateChangesAreExposedToTheUiBinding() {
+        val persistence = FakePersistence()
+        val session = AppSessionViewModel(
+            initialBundle = AppRuntimeFactory.createDefault(),
+            persistence = persistence
+        )
+
+        persistence.publish(
+            ProjectPersistenceState(
+                startup = PersistenceStartupStatus.READY,
+                projectId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+                projectName = "Demo",
+                saveStatus = PersistenceSaveStatus.DIRTY,
+                canSave = true,
+                canExport = true
+            )
+        )
+
+        assertEquals(
+            PersistenceSaveStatus.DIRTY,
+            session.persistenceState.saveStatus
+        )
+        assertEquals("Demo", session.persistenceState.projectName)
+        assertTrue(session.persistenceState.canSave)
+    }
+
+    @Test
+    fun persistenceCommandsDelegateWithoutReplacingRuntimeDirectly() {
+        val persistence = FakePersistence()
+        val bundle = AppRuntimeFactory.createDefault()
+        bundle.projectRuntime.loadProject(
+            "Current",
+            mapOf("Main.prg" to "Function main\nFend\n".toByteArray())
+        )
+        val session = AppSessionViewModel(
+            initialBundle = bundle,
+            persistence = persistence
+        )
+        val before = bundle.projectRuntime.state
+        val selection = DocumentTreeSelection(
+            "content://provider/tree/demo",
+            read = true,
+            write = true,
+            persistable = true
+        )
+
+        session.importTreeSelected(selection)
+        session.saveProject()
+        session.exportTreeSelected(selection)
+        session.resolveProjectReplacement(ProjectReplacementDecision.CANCEL)
+        session.dismissPersistenceMessage()
+
+        assertEquals(1, persistence.imports)
+        assertEquals(1, persistence.saves)
+        assertEquals(1, persistence.exports)
+        assertEquals(ProjectReplacementDecision.CANCEL, persistence.lastDecision)
+        assertEquals(1, persistence.dismisses)
+        assertSame(before, bundle.projectRuntime.state)
+    }
+
+    @Test
+    fun dirtyImportDecisionIsSurfacedWithoutViewModelMutatingProject() {
+        val persistence = FakePersistence()
+        val bundle = AppRuntimeFactory.createDefault()
+        bundle.projectRuntime.loadProject(
+            "Current",
+            mapOf("Main.prg" to "Function main\nFend\n".toByteArray())
+        )
+        val before = bundle.projectRuntime.state
+        val session = AppSessionViewModel(
+            initialBundle = bundle,
+            persistence = persistence
+        )
+
+        session.importTreeSelected(
+            DocumentTreeSelection(
+                "content://provider/tree/new",
+                read = true,
+                write = false,
+                persistable = true
+            )
+        )
+
+        assertTrue(session.persistenceState.replacementDecisionRequired)
+        assertSame(before, bundle.projectRuntime.state)
+    }
+
+    @Test
+    fun clearingViewModelStoreClosesPersistenceExactlyOnce() {
+        val persistence = FakePersistence()
+        val bundle = AppRuntimeFactory.createDefault()
+        val store = ViewModelStore()
+        val provider = ViewModelProvider(
+            store,
+            object : ViewModelProvider.Factory {
+                override fun <T : ViewModel> create(
+                    modelClass: Class<T>
+                ): T {
+                    @Suppress("UNCHECKED_CAST")
+                    return AppSessionViewModel(
+                        initialBundle = bundle,
+                        persistence = persistence
+                    ) as T
+                }
+            }
+        )
+
+        provider[AppSessionViewModel::class.java]
+        store.clear()
+        store.clear()
+
+        assertEquals(1, persistence.closes)
     }
 
 
