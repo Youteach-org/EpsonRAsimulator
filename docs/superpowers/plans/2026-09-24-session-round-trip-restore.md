@@ -18,11 +18,11 @@
 - Snapshot metadata remains authoritative for project id/name, simulator adapter id and robot id. The sidecar does not duplicate those identities.
 - Sidecar V1 does NOT persist task programs/status, clock elapsed/running state, I/O values/labels, command transcript, build results, Run internals, camera, workcell entities, tools, signal bindings, physical connection state or learning progress.
 - Every restore ends in `ConnectionMode.LOCAL_SIMULATION`; transient clock/I/O/task/workcell/tool state is reset to neutral defaults. No task, motion, timer or hardware connection auto-resumes.
-- Empty sidecar bytes are the Phase 8B legacy/default representation and restore a neutral semantic session rather than failing.
+- Empty sidecar bytes are the Phase 8B legacy/default representation and restore a neutral semantic session rather than failing. Neutral runtime restore means the snapshot robot's zero joint state plus no teach points; an encoded EPSSES01 V1 payload must contain a non-empty joint vector and is validated later against the exact robot joint count.
 - Sidecar payload magic: ASCII `EPSSES01`; payload schema: int32 `1`. It is already protected by the outer ProjectSnapshot SHA-256, so no second checksum is added.
-- Sidecar limits: 1 MiB encoded payload; 32 joint values; 4096 teach points; 64 child windows; 4096 UTF-8 bytes for a resource/window selection string; 256 UTF-8 bytes for ids and teach-point names.
+- Sidecar limits: 1 MiB encoded payload; encoded V1 joint count 1..32; 4096 teach points; 64 child windows; 4096 UTF-8 bytes for a resource/window selection string; 256 UTF-8 bytes for ids and teach-point names.
 - All persisted floating-point values must be finite. Training step must be > 0. Joint values and preferred joint states must be inside the restored robot's configured ranges; do not silently clamp corrupted saved data.
-- Missing UI targets reconcile to neutral valid state: unavailable windows are dropped; stale active window is cleared/reselected; missing project/Visual source selections fall back to null/first valid source; unavailable Robot Manager page falls back to CONTROL_PANEL.
+- Missing UI targets reconcile to neutral valid state: unavailable windows are dropped; stale active window is cleared/reselected; missing project/Visual source selections fall back to null/first valid source; unavailable Robot Manager page falls back to CONTROL_PANEL. Project-navigation source ranges/function offsets are not persisted; they are recomputed from the restored ProjectRuntime semantic model, and a stale function selection reconciles to its source resource or null.
 - Missing/unsupported simulator adapter or robot is explicit restore failure; never reinterpret saved state as the default C4/SPEL+ target.
 - Sidecar changes use the same monotonic project revision and serialized 750 ms autosave writer as native-resource changes. An older sidecar/native save completion cannot clear a newer Dirty revision.
 - Imported external folders have no app sidecar and therefore replace the current semantic session with the neutral V1/default session only after the existing Save/Discard/Cancel replacement transaction succeeds.
@@ -185,6 +185,12 @@ fun interface ProjectSessionRestorePlan {
     fun apply()
 }
 
+class ProjectSessionSubscription(
+    private val cancelAction: () -> Unit
+) {
+    fun cancel()
+}
+
 interface ProjectSessionPersistencePort {
     fun capture(): ByteArray
     fun prepareRestore(snapshot: ProjectSnapshot): ProjectSessionRestorePlan
@@ -193,7 +199,7 @@ interface ProjectSessionPersistencePort {
 }
 ```
 
-`AppProjectSessionPersistence` consumes the same bundle/runtime plus the retained workspace/navigation/robot-manager/visual-programming sessions and experience getter/setter callbacks.
+`AppProjectSessionPersistence` consumes the same bundle/runtime plus the retained workspace/navigation/robot-manager/visual-programming sessions and experience getter/setter callbacks. Constructor contract: `AppProjectSessionPersistence(bundle, workspaceSession, projectNavigationSession, robotManagerSession, visualProgrammingSession, activeExperience = { ... }, restoreExperience = { ... })`. The restore callback is an internal mutation path that does not emit a fresh durable-change notification.
 
 - [ ] **Step 1: Write RED SharedRuntime safe-restore tests**
 
@@ -239,7 +245,7 @@ Cover capture of all V1 fields and restore behavior:
 - unavailable Robot Manager page -> CONTROL_PANEL;
 - training step restored exactly when valid;
 - unsupported snapshot robot -> INVALID_METADATA before any live mutation;
-- empty sidecar -> neutral experience/workspace/selections with safe runtime reset.
+- empty sidecar -> neutral experience/workspace/selections with the snapshot robot's zero joint state, no teach points, and safe transient-runtime reset.
 
 - [ ] **Step 5: Implement session restore helpers**
 
@@ -283,7 +289,7 @@ Cases:
 - corrupt sidecar -> startup ERROR and no project/runtime mutation;
 - unknown sidecar schema -> UNSUPPORTED/ERROR and no overwrite;
 - legacy empty sidecar -> project restores successfully with neutral prepared plan;
-- snapshot robot differing from default is allowed only when the attached session port validates it; no port retains the Phase 8B strict-current-robot behavior.
+- snapshot robot differing from the process default is allowed only when the attached session port validates that robot through the registry; when no session port is attached, retain the Phase 8B strict-current-robot behavior.
 
 - [ ] **Step 2: Write RED semantic autosave ordering tests**
 
@@ -345,7 +351,7 @@ Commit: `feat: persist semantic project session revisions`.
 - Create: `docs/superpowers/progress/2026-09-24-session-round-trip-restore.md`
 
 **Interfaces:**
-- ViewModel constructs one `AppProjectSessionPersistence` after its retained sessions exist, attaches it to persistence, then starts persistence.
+- ViewModel constructs one `AppProjectSessionPersistence` after its retained sessions exist, calls `persistence.attachSessionPersistence(port)` before subscribing/starting persistence, then starts persistence.
 - `selectExperience` and `clearExperience` notify the session port after changing `activeExperience`.
 - Restore callback may set `activeExperience` directly without generating a new Dirty revision.
 - ViewModel clear cancels persistence as before; no duplicate session subscriptions across experience switches.
