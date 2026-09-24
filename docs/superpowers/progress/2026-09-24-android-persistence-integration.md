@@ -27,3 +27,7 @@ Branch: feature/android-persistence-integration.
 - Task3: complete — implementation c03ff73b757ff585519341cc0dbb85fa71ff431d, Android CI334/run36063296052 unit tests, debug APK and artifact upload SUCCESS. RED1fe4743b/CI333 verified. Production factory, retained ViewModel lifecycle, picker callbacks, status bar, startup gate, replacement dialog and export details connected.
 - Device acceptance: UNVERIFIED. adb devices failed before enumeration with Cannot mkdir \\.android / permission denied. No installation/interaction was claimed.
 - Final8B independent review pending; do not confuse with completed8A review. Product tasks implemented, not final-reviewed yet.
+
+- Final8B review: one isolated gpt-6-astra/high review COMPLETE. Accepted Important F1 edits during import lost, F2 obsolete import leaves wrong active pointer, F3 failed Discard import erases pending save. ONE RED→GREEN fix wave remains; do not launch second review. No fixes applied yet.
+- Final: minor (deferred): no warning after successful import without persisted read grant; private durability intact.
+- Final declined-to-judge rulings and exact reproductions: docs/superpowers/progress/2026-09-24-android-persistence-independent-review.md. Preliminary RecordFailed suggestion superseded by final report; retain only as follow-up risk.
