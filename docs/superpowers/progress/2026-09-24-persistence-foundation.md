@@ -10,3 +10,7 @@ Remote base: 794e62c96133b0eb4a138d8e589941006b3385d0; product base PR16 95f2130
 - Task1: pending.
 - Task2: pending.
 - Task3: pending.
+- Ruling: Superpowers shell helpers cannot find dirname/basename in this Windows shell; use equivalent plan-scoped PowerShell brief/ledger/test records — cost if wrong: bookkeeping needs manual audit.
+- Task1: local RED missing new snapshot APIs observed; GREEN complete pure suite 347 tests. Remote RED bf10226 CI310/run36001040561 failed unit compilation as expected; GREEN awaiting full CI.
+- Task1: complete — remote GREEN e8e12aa, Android CI311/run36001275956 unit tests, debug APK, upload SUCCESS. Local suite 347/347.
+
