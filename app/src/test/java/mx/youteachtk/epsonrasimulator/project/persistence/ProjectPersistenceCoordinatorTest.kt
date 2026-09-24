@@ -444,6 +444,8 @@ class ProjectPersistenceCoordinatorTest {
         h.project.replaceSource("Main.prg", "Function main\n  Speed 2\nFend\n")
         h.execution.advanceBy(750)
         h.execution.runWorkerAll()
+        h.execution.runUiAll()
+        h.execution.runWorkerAll()
 
         h.project.replaceSource("Main.prg", "Function main\n  Speed 3\nFend\n")
         assertEquals(PersistenceSaveStatus.DIRTY, h.coordinator.state.saveStatus)
