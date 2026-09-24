@@ -71,6 +71,17 @@ class ProjectSnapshotCodecTest {
         }
     }
 
+    @Test fun unicodeCaselessAliasesAreRejectedForFilesAndDirectoryPrefixes() {
+        listOf(
+            listOf("Σ.prg", "ς.prg"),
+            listOf("Σ/a.prg", "ς/b.prg")
+        ).forEach { names ->
+            rejects(PersistenceFailure.INVALID_PATH) {
+                snapshot(names.associateWith { byteArrayOf() })
+            }
+        }
+    }
+
     @Test fun metadataCannotBeBlankNegativeOrMalformedUnicode() {
         rejects(PersistenceFailure.INVALID_METADATA) { ProjectSnapshot("", "Demo", "s", "r", 0, emptyMap()) }
         rejects(PersistenceFailure.INVALID_METADATA) { ProjectSnapshot("id", " ", "s", "r", 0, emptyMap()) }
