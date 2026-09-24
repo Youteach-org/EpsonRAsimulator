@@ -9,14 +9,14 @@ A learner can close the Android app, reopen the same project and workspace, edit
 
 The existing ProjectRuntime loadProject/export/resourceBytes APIs already preserve resource bytes in memory. AppSessionViewModel currently survives configuration changes only; no durable store or Android import/export workflow exists.
 
-## Transfer choice awaiting user preference
-Recommended: ZIP import/export through Android's document selector, plus a private app-owned working copy. ZIP is a transport container, not a claim to understand Epson .sprj semantics. Arbitrary supplied .sprj/.pts/unknown files remain byte-preserved resources.
+## Transfer choice — folders selected by user, 2026-09-24
+Use Android's document-tree folder selector (Storage Access Framework) for project import and export, plus an app-private working copy and autosave. The user explicitly selected folders; ZIP is not part of this phase.
 
-Alternative: a selected document-tree folder. Easier external editing but provider permissions, per-file writes and conflict handling are more complex, and a folder cannot generally be replaced atomically through a document provider.
+Keep the tree URI and only the permissions actually granted by the provider. On permission revocation, unavailable storage or unsupported operations, show a recoverable error and retain the private working copy. A tree URI is not a filesystem path.
 
-A database alone would simplify indexes but still needs a file-transfer format and adds migration/dependency overhead. Use a versioned private snapshot store with existing platform/JDK APIs for the initial implementation; retain an interface so its storage can change.
+External document providers do not guarantee atomic replacement of a whole folder. Atomic generation/recovery guarantees apply to the private store only. Folder export reports per-resource progress and incomplete writes honestly; never promise all-or-nothing external writes.
 
-Assumption pending response: ZIP transport. Do not implement either Android flow before the written design is approved.
+The shared design scope is retained with this selected transport. Next artifact is a concrete implementation plan; product code has not started.
 
 ## Storage and authority
 - ProjectRuntime remains the live source/resource authority; SharedRuntime remains the live robot/point authority.
@@ -37,14 +37,14 @@ Current syntax-invalid source remains exact on disk. Last-valid semantic models 
 
 ## Import and export
 - Read through Android content streams; do not assume a document URI is a filesystem path.
-- Decode an archive into an isolated candidate resource map first. Validate the whole candidate before replacing the active project.
-- Treat resource names as relative virtual paths. Reject absolute/traversal names, duplicate normalized names and incompatible case collisions; never extract uncontrolled names directly to disk.
-- Bound resource count, individual uncompressed size and total uncompressed size while streaming. Exact default limits and user-facing errors belong in the implementation plan and tests.
+- Enumerate the selected document tree into an isolated candidate resource map, preserving relative hierarchy and exact bytes. Validate the whole candidate before replacing the active project. Reject cycles/repeated document identities and ambiguous names rather than looping or flattening paths.
+- Treat resource names as relative virtual paths. Reject absolute/traversal names, duplicate normalized names and incompatible case collisions; never map uncontrolled names directly to private filesystem paths.
+- Bound resource count, individual resource size, tree depth and total bytes while streaming. Exact default limits and user-facing errors belong in the implementation plan and tests.
 - A cancelled or failed import leaves the current project/session unchanged.
 - Imported malformed UTF-8 source stays preserved and read-only under the existing ProjectRuntime rules.
-- Export snapshots current resources once. Untouched files must have identical bytes after import/edit/export; ZIP compression metadata need not be identical.
-- Export creates a user-chosen destination. A provider failure must surface explicitly; keep the internal saved project intact and avoid claiming the destination is complete.
-- Imported ZIP cannot execute scripts or automatically start tasks.
+- Export snapshots current resources once. Untouched files must have identical bytes after import/edit/export.
+- Export writes to a user-selected folder. Default to a new project subfolder. Reusing existing names requires an explicit conflict decision; preserve unrelated files and never recursively clear a destination. A provider failure must surface explicitly; retain private data and a per-resource export result without claiming completion.
+- Imported resources cannot execute scripts or automatically start tasks.
 
 ## Autosave and ordering
 Use a single serialized persistence writer. On supported source/point/session changes, capture a revision-tagged immutable snapshot and schedule a bounded/debounced save off the UI thread.
@@ -54,12 +54,12 @@ Connect subscriptions once to the retained session; cancel them with its owner. 
 
 ## Conflicts
 Maintain a content fingerprint and expected saved revision for compare-and-save. Reject a write if its expected base no longer matches stored data; do not use silent last-writer-wins.
-ZIP imports default to a separate working project. Replacing a current project with unsaved edits requires an explicit Save/Discard/Cancel decision.
-External changes are not monitored continuously in this phase. Reopening/importing a changed source must not silently overwrite active edits. Windows bridge synchronization remains a later phase.
+Folder imports create an app-private working project; autosave does not silently write back into the selected external folder. Replacing a current project with unsaved edits requires an explicit Save/Discard/Cancel decision.
+Before an explicit write-back to existing resources, re-read and compare the expected external bytes/fingerprints; changed files require a conflict decision. Provider operations cannot eliminate a concurrent external-edit race, so prefer export to a new folder and do not claim atomic compare-and-swap on a document provider. External changes are not monitored continuously in this phase. Reopening/importing a changed source must not silently overwrite active edits. Windows bridge synchronization remains a later phase.
 
 ## Proposed implementation slices
-8A: pure snapshot contracts, safe archive codec, private transactional store, recovery/version/conflict tests.
-8B: Android document picker import/export and retained persistence service, saved/dirty/error feedback, initial restore and autosave.
+8A: pure snapshot contracts, bounded resource-tree import/export contracts, private transactional store, recovery/version/conflict tests.
+8B: Android folder picker and document-tree import/export and retained persistence service, saved/dirty/error feedback, initial restore and autosave.
 8C: validated workspace/experience/robot/point restoration and end-to-end round-trip acceptance.
 Each slice gets a concrete TDD implementation plan and a stacked Draft checkpoint; preserve native/inline execution and one final independent review per completed plan.
 
@@ -75,6 +75,11 @@ Each slice gets a concrete TDD implementation plan and a stacked Draft checkpoin
 9. Android CI must pass unit tests/APK/upload; device checks for picker cancellation, process restart and provider failure are reported separately.
 
 ## Scope review
-The design preserves the approved single-authority and byte-preservation constraints. It narrows full simulation persistence to explicit learner project/session data for the first slices. ZIP versus folder remains a user preference. Storage layout/version/limits must be pinned by the written implementation plan before coding.
+The design preserves the approved single-authority and byte-preservation constraints. It narrows full simulation persistence to explicit learner project/session data for the first slices. The user selected folders on 2026-09-24; archive transport is excluded. Storage layout/version/limits must be pinned by the written implementation plan before coding.
 
-Next gate: user reviews this written design and confirms the transfer choice. Then write the detailed 8A implementation plan using Superpowers writing-plans. Do not start product implementation or merge PR16.
+Next: write the detailed 8A implementation plan using Superpowers writing-plans with folders as the selected transport. Submit the concrete plan for review before product implementation. Do not merge PR16.
+
+## Additional folder acceptance
+- Revoked permissions or a disconnected provider leave the private project recoverable.
+- Partial export failures identify affected resources and never report a complete export.
+- Existing changed files and unrelated destination resources are not silently overwritten or removed.
