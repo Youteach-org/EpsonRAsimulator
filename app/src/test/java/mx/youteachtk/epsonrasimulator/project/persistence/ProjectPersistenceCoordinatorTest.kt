@@ -658,6 +658,7 @@ class ProjectPersistenceCoordinatorTest {
             "Function main\n  Speed 7\nFend\n"
         )
         h.execution.runUiAll()
+        h.execution.drain()
 
         assertEquals(
             "Function main\n  Speed 7\nFend\n",
