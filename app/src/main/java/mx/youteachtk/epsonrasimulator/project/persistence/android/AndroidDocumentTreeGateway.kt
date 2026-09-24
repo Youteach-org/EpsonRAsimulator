@@ -23,6 +23,12 @@ class AndroidDocumentTreeGateway(
             throw IOException("Invalid document-tree URI", e)
         }
 
+    override fun displayName(
+        selection: DocumentTreeSelection,
+        documentId: String
+    ): String =
+        queryDisplayName(documentUri(selection, documentId))
+
     override fun children(
         selection: DocumentTreeSelection,
         parentId: String
@@ -135,7 +141,7 @@ class AndroidDocumentTreeGateway(
         } catch (e: SecurityException) {
             throw IOException("Document provider permission unavailable", e)
         }
-        val actualName = displayName(created)
+        val actualName = queryDisplayName(created)
         val id = try {
             DocumentsContract.getDocumentId(created)
         } catch (e: RuntimeException) {
@@ -144,7 +150,7 @@ class AndroidDocumentTreeGateway(
         return CreatedDocument(id, actualName)
     }
 
-    private fun displayName(uri: Uri): String {
+    private fun queryDisplayName(uri: Uri): String {
         val projection = arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
         val cursor = try {
             resolver.query(uri, projection, null, null, null)
