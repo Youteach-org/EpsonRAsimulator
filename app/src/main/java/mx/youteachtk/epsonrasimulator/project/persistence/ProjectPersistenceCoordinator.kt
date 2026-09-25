@@ -76,6 +76,7 @@ class ProjectPersistenceCoordinator(
     private val slotStores: ProjectSlotStoreFactory,
     private val documentGateway: DocumentTreeGateway,
     private val execution: PersistenceExecution,
+    private val sessionSidecar: ProjectSessionSidecarController? = null,
     private val folderTransfer: ProjectFolderTransfer = ProjectFolderTransfer(),
     private val idGenerator: () -> String = { UUID.randomUUID().toString() },
     private val autosaveDebounceMillis: Long = 750
@@ -94,6 +95,7 @@ class ProjectPersistenceCoordinator(
     private var started = false
     private var closed = false
     private var projectSubscription: ProjectRuntimeSubscription? = null
+    private var sessionSubscription: AppSessionSidecarSubscription? = null
     private var applyingOwnedProject = false
     private var currentToken: SnapshotToken? = null
 
@@ -324,6 +326,8 @@ class ProjectPersistenceCoordinator(
         debounce = null
         projectSubscription?.cancel()
         projectSubscription = null
+        sessionSubscription?.cancel()
+        sessionSubscription = null
         synchronized(importLock) {
             importGeneration++
             importPublicationRequestId = null
@@ -396,7 +400,7 @@ class ProjectPersistenceCoordinator(
                         saveStatus = PersistenceSaveStatus.NO_PROJECT
                     )
                 )
-                subscribeProjectChanges()
+                subscribeChanges()
             }
 
             is StartupResult.Failed -> {
@@ -410,11 +414,15 @@ class ProjectPersistenceCoordinator(
             }
 
             is StartupResult.Loaded -> {
+                val sessionWarning: String?
                 try {
                     applyingOwnedProject = true
                     projectRuntime.loadProject(
                         result.snapshot.projectName,
                         result.snapshot.exportResources()
+                    )
+                    sessionWarning = restoreSessionSidecar(
+                        result.snapshot.sidecarBytes()
                     )
                 } finally {
                     applyingOwnedProject = false
@@ -423,6 +431,12 @@ class ProjectPersistenceCoordinator(
                 currentRevision = result.snapshot.revision
                 activeRecordPublished = true
                 pendingSnapshot = null
+                val recoveredMessage =
+                    if (result.recovered) {
+                        "Recovered the previous complete project generation"
+                    } else {
+                        null
+                    }
                 publish(
                     ProjectPersistenceState(
                         startup = PersistenceStartupStatus.READY,
@@ -434,14 +448,23 @@ class ProjectPersistenceCoordinator(
                         } else {
                             PersistenceSaveStatus.SAVED
                         },
-                        message = if (result.recovered) {
-                            "Recovered the previous complete project generation"
-                        } else {
-                            null
-                        }
+                        message = listOfNotNull(
+                            recoveredMessage,
+                            sessionWarning
+                        ).joinToString(" · ").ifBlank { null }
                     )
                 )
-                subscribeProjectChanges()
+                subscribeChanges()
+            }
+        }
+    }
+
+    private fun subscribeChanges() {
+        subscribeProjectChanges()
+        sessionSubscription?.cancel()
+        sessionSubscription = sessionSidecar?.subscribe {
+            if (!closed && !applyingOwnedProject) {
+                onSessionChanged()
             }
         }
     }
@@ -468,14 +491,30 @@ class ProjectPersistenceCoordinator(
             currentToken = null
             activeRecordPublished = false
         }
+        markDirty(projectId, projectName)
+    }
 
+    private fun onSessionChanged() {
+        val projectId = state.projectId ?: return
+        val projectName = projectRuntime.state.projectName ?: return
+        markDirty(projectId, projectName)
+    }
+
+    private fun markDirty(
+        projectId: String,
+        projectName: String
+    ) {
         currentRevision += 1
         synchronized(importLock) {
             if (importPublicationRequestId != null) {
                 importPublicationInvalidatedByEdit = true
             }
         }
-        val snapshot = captureSnapshot(projectId, projectName, currentRevision)
+        val snapshot = captureSnapshot(
+            projectId,
+            projectName,
+            currentRevision
+        )
         pendingSnapshot = snapshot
         publish(
             state.copy(
@@ -802,12 +841,14 @@ class ProjectPersistenceCoordinator(
                     return
                 }
 
+                val sessionWarning: String?
                 try {
                     applyingOwnedProject = true
                     projectRuntime.loadProject(
                         result.snapshot.projectName,
                         result.snapshot.exportResources()
                     )
+                    sessionWarning = resetImportedSession()
                 } finally {
                     applyingOwnedProject = false
                 }
@@ -831,7 +872,7 @@ class ProjectPersistenceCoordinator(
                         projectName = result.snapshot.projectName,
                         origin = result.origin,
                         saveStatus = PersistenceSaveStatus.SAVED,
-                        message = null,
+                        message = sessionWarning,
                         replacementDecisionRequired = false,
                         lastExport = null
                     )
@@ -994,8 +1035,59 @@ class ProjectPersistenceCoordinator(
             adapterId = runtime.state.simulatorAdapterId.value,
             robotId = runtime.state.activeRobotId,
             revision = revision,
-            resources = projectRuntime.export()
+            resources = projectRuntime.export(),
+            sidecar = sessionSidecar?.capture() ?: byteArrayOf()
         )
+
+    private fun restoreSessionSidecar(
+        bytes: ByteArray
+    ): String? {
+        val controller = sessionSidecar ?: return null
+        return try {
+            val restored =
+                if (bytes.isEmpty()) {
+                    controller.resetForImportedProject(
+                        projectRuntime.state
+                    )
+                } else {
+                    controller.apply(
+                        bytes,
+                        projectRuntime.state
+                    )
+                }
+            restored.warnings
+                .takeIf { it.isNotEmpty() }
+                ?.joinToString("; ")
+        } catch (e: PersistenceException) {
+            val resetWarning = try {
+                controller.resetForImportedProject(
+                    projectRuntime.state
+                ).warnings
+            } catch (_: Exception) {
+                emptyList()
+            }
+            (
+                listOf(
+                    "Project opened, but saved session state could not be restored: " +
+                        e.reason
+                ) + resetWarning
+                ).joinToString("; ")
+        }
+    }
+
+    private fun resetImportedSession(): String? {
+        val controller = sessionSidecar ?: return null
+        return try {
+            controller.resetForImportedProject(
+                projectRuntime.state
+            ).warnings
+                .takeIf { it.isNotEmpty() }
+                ?.joinToString("; ")
+        } catch (e: PersistenceException) {
+            "Imported project opened, but session state could not be reset: " +
+                e.reason
+        }
+    }
 
     private fun hasUnsavedWork(): Boolean =
         state.saveStatus in setOf(
