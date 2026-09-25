@@ -18,3 +18,6 @@ Branch: feature/session-round-trip-restore.
 
 - Task1 RED: 0be350061fb1772a024a8eb2fd5e7486d4953c6a; Android CI344/run36076316689 failed in unit-test compilation exactly because ProjectSessionCodec/ProjectSessionSnapshot/ProjectSessionLimits and persisted session types were absent. Build/APK/upload correctly skipped after the RED failure.
 - Task1 GREEN candidate: d2f4e44960ac0445b5888295d74dd23c1f71a916 adds only the bounded/versioned EPSSES01 V1 model+codec. Full Android CI is now the authoritative validation gate.
+
+- Task1 GREEN complete: codec/model production d2f4e44960ac0445b5888295d74dd23c1f71a916 plus strict legacy-empty regression 764becb31675e4c2650c9a665b3744afcb1fc273. CI345 was cancelled only because the deliberate PR reopen retrigger hit workflow cancel-in-progress; it is not product evidence. Replacement Android CI346/run36076757871 on the same HEAD passed unit tests, debug APK build and artifact upload SUCCESS.
+- Task1 COMPLETE. Task2 safe app-session capture/validation/restore is active; first substep is SharedRuntime safe-restore RED.
