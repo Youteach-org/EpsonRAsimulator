@@ -69,6 +69,51 @@ class ProjectPersistenceCoordinatorTest {
         }
     }
 
+    private class FakeSessionSidecarController :
+        ProjectSessionSidecarController {
+        var captured: ByteArray = "session-default".toByteArray()
+        val applied = mutableListOf<ByteArray>()
+        var resets = 0
+        var throwOnApply: PersistenceFailure? = null
+        var projectNameSeenOnApply: String? = null
+        private val listeners = linkedSetOf<() -> Unit>()
+
+        override fun capture(): ByteArray = captured.copyOf()
+
+        override fun apply(
+            bytes: ByteArray,
+            projectState: mx.youteachtk.epsonrasimulator.project.ProjectRuntimeState
+        ): SessionRestoreResult {
+            throwOnApply?.let {
+                throw PersistenceException(it, "sidecar rejected")
+            }
+            projectNameSeenOnApply = projectState.projectName
+            applied += bytes.copyOf()
+            return SessionRestoreResult()
+        }
+
+        override fun resetForImportedProject(
+            projectState: mx.youteachtk.epsonrasimulator.project.ProjectRuntimeState
+        ): SessionRestoreResult {
+            resets++
+            projectNameSeenOnApply = projectState.projectName
+            return SessionRestoreResult()
+        }
+
+        override fun subscribe(
+            listener: () -> Unit
+        ): AppSessionSidecarSubscription {
+            listeners += listener
+            return AppSessionSidecarSubscription {
+                listeners -= listener
+            }
+        }
+
+        fun emitChange() {
+            listeners.toList().forEach { it() }
+        }
+    }
+
     private class TestExecution : PersistenceExecution {
         private data class Scheduled(
             val due: Long,
@@ -257,6 +302,7 @@ class ProjectPersistenceCoordinatorTest {
         val slots: MemorySlots,
         val gateway: Gateway,
         val execution: TestExecution,
+        val sidecar: FakeSessionSidecarController,
         val coordinator: ProjectPersistenceCoordinator
     ) {
         val project: ProjectRuntime get() = bundle.projectRuntime
@@ -284,6 +330,7 @@ class ProjectPersistenceCoordinatorTest {
         val slots = MemorySlots()
         val gateway = Gateway()
         val execution = TestExecution()
+        val sidecar = FakeSessionSidecarController()
         val coordinator = ProjectPersistenceCoordinator(
             projectRuntime = bundle.projectRuntime,
             runtime = bundle.runtime,
@@ -291,10 +338,19 @@ class ProjectPersistenceCoordinatorTest {
             slotStores = slots,
             documentGateway = gateway,
             execution = execution,
+            sessionSidecar = sidecar,
             idGenerator = { ids.removeFirst() },
             autosaveDebounceMillis = 750
         )
-        return Harness(bundle, records, slots, gateway, execution, coordinator)
+        return Harness(
+            bundle,
+            records,
+            slots,
+            gateway,
+            execution,
+            sidecar,
+            coordinator
+        )
     }
 
     private fun Harness.seed(
@@ -302,7 +358,8 @@ class ProjectPersistenceCoordinatorTest {
         name: String = "Saved Demo",
         revision: Long = 1,
         source: String = "Function main\nFend\n",
-        origin: DocumentTreeOrigin? = null
+        origin: DocumentTreeOrigin? = null,
+        sidecar: ByteArray = byteArrayOf()
     ): SnapshotToken {
         val snapshot = ProjectSnapshot(
             projectId = id,
@@ -313,7 +370,8 @@ class ProjectPersistenceCoordinatorTest {
             resources = linkedMapOf(
                 "Main.prg" to source.toByteArray(),
                 "opaque.bin" to byteArrayOf(0, -1)
-            )
+            ),
+            sidecar = sidecar
         )
         val saved = slots.open(id).save(snapshot, null) as StoreSave.Saved
         records.record = ActiveProjectRecord(id, origin)
@@ -778,6 +836,135 @@ class ProjectPersistenceCoordinatorTest {
         assertFalse(result.complete)
         assertEquals("Main.prg", result.failedPath)
         assertEquals(PersistenceFailure.IO, result.failure)
+    }
+
+    @Test fun startupAppliesSemanticSidecarAfterNativeProjectLoads() {
+        val h = harness()
+        val savedSidecar = "saved-session".toByteArray()
+        h.seed(sidecar = savedSidecar)
+
+        h.start()
+
+        assertEquals("Saved Demo", h.sidecar.projectNameSeenOnApply)
+        assertEquals(1, h.sidecar.applied.size)
+        assertArrayEquals(savedSidecar, h.sidecar.applied.single())
+        assertEquals(PersistenceSaveStatus.SAVED, h.coordinator.state.saveStatus)
+    }
+
+    @Test fun emptyLegacySidecarResetsSemanticSessionWithoutMakingProjectDirty() {
+        val h = harness()
+        h.seed(sidecar = byteArrayOf())
+
+        h.start()
+
+        assertEquals(1, h.sidecar.resets)
+        assertEquals("Saved Demo", h.sidecar.projectNameSeenOnApply)
+        assertEquals(PersistenceSaveStatus.SAVED, h.coordinator.state.saveStatus)
+        assertEquals(0, h.execution.scheduledCount())
+    }
+
+    @Test fun semanticOnlyChangeBecomesDirtyAndAutosavesSidecar() {
+        val h = harness()
+        val id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = id, sidecar = "old-session".toByteArray())
+        h.start()
+        h.sidecar.captured = "new-session".toByteArray()
+
+        h.sidecar.emitChange()
+
+        assertEquals(PersistenceSaveStatus.DIRTY, h.coordinator.state.saveStatus)
+        h.execution.advanceBy(750)
+        h.execution.drain()
+
+        val saved = h.savedSnapshot(id)
+        assertEquals(2L, saved.revision)
+        assertArrayEquals(
+            "new-session".toByteArray(),
+            saved.sidecarBytes()
+        )
+        assertEquals(PersistenceSaveStatus.SAVED, h.coordinator.state.saveStatus)
+    }
+
+    @Test fun olderSaveCompletionCannotClearNewerSemanticDirtyRevision() {
+        val h = harness()
+        val id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = id, sidecar = "v1".toByteArray())
+        h.start()
+
+        h.sidecar.captured = "v2".toByteArray()
+        h.sidecar.emitChange()
+        h.execution.advanceBy(750)
+        h.execution.runWorkerAll()
+        h.execution.runUiAll()
+        h.execution.runWorkerAll()
+
+        h.sidecar.captured = "v3".toByteArray()
+        h.sidecar.emitChange()
+        assertEquals(PersistenceSaveStatus.DIRTY, h.coordinator.state.saveStatus)
+
+        h.execution.runUiAll()
+        assertEquals(PersistenceSaveStatus.DIRTY, h.coordinator.state.saveStatus)
+
+        h.execution.advanceBy(750)
+        h.execution.drain()
+
+        val saved = h.savedSnapshot(id)
+        assertEquals(3L, saved.revision)
+        assertArrayEquals("v3".toByteArray(), saved.sidecarBytes())
+    }
+
+    @Test fun corruptSemanticSidecarKeepsNativeProjectOpenAndWarns() {
+        val h = harness()
+        h.seed(sidecar = byteArrayOf(7, 7, 7))
+        h.sidecar.throwOnApply = PersistenceFailure.CORRUPT
+
+        h.start()
+
+        assertEquals(PersistenceStartupStatus.READY, h.coordinator.state.startup)
+        assertEquals("Saved Demo", h.project.state.projectName)
+        assertArrayEquals(
+            byteArrayOf(0, -1),
+            h.project.resourceBytes("opaque.bin")
+        )
+        assertEquals(PersistenceSaveStatus.SAVED, h.coordinator.state.saveStatus)
+        assertNotNull(h.coordinator.state.message)
+    }
+
+    @Test fun successfulImportResetsSemanticSessionAndNativeExportStillHasNoSidecar() {
+        val h = harness()
+        h.start()
+        h.gateway.trees["content://tree/new"] = Tree(
+            "Imported",
+            linkedMapOf(
+                "Main.prg" to "Function main\nFend\n".toByteArray()
+            )
+        )
+
+        h.coordinator.requestImport(readSelection("content://tree/new"))
+        h.execution.drain()
+
+        assertEquals(1, h.sidecar.resets)
+        val id = requireNotNull(h.coordinator.state.projectId)
+        assertTrue(h.savedSnapshot(id).sidecarBytes().isEmpty())
+
+        h.sidecar.captured = "private-session-only".toByteArray()
+        h.sidecar.emitChange()
+        h.execution.advanceBy(750)
+        h.execution.drain()
+        assertArrayEquals(
+            "private-session-only".toByteArray(),
+            h.savedSnapshot(id).sidecarBytes()
+        )
+
+        h.gateway.trees["content://tree/export"] =
+            Tree("Target", linkedMapOf())
+        h.coordinator.exportTo(writeSelection("content://tree/export"))
+        h.execution.drain()
+        assertTrue(
+            h.gateway.exported.values.none {
+                it.contentEquals("private-session-only".toByteArray())
+            }
+        )
     }
 
     @Test fun closeCancelsSubscriptionsAndExecution() {
