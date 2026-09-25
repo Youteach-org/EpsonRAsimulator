@@ -21,3 +21,8 @@ Branch: feature/session-round-trip-restore.
 
 - Task1 GREEN complete: codec/model production d2f4e44960ac0445b5888295d74dd23c1f71a916 plus strict legacy-empty regression 764becb31675e4c2650c9a665b3744afcb1fc273. CI345 was cancelled only because the deliberate PR reopen retrigger hit workflow cancel-in-progress; it is not product evidence. Replacement Android CI346/run36076757871 on the same HEAD passed unit tests, debug APK build and artifact upload SUCCESS.
 - Task1 COMPLETE. Task2 safe app-session capture/validation/restore is active; first substep is SharedRuntime safe-restore RED.
+
+- Task2 runtime RED: 21fe0f5217bd01c36f2f947267033c15dfdd21e1; Android CI348/run36077176865 failed exactly on missing SharedRuntime.restoreLocalPersistentSession.
+- Task2 runtime GREEN: d1988ac0e24ec76d583a7b8a9867a9e086332af3; Android CI349/run36077499539 unit tests, debug APK and artifact upload SUCCESS. Restore validates robot/joints/teach points without clamping, publishes once, and resets clock/I/O/tasks/workcell/tools into Local Simulation defaults.
+- Task2 app-session RED: 4aa175db9220157ecddefff253bf150c1281c7b4; Android CI350/run36077978824 failed in test compilation on missing AppProjectSessionPersistence capture/prepareRestore/subscribe APIs as expected.
+- Task2 app-session GREEN candidate: d7147da6f195f3d09887a5d86fa3ca95b2d41c22 adds the persistence port, capture/reconcile/restore implementation, workspace restore validation and project-selection restore. Full Android CI is the gate.
