@@ -96,6 +96,22 @@ namespace EpsonRa.Bridge.Readiness.Tests
         }
 
         [TestMethod]
+        public void DriveRelativeAndRootRelativeExplicitRootsAreInvalidWithoutFallback()
+        {
+            foreach (var candidate in new[] { @"C:EpsonRC70", @"\EpsonRC70" })
+            {
+                var env = new FakeEnvironment(new[] { @"C:\Other" });
+
+                var report = new ReadinessInspector(env).Inspect(candidate);
+
+                Assert.IsFalse(report.Ready);
+                Assert.AreEqual(CheckStatus.INVALID, report.Checks.Single(c => c.Name == "installRoot").Status);
+                Assert.AreEqual(0, env.DiscoveryCalls);
+                Assert.AreEqual(0, env.InspectedRoots.Count);
+            }
+        }
+
+        [TestMethod]
         public void UnreadableExplicitRootBecomesInvalidWithoutFallback()
         {
             var env = new FakeEnvironment(new[] { @"C:\Other" });
