@@ -54,6 +54,15 @@ class BridgeSession(private val limits: BridgeLimits = BridgeLimits()) {
 
     private fun printableIdentity(value: String): Boolean =
         value.isNotBlank() && value.toByteArray(Charsets.UTF_8).size <= 128 &&
-            value.none { Character.isISOControl(it) || Character.isSurrogate(it) }
+            value.codePoints().allMatch { codePoint ->
+                when (Character.getType(codePoint)) {
+                    Character.CONTROL.toInt(),
+                    Character.FORMAT.toInt(),
+                    Character.LINE_SEPARATOR.toInt(),
+                    Character.PARAGRAPH_SEPARATOR.toInt(),
+                    Character.SURROGATE.toInt() -> false
+                    else -> true
+                }
+            }
 }
 

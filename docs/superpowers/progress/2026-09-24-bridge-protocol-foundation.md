@@ -41,3 +41,6 @@ Reviewed the [implementation plan](https://github.com/Youteach-org/EpsonRAsimula
 The plan's larger scope boundaries are consistent with the approved design: no physical control, Windows adapter, transport, UI or runtime mutation. These rulings are contract details, not a reason to expand phase 9A.
 
 
+
+Task1 remote RED69c00cf CI372 missing APIs confirmed. GREEN f7d8633 CI373/run36096600724 tests/APK/upload SUCCESS. Local12 focused /453 full PASS.
+Task1 review found Important Unicode printable identity gap. Local fix RED f5fef1a:14 tests/2 intended failures; GREEN3562cd7:14/14 PASS. Fix uses code-point categories and preserves supplementary printable characters. Scoped fix review and full Android CI pending; Task1 not yet closed. Task2/3 not started. Quota checkpoint; handoff outputs/handoff-epsonrasimulator.txt.

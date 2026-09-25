@@ -49,6 +49,27 @@ class BridgeSessionTest {
         }
     }
 
+    @Test fun rejectsInvisibleAndSeparatingIdentityCodePoints() {
+        val nonPrintable = listOf("\u200B", "\u2028", "\u2029", "\uD800")
+        for (character in nonPrintable) {
+            for (candidate in listOf(
+                hello(epoch = "e${character}1"),
+                hello(simulatorId = "rc${character}plus"),
+                hello(simulatorVersion = "7${character}.5"),
+            )) {
+                val s = BridgeSession()
+                assertFalse("accepted identity containing U+${character[0].code.toString(16)}", s.connect(candidate))
+                assertNull(s.hello)
+            }
+        }
+    }
+
+    @Test fun acceptsPrintableSupplementaryUnicodeIdentityCodePoints() {
+        val s = BridgeSession()
+        assertTrue(s.connect(hello(epoch = "e\uD83D\uDE80", simulatorId = "C4\uD83E\uDD16")))
+        assertEquals("e\uD83D\uDE80", s.hello?.epoch)
+    }
+
     @Test fun rejectsDuplicateOutOfOrderAndOldEpochSnapshotsWithoutChangingLatest() {
         val s = BridgeSession()
         assertTrue(s.connect(hello()))
