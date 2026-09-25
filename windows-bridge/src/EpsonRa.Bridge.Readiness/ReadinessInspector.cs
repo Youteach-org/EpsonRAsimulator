@@ -149,12 +149,39 @@ namespace EpsonRa.Bridge.Readiness
             }
         }
 
+        private static bool IsFullyQualifiedWindowsPath(string candidate)
+        {
+            if (string.IsNullOrWhiteSpace(candidate) || !Path.IsPathRooted(candidate))
+            {
+                return false;
+            }
+
+            if (candidate.Length >= 2 &&
+                IsDirectorySeparator(candidate[0]) &&
+                IsDirectorySeparator(candidate[1]))
+            {
+                return true;
+            }
+
+            var root = Path.GetPathRoot(candidate);
+            return !string.IsNullOrEmpty(root) &&
+                root.Length >= 3 &&
+                root[1] == Path.VolumeSeparatorChar &&
+                IsDirectorySeparator(root[2]);
+        }
+
+        private static bool IsDirectorySeparator(char value)
+        {
+            return value == Path.DirectorySeparatorChar ||
+                value == Path.AltDirectorySeparatorChar;
+        }
+
         private static bool TryNormalizeAbsoluteRoot(
             string candidate,
             out string normalized)
         {
             normalized = null;
-            if (string.IsNullOrWhiteSpace(candidate) || !Path.IsPathRooted(candidate))
+            if (!IsFullyQualifiedWindowsPath(candidate))
             {
                 return false;
             }
