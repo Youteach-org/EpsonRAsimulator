@@ -1,7 +1,14 @@
 package mx.youteachtk.epsonrasimulator.runtime
 
+import mx.youteachtk.epsonrasimulator.domain.JointState
 import mx.youteachtk.epsonrasimulator.domain.RobotDefinition
+import mx.youteachtk.epsonrasimulator.domain.TeachPoint
 import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
+import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClockState
+import mx.youteachtk.epsonrasimulator.runtime.io.IoState
+import mx.youteachtk.epsonrasimulator.runtime.task.TaskRuntimeState
+import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeState
+import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellState
 
 class SharedRuntime(
     private val robots: RobotRegistry,
@@ -21,6 +28,85 @@ class SharedRuntime(
     }
 
     fun activeRobot(): RobotDefinition = robots.require(state.activeRobotId)
+
+    fun restoreLearnerSession(
+        requestedRobotId: String?,
+        jointValues: List<Double>,
+        teachPoints: List<TeachPoint>
+    ): LearnerSessionRestoreResult {
+        val warnings = mutableListOf<String>()
+        val robot = requestedRobotId
+            ?.let(robots::find)
+            ?: activeRobot().also {
+                if (requestedRobotId != null) {
+                    warnings += "Saved robot is unavailable; kept current robot"
+                }
+            }
+
+        val restoredJoints =
+            if (
+                jointValues.size == robot.joints.size &&
+                jointValues.all(Double::isFinite) &&
+                jointValues.indices.all { index ->
+                    robot.joints[index].contains(jointValues[index])
+                }
+            ) {
+                JointState(jointValues.toList())
+            } else {
+                if (jointValues.isNotEmpty()) {
+                    warnings += "Saved joint state is incompatible; restored robot zero state"
+                }
+                robot.zeroState()
+            }
+
+        val restoredPoints = linkedMapOf<String, TeachPoint>()
+        teachPoints.sortedBy { it.name }.forEach { point ->
+            val pose = point.pose
+            val poseValid = listOf(
+                pose.x, pose.y, pose.z,
+                pose.rx, pose.ry, pose.rz
+            ).all(Double::isFinite)
+            val preferred = point.preferredJointState
+            val preferredValid =
+                preferred == null ||
+                    (
+                        preferred.values.size == robot.joints.size &&
+                            preferred.values.all(Double::isFinite) &&
+                            preferred.values.indices.all { index ->
+                                robot.joints[index].contains(
+                                    preferred.values[index]
+                                )
+                            }
+                    )
+            if (
+                point.name.isBlank() ||
+                !poseValid ||
+                !preferredValid ||
+                restoredPoints.containsKey(point.name)
+            ) {
+                warnings += "Dropped incompatible teach point: " + point.name
+            } else {
+                restoredPoints[point.name] = point
+            }
+        }
+
+        val next = state.copy(
+            activeRobotId = robot.id,
+            jointState = restoredJoints,
+            teachPoints = restoredPoints,
+            connectionMode = ConnectionMode.LOCAL_SIMULATION,
+            clockState = SimulationClockState(),
+            ioState = IoState(),
+            taskState = TaskRuntimeState(),
+            workcellState = WorkcellState(),
+            toolState = ToolRuntimeState()
+        )
+        if (next != state) {
+            state = next
+            listeners.toList().forEach { it(next) }
+        }
+        return LearnerSessionRestoreResult(warnings.toList())
+    }
 
     fun dispatch(command: RuntimeCommand): SharedRuntimeState {
         val current = state
@@ -330,3 +416,7 @@ class RuntimeSubscription(
         }
     }
 }
+
+data class LearnerSessionRestoreResult(
+    val warnings: List<String>
+)
