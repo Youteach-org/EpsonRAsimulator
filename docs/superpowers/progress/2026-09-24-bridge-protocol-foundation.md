@@ -44,3 +44,7 @@ The plan's larger scope boundaries are consistent with the approved design: no p
 
 Task1 remote RED69c00cf CI372 missing APIs confirmed. GREEN f7d8633 CI373/run36096600724 tests/APK/upload SUCCESS. Local12 focused /453 full PASS.
 Task1 review found Important Unicode printable identity gap. Local fix RED f5fef1a:14 tests/2 intended failures; GREEN3562cd7:14/14 PASS. Fix uses code-point categories and preserves supplementary printable characters. Scoped fix review and full Android CI pending; Task1 not yet closed. Task2/3 not started. Quota checkpoint; handoff outputs/handoff-epsonrasimulator.txt.
+
+Task1 scoped review COMPLETE on remote fix e035c4d01f207336aff4178f7aa282e2187e6fa4. No additional Critical/Important findings: identity validation now rejects control/format/line/paragraph/surrogate code points while preserving printable supplementary Unicode, and existing epoch/snapshot authority rules remain unchanged. Android CI374/run36096932567 on exact HEAD passed unit tests, debug APK build and artifact upload SUCCESS.
+Ruling: this environment exposes no subagent tool, so remaining Phase9A tasks use superpowers:executing-plans inline while retaining task-scoped self-review gates and the one final whole-branch review — preserves the user-authorized plan without fabricating agent dispatch; cost if wrong is weaker fresh-context isolation.
+Task1 COMPLETE. Task2 bounded command outcomes is active; first checkpoint is tests-only RED using the preflight ruling that receive includes nowMs and reconciles expiry before acknowledgement processing.
