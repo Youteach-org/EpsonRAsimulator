@@ -9,6 +9,7 @@ import mx.youteachtk.epsonrasimulator.project.persistence.ProjectSnapshot
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeBundle
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
 import mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand
+import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
 import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceCatalog
 import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceTools
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectNavigationSession
@@ -252,6 +253,69 @@ class AppProjectSessionPersistenceTest {
         assertEquals(runtimeBefore, h.bundle.runtime.state)
         assertEquals(workspaceBefore, h.workspace.state)
         assertEquals(experienceBefore, h.experience)
+    }
+
+    @Test fun subscriptionIgnoresTransientRuntimeOnlyChanges() {
+        val h = harness()
+        var changes = 0
+        val subscription = h.persistence.subscribe { changes += 1 }
+
+        h.bundle.runtime.dispatch(RuntimeCommand.StartClock)
+        h.bundle.runtime.dispatch(
+            RuntimeCommand.SetDigitalOutput(
+                DigitalIoAddress(7),
+                true
+            )
+        )
+
+        assertEquals(0, changes)
+
+        h.bundle.runtime.dispatch(
+            RuntimeCommand.SetJointValue(0, 10.0)
+        )
+
+        assertEquals(1, changes)
+        subscription.cancel()
+    }
+
+    @Test fun prepareRestoreRejectsWindowToolOwnershipMismatchBeforeMutation() {
+        val h = harness()
+        val beforeRuntime = h.bundle.runtime.state
+        val beforeWorkspace = h.workspace.state
+        val sidecar = codec.encode(
+            ProjectSessionSnapshot(
+                activeExperience = PersistedExperience.RCPLUS_TRAINER,
+                jointValues = h.bundle.runtime.state.jointState.values,
+                teachPoints = emptyList(),
+                windows = listOf(
+                    window(
+                        "source:Main.prg",
+                        "robot-manager"
+                    )
+                ),
+                zOrder = listOf("source:Main.prg"),
+                activeWindowId = "source:Main.prg",
+                selectedProjectNodeId = null,
+                visualSourcePath = null,
+                robotManagerPage = "CONTROL_PANEL",
+                robotManagerTrainingStepDegrees = 1.0
+            )
+        )
+        val snapshot = projectSnapshot(
+            name = "Bad Window",
+            sidecar = sidecar,
+            resources = mapOf(
+                "Main.prg" to "Function main\nFend\n".toByteArray()
+            )
+        )
+
+        val error = assertThrows(PersistenceException::class.java) {
+            h.persistence.prepareRestore(snapshot)
+        }
+
+        assertEquals(PersistenceFailure.INVALID_METADATA, error.reason)
+        assertEquals(beforeRuntime, h.bundle.runtime.state)
+        assertEquals(beforeWorkspace, h.workspace.state)
     }
 
     @Test fun subscriptionForwardsRealSessionChangesButNotInitialSnapshots() {
