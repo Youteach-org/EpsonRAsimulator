@@ -46,16 +46,16 @@ class AppSessionSidecarSubscription(
 interface ProjectSessionSidecarController {
     fun capture(): ByteArray
 
-    override fun apply(
+    fun apply(
         bytes: ByteArray,
         projectState: ProjectRuntimeState
     ): SessionRestoreResult
 
-    override fun resetForImportedProject(
+    fun resetForImportedProject(
         projectState: ProjectRuntimeState
     ): SessionRestoreResult
 
-    override fun subscribe(
+    fun subscribe(
         listener: () -> Unit
     ): AppSessionSidecarSubscription
 }
@@ -79,7 +79,7 @@ class AppSessionSidecarController(
 
     override fun capture(): ByteArray = codec.encode(semanticState())
 
-    fun apply(
+    override fun apply(
         bytes: ByteArray,
         projectState: ProjectRuntimeState
     ): SessionRestoreResult {
@@ -89,12 +89,12 @@ class AppSessionSidecarController(
         return applyState(codec.decode(bytes), projectState)
     }
 
-    fun resetForImportedProject(
+    override fun resetForImportedProject(
         projectState: ProjectRuntimeState
     ): SessionRestoreResult =
         applyState(ProjectSessionSidecar(), projectState)
 
-    fun subscribe(
+    override fun subscribe(
         listener: () -> Unit
     ): AppSessionSidecarSubscription {
         listeners += listener
