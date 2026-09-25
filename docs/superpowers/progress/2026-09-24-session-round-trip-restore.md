@@ -15,3 +15,6 @@ Branch: feature/session-round-trip-restore.
 - Written plan review gate COMPLETE on current remote plan. No blocking architecture finding: Task ordering preserves codec -> safe app restore -> coordinator ordering -> ViewModel/E2E, and no 8A/8B fix is reopened.
 - Plan-review rulings before Task1: persisted zOrder is a bijection over persisted window ids; activeWindowId must name an existing non-minimized window; minimizedFrom may be NORMAL or MAXIMIZED but never MINIMIZED. Geometry must satisfy the existing normalized RcRect invariant as well as finiteness. Cost if wrong: corrupt sidecar could decode successfully but create an impossible RcWindowManagerState during Task2 restore.
 - Task1 is now active. Next checkpoint is RED codec tests only, then Android CI must fail on the missing session model/codec before production implementation.
+
+- Task1 RED: 0be350061fb1772a024a8eb2fd5e7486d4953c6a; Android CI344/run36076316689 failed in unit-test compilation exactly because ProjectSessionCodec/ProjectSessionSnapshot/ProjectSessionLimits and persisted session types were absent. Build/APK/upload correctly skipped after the RED failure.
+- Task1 GREEN candidate: d2f4e44960ac0445b5888295d74dd23c1f71a916 adds only the bounded/versioned EPSSES01 V1 model+codec. Full Android CI is now the authoritative validation gate.
