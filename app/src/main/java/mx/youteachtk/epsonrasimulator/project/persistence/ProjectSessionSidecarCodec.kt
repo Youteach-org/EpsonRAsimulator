@@ -71,7 +71,7 @@ class ProjectSessionSidecarCodec(
             }
 
             data.writeInt(sidecar.windowZOrder.size)
-            sidecar.windowZOrder.forEach(data::text)
+            sidecar.windowZOrder.forEach { data.text(it) }
             data.nullableText(sidecar.activeWindowId)
             data.nullableText(sidecar.selectedProjectNodeId)
             data.nullableText(sidecar.selectedVisualSourcePath)
