@@ -1,6 +1,6 @@
 # Phase 9A Bridge Protocol Foundation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Prove independent live-state, command and project synchronization contracts with a deterministic fake Windows bridge.
 
@@ -17,7 +17,7 @@
 - Project synchronization and live state synchronization remain independent.
 - Sidecar/session metadata is excluded from native resources.
 - Keep SceneView 4.35.0; Issue7 separate; Draft stacked on feature/session-round-trip-restore.
-- Execution: native/inline, TDD per task, one independent final review and one fix wave.
+- Execution: user authorized agents; task implementer/reviewer gates, one independent final review and one fix wave.
 - Base verified: 49e6aeb03f8d238d766d88e2b0c4624838de9106. Never push stale local snapshot history.
 
 ## Review Focus
@@ -165,4 +165,7 @@ No dependency change or real Windows/device probe needed for this pure-contract 
 Spec coverage: handshake/live task1; commands task2; independent project/bytes/conflicts and fake bridge task3.
 Review Focus mapped to explicit tests above. Interfaces share one naming/type scheme.
 No Windows/transport/runtime integration sneaks into fake acceptance. Scope remains phase9A, not all phase9.
-Written design approved by user; executable plan awaits review, preserving native execution method.
+Written design and execution approved by user; agents authorized. Preflight rulings in the progress ledger govern clarified contracts.
+
+
+

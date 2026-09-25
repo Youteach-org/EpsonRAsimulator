@@ -1,9 +1,43 @@
-# Phase 9A progress
+# SDD ledger — plan: docs/superpowers/plans/2026-09-24-bridge-protocol-foundation.md
 
-Base: 49e6aeb03f8d238d766d88e2b0c4624838de9106, Phase8C PR19.
+User authorized execution and agents. Preflight tables: preflight.md. Local baseline c7d19d8 materializes remote87cc154; never push local snapshot history.
+Ruling: use agents per task with task-scoped reviews, retain accepted single final review/one fix wave/no second final review — user requested agents; cost if wrong is review overhead.
+Ruling: add nowMs to receive and reconcile expiry before processing acknowledgement; expire/submit/receive share monotonic time. Invalid/backward time rejects without mutation (expire throws IllegalArgumentException) — avoids late success; cost is one API argument.
+Ruling: commands.disconnect calls session.disconnect and marks pending UNKNOWN — acceptance expects stale session; cost is coupling to explicit disconnect ownership.
+Ruling: BridgeLimits adds maxEpochs=4096 independently of maxRequestsPerSession; both positive bounded policy limits — avoids conflating histories; cost is one configuration field.
+Ruling: detached message constructors permit malformed scalar input, connect/accept return false after validation; collections defensively copied and never mutable through getters — keeps rejection test contract; cost is boundary validation responsibility.
+Ruling: fingerprint sorts unsigned UTF-8 path bytes; invalid candidate wins over fingerprint conflict after mutation-free validation — deterministic across platforms; cost is comparator and validation work.
 
-- User approved the written bridge design and requested executable plan preparation.
-- Official research and approved design preserved in specs/2026-09-24-bridge-protocol-design.md.
-- Three-task implementation plan written and self-reviewed: session/snapshots, command outcomes, independent project CAS/fake acceptance.
-- Native execution method preserved. Product code has not started; written-plan review is next.
-- No native Windows, device or physical-controller validation claimed. Phase8C final CI370 passed tests/APK/upload.
+Baseline local: 441 tests/68 classes PASS via work/run-phase9-tests.ps1; Android baseline CI371/run36095812423 success. Runner excludes Android-dependent acceptance and is not full Android evidence. Task1 agent phase9_task1 active.
+
+# Phase 9A plan preflight
+
+Reviewed the [implementation plan](https://github.com/Youteach-org/EpsonRAsimulator/blob/87cc154f95cfb0c1e616d924d8cdaee579fb21ce/docs/superpowers/plans/2026-09-24-bridge-protocol-foundation.md), [approved design](https://github.com/Youteach-org/EpsonRAsimulator/blob/87cc154f95cfb0c1e616d924d8cdaee579fb21ce/docs/superpowers/specs/2026-09-24-bridge-protocol-design.md), and existing [ProjectSnapshot](https://github.com/Youteach-org/EpsonRAsimulator/blob/87cc154f95cfb0c1e616d924d8cdaee579fb21ce/app/src/main/java/mx/youteachtk/epsonrasimulator/project/persistence/ProjectSnapshot.kt) at commit `87cc154f95cfb0c1e616d924d8cdaee579fb21ce`. GitHub comparison reports `feature/bridge-protocol-foundation` identical to that commit (0 ahead, 0 behind). The requested `specs/...` path does not exist; the plan identifies the actual path under `docs/superpowers/specs/`.
+
+## Task pair interfaces
+
+| Pair | Contract crossing the boundary | Consistency finding |
+| --- | --- | --- |
+| 1 → 2 | `BridgeCommands` reads `BridgeSession.hello`, `latest`, and `stale`; submit checks `COMMANDS`, current epoch and exact snapshot sequence; command replies never change `latest`. | The shared types and sequence model align. The plan needs an explicit rule for command invalidation when `BridgeSession.connect` or `disconnect` happens between ledger calls, and whether `BridgeCommands.disconnect()` also disconnects its session. The acceptance script assumes the latter. |
+| 1 ↔ 3 | Live `BridgeSession` and `BridgeProjectEndpoint` have no dependency in either direction. | Aligns with the design's project-only transfer and distinct live sequence/local project revision. The acceptance test should construct a project endpoint independently and prove its CAS works with a never-connected session. |
+| 2 ↔ 3 | Commands use session epoch/sequence; project CAS uses resource fingerprint and project identities. Neither consumes the other's outcome. | Aligns with the design. A successful CAS must not mark a command complete, unstale a session, or change the live sequence; acceptance assertions should cover all three. |
+
+## Per-task internal consistency
+
+| Task | Coherent as written | Gap or contradiction |
+| --- | --- | --- |
+| 1 — session/snapshots | VIRTUAL-only version-1 handshake, unique epoch, ordered full snapshots, defensive copies and failed-handshake revocation fit the design. Direct `Long` comparison handles maximum sequence. | The plan says accepted epochs are retained up to 4096 but `BridgeLimits` only names `maxRequestsPerSession=4096`, a command limit. Define a separate epoch-history bound or state that this fixed 4096 cap is intentionally unrelated to `BridgeLimits`. Clarify whether invalid `BridgeHello`/snapshot values throw at construction or cause `connect`/`accept` to return `false`; the tests and interface should use one rule. |
+| 2 — commands | A lifetime ID ledger, bounded pending set, terminal outcomes, and no optimistic live-state update satisfy most acceptance cases. | `receive` has no time argument, so it cannot know whether a completion arrived at or after the deadline unless the caller first invokes `expire`. This conflicts with the unqualified rule “At deadline outcome UNKNOWN.” Nondecreasing time is also underspecified across `submit` and `expire`. The acceptance snippet calls `commands.disconnect()` and then asserts `session.stale`, although task 2 defines only pending-command invalidation for that method. |
+| 3 — project CAS | Existing `ProjectSnapshot` already detaches bytes and validates paths and size at construction. Reconstructing it with endpoint `PersistenceLimits` can revalidate candidates created with looser limits. A fingerprint over paths and bytes omits sidecar/revision as intended. | “Sorted original UTF-8 paths” needs a bytewise comparator; Kotlin `String`/`toSortedMap` ordering is not equivalent for all Unicode paths. Specify whether `INVALID` or `CONFLICT` wins when both candidate and expected fingerprint are bad. Acceptance should assert that project CAS does not change session or command state, not merely that it succeeds. |
+
+## Rulings needed before execution
+
+1. **Deadline authority:** Either add `nowMs` to `receive` (and reconcile expiry there), or explicitly make callers invoke `expire(nowMs)` before processing replies and define “at deadline” relative to that invocation. State how nondecreasing time is enforced across public methods.
+2. **Disconnect ownership:** Specify whether `BridgeCommands.disconnect()` calls `session.disconnect()`. If it only invalidates commands, change the fake acceptance sequence to call `session.disconnect()` separately before asserting `stale`.
+3. **Epoch-history limit:** Name its own limit or document the fixed lifetime cap independently of `maxRequestsPerSession`.
+4. **Validation return versus exception:** Pin invalid-value behavior for `BridgeHello`/`BridgeLiveSnapshot` so rejection tests and method contracts agree. In particular, state whether `BridgeSession.accept` can receive invalid objects or only valid detached value objects.
+5. **Fingerprint ordering:** Define bytewise unsigned UTF-8 path order and test paths whose UTF-16 order differs, or explicitly choose Kotlin string order and revise the prose.
+
+The plan's larger scope boundaries are consistent with the approved design: no physical control, Windows adapter, transport, UI or runtime mutation. These rulings are contract details, not a reason to expand phase 9A.
+
+
