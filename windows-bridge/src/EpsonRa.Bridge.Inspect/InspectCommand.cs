@@ -60,14 +60,40 @@ namespace EpsonRa.Bridge.Inspect
 
             if (args.Length != 3 ||
                 !string.Equals(args[1], "--install-root", StringComparison.Ordinal) ||
-                string.IsNullOrWhiteSpace(args[2]) ||
-                !Path.IsPathRooted(args[2]))
+                !IsFullyQualifiedWindowsPath(args[2]))
             {
                 return false;
             }
 
             installRoot = args[2];
             return true;
+        }
+
+        private static bool IsFullyQualifiedWindowsPath(string candidate)
+        {
+            if (string.IsNullOrWhiteSpace(candidate) || !Path.IsPathRooted(candidate))
+            {
+                return false;
+            }
+
+            if (candidate.Length >= 2 &&
+                IsDirectorySeparator(candidate[0]) &&
+                IsDirectorySeparator(candidate[1]))
+            {
+                return true;
+            }
+
+            var root = Path.GetPathRoot(candidate);
+            return !string.IsNullOrEmpty(root) &&
+                root.Length >= 3 &&
+                root[1] == Path.VolumeSeparatorChar &&
+                IsDirectorySeparator(root[2]);
+        }
+
+        private static bool IsDirectorySeparator(char value)
+        {
+            return value == Path.DirectorySeparatorChar ||
+                value == Path.AltDirectorySeparatorChar;
         }
 
         private void WriteReport(TextWriter stdout, ReadinessReport report)
