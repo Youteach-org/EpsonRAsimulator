@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using EpsonRa.Bridge.Readiness;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace EpsonRa.Bridge.Readiness.Tests
