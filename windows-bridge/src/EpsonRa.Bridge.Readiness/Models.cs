@@ -38,7 +38,8 @@ namespace EpsonRa.Bridge.Readiness
             new HashSet<string>(StringComparer.Ordinal)
             {
                 "license",
-                "nativeRuntime"
+                "nativeRuntime",
+                "rcPlusVersion"
             };
 
         public ReadinessReport(string installRoot, IReadOnlyList<ReadinessCheck> checks)
