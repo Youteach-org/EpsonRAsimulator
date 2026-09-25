@@ -27,6 +27,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppSessionSidecarControllerTest {
+    private class ExperienceHolder(var value: AppExperience?)
+
     private data class Harness(
         val controller: AppSessionSidecarController,
         val bundle: mx.youteachtk.epsonrasimulator.runtime.AppRuntimeBundle,
@@ -34,7 +36,7 @@ class AppSessionSidecarControllerTest {
         val navigation: RcProjectNavigationSession,
         val robotManager: RcRobotManagerSession,
         val visual: VisualProgrammingSession,
-        var experience: AppExperience?
+        val experience: ExperienceHolder
     )
 
     private fun harness(): Harness {
@@ -50,9 +52,8 @@ class AppSessionSidecarControllerTest {
         val navigation = RcProjectNavigationSession()
         val robotManager = RcRobotManagerSession()
         val visual = VisualProgrammingSession()
-        var experience: AppExperience? = null
+        val experience = ExperienceHolder(null)
 
-        lateinit var result: Harness
         val controller = AppSessionSidecarController(
             runtime = bundle.runtime,
             projectRuntime = bundle.projectRuntime,
@@ -61,10 +62,10 @@ class AppSessionSidecarControllerTest {
             robotManagerSession = robotManager,
             visualProgrammingSession = visual,
             capabilities = simulator.capabilities,
-            activeExperience = { experience },
-            setActiveExperience = { experience = it }
+            activeExperience = { experience.value },
+            setActiveExperience = { experience.value = it }
         )
-        result = Harness(
+        return Harness(
             controller,
             bundle,
             workspace,
@@ -73,9 +74,6 @@ class AppSessionSidecarControllerTest {
             visual,
             experience
         )
-        return result.copy().also {
-            // Harness.experience is only a display copy; controller closures own the live value.
-        }
     }
 
     private fun loadedHarness(): Harness {
@@ -126,7 +124,8 @@ class AppSessionSidecarControllerTest {
         h.visual.selectSource("Main.prg")
         h.robotManager.selectPage(RcRobotManagerPageId.JOG_TEACH)
         h.robotManager.setTrainingStepDegrees(5.0)
-        h.controller.setExperienceForTest(AppExperience.RCPLUS_TRAINER)
+        h.experience.value = AppExperience.RCPLUS_TRAINER
+        h.controller.notifyExperienceChanged()
 
         val saved = h.controller.capture()
 
@@ -152,7 +151,8 @@ class AppSessionSidecarControllerTest {
         h.visual.selectSource(null)
         h.robotManager.selectPage(RcRobotManagerPageId.CONTROL_PANEL)
         h.robotManager.setTrainingStepDegrees(1.0)
-        h.controller.setExperienceForTest(null)
+        h.experience.value = null
+        h.controller.notifyExperienceChanged()
 
         val restored = h.controller.apply(
             saved,
@@ -185,7 +185,7 @@ class AppSessionSidecarControllerTest {
         )
         assertEquals(
             AppExperience.RCPLUS_TRAINER,
-            h.controller.activeExperienceForTest()
+            h.experience.value
         )
     }
 
@@ -290,7 +290,8 @@ class AppSessionSidecarControllerTest {
         )
         assertEquals(2, changes)
 
-        h.controller.setExperienceForTest(AppExperience.VISUAL_LAB)
+        h.experience.value = AppExperience.VISUAL_LAB
+        h.controller.notifyExperienceChanged()
         assertEquals(3, changes)
 
         subscription.cancel()
@@ -314,7 +315,8 @@ class AppSessionSidecarControllerTest {
         h.visual.selectSource("Main.prg")
         h.robotManager.selectPage(RcRobotManagerPageId.JOG_TEACH)
         h.robotManager.setTrainingStepDegrees(10.0)
-        h.controller.setExperienceForTest(AppExperience.RCPLUS_TRAINER)
+        h.experience.value = AppExperience.RCPLUS_TRAINER
+        h.controller.notifyExperienceChanged()
 
         val result =
             h.controller.resetForImportedProject(
@@ -335,7 +337,7 @@ class AppSessionSidecarControllerTest {
             h.robotManager.state.selectedPage
         )
         assertEquals(1.0, h.robotManager.state.trainingStepDegrees, 0.0)
-        assertNull(h.controller.activeExperienceForTest())
+        assertNull(h.experience.value)
         assertTrue(h.bundle.runtime.state.taskState.tasks.isEmpty())
         assertEquals(ConnectionMode.LOCAL_SIMULATION, h.bundle.runtime.state.connectionMode)
     }
