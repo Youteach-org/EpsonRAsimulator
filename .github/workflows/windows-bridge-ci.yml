@@ -1,0 +1,29 @@
+name: Windows Bridge CI
+
+on:
+  pull_request:
+    paths:
+      - "windows-bridge/**"
+      - ".github/workflows/windows-bridge-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  readiness-tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Test readiness core
+        shell: pwsh
+        run: dotnet test windows-bridge/tests/EpsonRa.Bridge.Readiness.Tests/EpsonRa.Bridge.Readiness.Tests.csproj -c Release --logger "trx;LogFileName=readiness.trx"
+      - name: Upload TRX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-bridge-readiness-trx
+          path: windows-bridge/tests/EpsonRa.Bridge.Readiness.Tests/TestResults/readiness.trx
+          if-no-files-found: ignore

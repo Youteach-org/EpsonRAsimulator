@@ -4,7 +4,7 @@
 
 **Goal:** Ship a Windows inspect command and pure virtual-target eligibility policy without activating Epson software.
 **Architecture:** A pure diagnostic core consumes detached installation facts through read-only ports. A console host adapts filesystem/registry metadata and writes JSON. Target eligibility is independent of readiness and never grants connection authority.
-**Tech Stack:** Original C#, .NET Framework 4.8, SDK-style projects, MSTest.TestFramework + MSTest.TestAdapter 3.6.4, Microsoft.NET.Test.Sdk 17.11.1, Microsoft.NETFramework.ReferenceAssemblies.net48 1.0.3 (build-only/private); Windows CI.
+**Tech Stack:** Original C#, .NET Framework 4.8, SDK-style projects, MSTest.TestFramework + MSTest.TestAdapter 4.4.0, Microsoft.NET.Test.Sdk 18.10.1, Microsoft.NETFramework.ReferenceAssemblies.net48 1.0.3 (build-only/private); Windows CI.
 **Spec:** docs/superpowers/specs/2026-09-25-windows-bridge-readiness-design.md
 
 ## Global Constraints
@@ -162,4 +162,4 @@ One independent whole-branch review, one fixes wave with fresh tests, preserve d
 Keep Draft stacked; refresh handoff with evidence and remaining native unknowns.
 Written design approved; executable plan awaiting user review, preserving authorized agent method.
 
-Package existence checked against NuGet on 2026-09-25: https://www.nuget.org/packages/MSTest.TestFramework/3.6.4 , https://www.nuget.org/packages/Microsoft.NET.Test.Sdk/17.11.1 , https://www.nuget.org/packages/Microsoft.NETFramework.ReferenceAssemblies.net48/1.0.3 . MSTest3.6.4 is an older deprecated release; update framework+adapter together to a maintained net48-compatible version during implementation preflight, record resolved versions before first test, and do not suppress package warnings.
+Package existence checked against NuGet on 2026-09-25: https://www.nuget.org/packages/MSTest.TestFramework/3.6.4 , https://www.nuget.org/packages/Microsoft.NET.Test.Sdk/17.11.1 , https://www.nuget.org/packages/Microsoft.NETFramework.ReferenceAssemblies.net48/1.0.3 . Implementation preflight resolved MSTest.TestFramework + MSTest.TestAdapter to 4.4.0 and Microsoft.NET.Test.Sdk to 18.10.1; all expose .NET Framework compatibility covering net48. Keep framework+adapter aligned at 4.4.0 and do not suppress package warnings.
