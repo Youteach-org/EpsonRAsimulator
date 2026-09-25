@@ -30,8 +30,10 @@ jobs:
           $emptyRoot = Join-Path $env:RUNNER_TEMP "epson-readiness-empty"
           New-Item -ItemType Directory -Path $emptyRoot -Force | Out-Null
           $exe = Resolve-Path "windows-bridge/src/EpsonRa.Bridge.Inspect/bin/Release/net48/EpsonRa.Bridge.Inspect.exe"
-          $jsonText = & $exe.Path inspect --install-root $emptyRoot
-          $exitCode = $LASTEXITCODE
+          $jsonFile = Join-Path $env:RUNNER_TEMP "inspect-empty-root.json"
+          $process = Start-Process -FilePath $exe.Path -ArgumentList @("inspect", "--install-root", $emptyRoot) -Wait -PassThru -NoNewWindow -RedirectStandardOutput $jsonFile
+          $exitCode = $process.ExitCode
+          $jsonText = Get-Content $jsonFile -Raw
           if ($exitCode -ne 2) {
             throw "Expected inspect exit code 2 for an empty root, got $exitCode."
           }
