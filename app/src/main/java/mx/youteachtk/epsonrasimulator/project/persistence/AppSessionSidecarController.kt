@@ -43,6 +43,23 @@ class AppSessionSidecarSubscription(
     }
 }
 
+interface ProjectSessionSidecarController {
+    fun capture(): ByteArray
+
+    override fun apply(
+        bytes: ByteArray,
+        projectState: ProjectRuntimeState
+    ): SessionRestoreResult
+
+    override fun resetForImportedProject(
+        projectState: ProjectRuntimeState
+    ): SessionRestoreResult
+
+    override fun subscribe(
+        listener: () -> Unit
+    ): AppSessionSidecarSubscription
+}
+
 class AppSessionSidecarController(
     private val runtime: SharedRuntime,
     private val projectRuntime: ProjectRuntime,
@@ -55,12 +72,12 @@ class AppSessionSidecarController(
     private val setActiveExperience: (AppExperience?) -> Unit,
     private val codec: ProjectSessionSidecarCodec =
         ProjectSessionSidecarCodec()
-) {
+) : ProjectSessionSidecarController {
     private val listeners = linkedSetOf<() -> Unit>()
     private var restoring = false
     private var lastObserved: ProjectSessionSidecar = semanticState()
 
-    fun capture(): ByteArray = codec.encode(semanticState())
+    override fun capture(): ByteArray = codec.encode(semanticState())
 
     fun apply(
         bytes: ByteArray,
