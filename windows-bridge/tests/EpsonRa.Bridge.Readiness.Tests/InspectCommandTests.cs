@@ -66,6 +66,8 @@ namespace EpsonRa.Bridge.Readiness.Tests
                 new[] { "unknown" },
                 new[] { "inspect", "--bad" },
                 new[] { "inspect", "--install-root" },
+                new[] { "inspect", "--install-root", @"C:EpsonRC70" },
+                new[] { "inspect", "--install-root", @"\EpsonRC70" },
                 new[] { "inspect", "--install-root", @"C:\A", "--install-root", @"C:\B" }
             };
 
