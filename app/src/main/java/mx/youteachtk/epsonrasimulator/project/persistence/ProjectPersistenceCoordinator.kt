@@ -50,7 +50,13 @@ data class ProjectPersistenceState(
 
 interface ProjectPersistenceController {
     val state: ProjectPersistenceState
-    fun attachSessionPersistence(port: ProjectSessionPersistencePort)
+
+    fun attachSessionPersistence(port: ProjectSessionPersistencePort) {
+        throw UnsupportedOperationException(
+            "This persistence controller does not support semantic session attachment"
+        )
+    }
+
     fun start()
     fun requestImport(selection: DocumentTreeSelection)
     fun resolveReplacement(decision: ProjectReplacementDecision)
