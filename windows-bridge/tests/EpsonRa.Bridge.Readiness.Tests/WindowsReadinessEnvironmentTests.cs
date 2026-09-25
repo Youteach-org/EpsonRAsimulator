@@ -77,6 +77,19 @@ namespace EpsonRa.Bridge.Readiness.Tests
         }
 
         [TestMethod]
+        public void UnavailableRegistryVersionIsInformationalAndDoesNotBlockReady()
+        {
+            PrepareExecutable();
+            File.Copy(typeof(EpsonRa.Bridge.TestFixture.Marker).Assembly.Location, ApiAssemblyPath(), true);
+
+            var checks = new WindowsReadinessEnvironment().InspectRoot(root);
+            var report = new ReadinessReport(root, checks);
+
+            Assert.AreEqual(CheckStatus.UNVERIFIED, checks.Single(c => c.Name == "rcPlusVersion").Status);
+            Assert.IsTrue(report.Ready);
+        }
+
+        [TestMethod]
         public void MissingRootProducesMissingChecksWithoutFallback()
         {
             Directory.Delete(root, true);
