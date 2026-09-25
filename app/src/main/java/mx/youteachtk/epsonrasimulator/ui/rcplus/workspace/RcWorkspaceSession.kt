@@ -1,6 +1,7 @@
 package mx.youteachtk.epsonrasimulator.ui.rcplus.workspace
 
 import mx.youteachtk.epsonrasimulator.runtime.CapabilitySet
+import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceTools
 
 class RcWorkspaceSubscription(
     private val cancelAction: () -> Unit
@@ -126,6 +127,9 @@ class RcWorkspaceSession(
             check(id == window.id) {
                 "Restored RC+ window key must match its id"
             }
+            check(id.isOwnedBy(window.toolId)) {
+                "Restored RC+ window id is not owned by its tool"
+            }
             val tool = toolRegistry.descriptor(window.toolId)
             check(
                 capabilities.containsAll(tool.requiredCapabilities)
@@ -241,3 +245,30 @@ class RcWorkspaceSession(
         listeners.toList().forEach { it(next) }
     }
 }
+
+
+internal fun RcWindowId.isOwnedBy(
+    toolId: RcToolId
+): Boolean =
+    when (toolId) {
+        RcPlusWorkspaceTools.SOURCE_DOCUMENT ->
+            value.startsWith("source:") &&
+                value.removePrefix("source:").isNotBlank()
+
+        RcPlusWorkspaceTools.POINT_DOCUMENT ->
+            value.startsWith("points:") &&
+                value.removePrefix("points:").isNotBlank()
+
+        RcPlusWorkspaceTools.PRESERVED_RESOURCE ->
+            value.startsWith("resource:") &&
+                value.removePrefix("resource:").isNotBlank()
+
+        RcPlusWorkspaceTools.ROBOT_MANAGER,
+        RcPlusWorkspaceTools.COMMAND_WINDOW,
+        RcPlusWorkspaceTools.IO_MONITOR,
+        RcPlusWorkspaceTools.TASK_MANAGER,
+        RcPlusWorkspaceTools.RUN_WINDOW ->
+            value == toolId.value
+
+        else -> false
+    }
