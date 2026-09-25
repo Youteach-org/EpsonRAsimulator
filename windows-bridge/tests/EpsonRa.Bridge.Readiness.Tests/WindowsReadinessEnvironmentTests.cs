@@ -67,20 +67,22 @@ namespace EpsonRa.Bridge.Readiness.Tests
         public void OriginalRcapiNamedFixtureProvidesPresentAssemblyMetadata()
         {
             PrepareExecutable();
-            File.Copy(typeof(EpsonRa.Bridge.TestFixture.Marker).Assembly.Location, ApiAssemblyPath(), true);
+            Assert.IsFalse(IsFixtureAssemblyLoaded());
+            File.Copy(FixtureAssemblyPath(), ApiAssemblyPath(), true);
 
             var checks = new WindowsReadinessEnvironment().InspectRoot(root);
 
             var api = checks.Single(c => c.Name == "apiAssembly");
             Assert.AreEqual(CheckStatus.PRESENT, api.Status);
             StringAssert.Contains(api.Detail, "RCAPINet");
+            Assert.IsFalse(IsFixtureAssemblyLoaded(), "Metadata inspection must not load RCAPINet into the AppDomain.");
         }
 
         [TestMethod]
         public void UnavailableRegistryVersionIsInformationalAndDoesNotBlockReady()
         {
             PrepareExecutable();
-            File.Copy(typeof(EpsonRa.Bridge.TestFixture.Marker).Assembly.Location, ApiAssemblyPath(), true);
+            File.Copy(FixtureAssemblyPath(), ApiAssemblyPath(), true);
 
             var checks = new WindowsReadinessEnvironment().InspectRoot(root);
             var report = new ReadinessReport(root, checks);
@@ -99,6 +101,19 @@ namespace EpsonRa.Bridge.Readiness.Tests
             Assert.AreEqual(CheckStatus.MISSING, checks.Single(c => c.Name == "installRoot").Status);
             Assert.AreEqual(CheckStatus.MISSING, checks.Single(c => c.Name == "rcPlusExecutable").Status);
             Assert.AreEqual(CheckStatus.MISSING, checks.Single(c => c.Name == "apiAssembly").Status);
+        }
+
+        private static string FixtureAssemblyPath()
+        {
+            var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RCAPINet.dll");
+            Assert.IsTrue(File.Exists(path), "The original RCAPINet-named fixture must be copied to test output.");
+            return path;
+        }
+
+        private static bool IsFixtureAssemblyLoaded()
+        {
+            return AppDomain.CurrentDomain.GetAssemblies()
+                .Any(assembly => string.Equals(assembly.GetName().Name, "RCAPINet", StringComparison.Ordinal));
         }
 
         private void PrepareExecutable()
