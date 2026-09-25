@@ -36,3 +36,9 @@ Branch: feature/session-round-trip-restore.
 - Task3 compatibility fix: fcde2c455816bd2a5c3e9c430acffd27e78969fe gives the interface a default unsupported semantic-attachment implementation while ProjectPersistenceCoordinator keeps the real strict implementation. This preserves old alternate/test controllers until Task4 explicitly wires semantic persistence.
 - Task3 COMPLETE: Android CI357/run36081045741 passed unit tests, debug APK build and artifact upload SUCCESS.
 - Task4 ViewModel wiring and end-to-end round-trip acceptance is now active. First checkpoint is RED tests only.
+
+- Task3 RED: a7f2cb5cffc03235da3712a536ac694af8482b12; Android CI355/run36080570368 failed exactly because ProjectPersistenceCoordinator did not yet expose attachSessionPersistence.
+- Task3 GREEN candidate: 1a0991f42b031833d2cc05f18741867e974f4162 implemented attach-before-start, prepared startup/import restores, semantic sidecar capture and a shared native/semantic revision stream. CI356 exposed only a compatibility break in the pre-existing test fake caused by making the new controller method abstract.
+- Task3 compatibility fix: fcde2c455816bd2a5c3e9c430acffd27e78969fe gives ProjectPersistenceController a default unsupported attachment method while ProjectPersistenceCoordinator keeps the real implementation; this preserves existing alternate controllers without weakening attach-before-start in production.
+- Task3 COMPLETE: Android CI357/run36081045741 passed unit tests, debug APK build and artifact upload SUCCESS. Semantic-only changes now share the serialized 750 ms revision/autosave writer; startup/import restore is prepared before mutation; successful external import applies empty-sidecar neutral session; native export remains resources-only.
+- Task4 ViewModel wiring + end-to-end round-trip acceptance is active.
