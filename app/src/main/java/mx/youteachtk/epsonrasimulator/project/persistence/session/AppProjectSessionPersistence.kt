@@ -182,7 +182,9 @@ class AppProjectSessionPersistence(
         val requestedActive = decoded.activeWindowId
             ?.let(::RcWindowId)
             ?.takeIf { id ->
-                restoredWindows[id]?.mode != RcWindowMode.MINIMIZED
+                restoredWindows[id]?.let { window ->
+                    window.mode != RcWindowMode.MINIMIZED
+                } == true
             }
         val restoredActive = requestedActive
             ?: restoredOrder.asReversed().firstOrNull { id ->
