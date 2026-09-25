@@ -8,6 +8,9 @@ import mx.youteachtk.epsonrasimulator.project.ProjectRuntime
 import mx.youteachtk.epsonrasimulator.project.ProjectRuntimeResult
 import mx.youteachtk.epsonrasimulator.project.persistence.android.CreatedDocument
 import mx.youteachtk.epsonrasimulator.project.persistence.android.DocumentTreeGateway
+import mx.youteachtk.epsonrasimulator.project.persistence.session.ProjectSessionPersistencePort
+import mx.youteachtk.epsonrasimulator.project.persistence.session.ProjectSessionRestorePlan
+import mx.youteachtk.epsonrasimulator.project.persistence.session.ProjectSessionSubscription
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeBundle
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
 import org.junit.Assert.assertArrayEquals
@@ -16,6 +19,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 class ProjectPersistenceCoordinatorTest {
@@ -66,6 +70,64 @@ class ProjectPersistenceCoordinatorTest {
         }
         override fun clear() {
             record = null
+        }
+    }
+
+    private class SessionPort(
+        var captured: ByteArray = byteArrayOf(1)
+    ) : ProjectSessionPersistencePort {
+        var prepareFailure: PersistenceException? = null
+        var captureCalls = 0
+        var prepareCalls = 0
+        var applyCalls = 0
+        var subscribeCalls = 0
+        var cancelCalls = 0
+        val preparedSidecars = mutableListOf<ByteArray>()
+        val appliedSidecars = mutableListOf<ByteArray>()
+        var onPrepare: ((ProjectSnapshot) -> Unit)? = null
+        var onApply: ((ProjectSnapshot) -> Unit)? = null
+        private var listener: (() -> Unit)? = null
+
+        override fun capture(): ByteArray {
+            captureCalls += 1
+            return captured.copyOf()
+        }
+
+        override fun prepareRestore(
+            snapshot: ProjectSnapshot
+        ): ProjectSessionRestorePlan {
+            prepareCalls += 1
+            preparedSidecars += snapshot.sidecarBytes()
+            onPrepare?.invoke(snapshot)
+            prepareFailure?.let { throw it }
+            val sidecar = snapshot.sidecarBytes()
+            return ProjectSessionRestorePlan {
+                applyCalls += 1
+                appliedSidecars += sidecar
+                onApply?.invoke(snapshot)
+            }
+        }
+
+        override fun subscribe(
+            listener: () -> Unit
+        ): ProjectSessionSubscription {
+            subscribeCalls += 1
+            this.listener = listener
+            return ProjectSessionSubscription {
+                cancelCalls += 1
+                if (this.listener === listener) {
+                    this.listener = null
+                }
+            }
+        }
+
+        override fun notifyExternalSessionChange() {
+            listener?.invoke()
+        }
+
+        fun changeTo(bytes: ByteArray) {
+            captured = bytes.copyOf()
+            listener?.invoke()
         }
     }
 
@@ -302,18 +364,21 @@ class ProjectPersistenceCoordinatorTest {
         name: String = "Saved Demo",
         revision: Long = 1,
         source: String = "Function main\nFend\n",
-        origin: DocumentTreeOrigin? = null
+        origin: DocumentTreeOrigin? = null,
+        robotId: String = bundle.runtime.state.activeRobotId,
+        sidecar: ByteArray = byteArrayOf()
     ): SnapshotToken {
         val snapshot = ProjectSnapshot(
             projectId = id,
             projectName = name,
             adapterId = bundle.runtime.state.simulatorAdapterId.value,
-            robotId = bundle.runtime.state.activeRobotId,
+            robotId = robotId,
             revision = revision,
             resources = linkedMapOf(
                 "Main.prg" to source.toByteArray(),
                 "opaque.bin" to byteArrayOf(0, -1)
-            )
+            ),
+            sidecar = sidecar
         )
         val saved = slots.open(id).save(snapshot, null) as StoreSave.Saved
         records.record = ActiveProjectRecord(id, origin)
@@ -778,6 +843,245 @@ class ProjectPersistenceCoordinatorTest {
         assertFalse(result.complete)
         assertEquals("Main.prg", result.failedPath)
         assertEquals(PersistenceFailure.IO, result.failure)
+    }
+
+    @Test fun sessionPortMustAttachBeforeStart() {
+        val h = harness()
+        h.start()
+
+        assertThrows(IllegalStateException::class.java) {
+            h.coordinator.attachSessionPersistence(SessionPort())
+        }
+    }
+
+    @Test fun startupPreparesSessionBeforeProjectMutationAndAppliesAfterLoad() {
+        val h = harness()
+        val sidecar = byteArrayOf(7, 8, 9)
+        h.seed(sidecar = sidecar)
+        val port = SessionPort()
+        port.onPrepare = {
+            assertNull(h.project.state.projectName)
+        }
+        port.onApply = {
+            assertEquals("Saved Demo", h.project.state.projectName)
+        }
+        h.coordinator.attachSessionPersistence(port)
+
+        h.start()
+
+        assertEquals(PersistenceStartupStatus.READY, h.coordinator.state.startup)
+        assertEquals(1, port.prepareCalls)
+        assertEquals(1, port.applyCalls)
+        assertArrayEquals(sidecar, port.preparedSidecars.single())
+        assertArrayEquals(sidecar, port.appliedSidecars.single())
+        assertEquals(1, port.subscribeCalls)
+    }
+
+    @Test fun sessionPrepareFailureLeavesLiveProjectUntouchedAndReportsStartupError() {
+        listOf(
+            PersistenceFailure.CORRUPT,
+            PersistenceFailure.UNSUPPORTED_VERSION
+        ).forEach { reason ->
+            val h = harness()
+            h.project.loadProject(
+                "Before",
+                mapOf("Before.prg" to "Function before\nFend\n".toByteArray())
+            )
+            h.seed(sidecar = byteArrayOf(4, 5, 6))
+            val port = SessionPort().apply {
+                prepareFailure = PersistenceException(reason, "bad sidecar")
+            }
+            h.coordinator.attachSessionPersistence(port)
+
+            h.start()
+
+            assertEquals(PersistenceStartupStatus.ERROR, h.coordinator.state.startup)
+            assertEquals(PersistenceSaveStatus.ERROR, h.coordinator.state.saveStatus)
+            assertEquals("Before", h.project.state.projectName)
+            assertEquals(1, port.prepareCalls)
+            assertEquals(0, port.applyCalls)
+            assertEquals(0, port.subscribeCalls)
+        }
+    }
+
+    @Test fun attachedSessionPortOwnsSnapshotRobotValidationWhileLegacyPathRemainsStrict() {
+        val withoutPort = harness()
+        withoutPort.seed(robotId = "alternate-robot")
+        withoutPort.start()
+        assertEquals(
+            PersistenceStartupStatus.ERROR,
+            withoutPort.coordinator.state.startup
+        )
+        assertNull(withoutPort.project.state.projectName)
+
+        val withPort = harness()
+        withPort.seed(robotId = "alternate-robot")
+        val port = SessionPort()
+        withPort.coordinator.attachSessionPersistence(port)
+        withPort.start()
+
+        assertEquals(
+            PersistenceStartupStatus.READY,
+            withPort.coordinator.state.startup
+        )
+        assertEquals("Saved Demo", withPort.project.state.projectName)
+        assertEquals(1, port.prepareCalls)
+        assertEquals(1, port.applyCalls)
+    }
+
+    @Test fun semanticOnlyChangesShareDebounceAndNewestRevisionWins() {
+        val h = harness()
+        val id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = id, sidecar = byteArrayOf(1))
+        val port = SessionPort(byteArrayOf(1))
+        h.coordinator.attachSessionPersistence(port)
+        h.start()
+
+        port.changeTo(byteArrayOf(2))
+        assertEquals(PersistenceSaveStatus.DIRTY, h.coordinator.state.saveStatus)
+        h.execution.advanceBy(300)
+        port.changeTo(byteArrayOf(3))
+        h.execution.advanceBy(749)
+        h.execution.drain()
+        assertEquals(1L, h.savedSnapshot(id).revision)
+
+        h.execution.advanceBy(1)
+        h.execution.drain()
+
+        val saved = h.savedSnapshot(id)
+        assertEquals(3L, saved.revision)
+        assertArrayEquals(byteArrayOf(3), saved.sidecarBytes())
+        assertEquals(PersistenceSaveStatus.SAVED, h.coordinator.state.saveStatus)
+    }
+
+    @Test fun semanticRevisionArrivingDuringSaveRemainsDirtyUntilItsOwnCommit() {
+        val h = harness()
+        val id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = id, sidecar = byteArrayOf(1))
+        val port = SessionPort(byteArrayOf(1))
+        h.coordinator.attachSessionPersistence(port)
+        h.start()
+
+        port.changeTo(byteArrayOf(2))
+        h.execution.advanceBy(750)
+        h.execution.runWorkerAll()
+        h.execution.runUiAll()
+        h.execution.runWorkerAll()
+
+        port.changeTo(byteArrayOf(3))
+        assertEquals(PersistenceSaveStatus.DIRTY, h.coordinator.state.saveStatus)
+
+        h.execution.runUiAll()
+        assertEquals(PersistenceSaveStatus.DIRTY, h.coordinator.state.saveStatus)
+
+        h.execution.advanceBy(750)
+        h.execution.drain()
+        val saved = h.savedSnapshot(id)
+        assertEquals(3L, saved.revision)
+        assertArrayEquals(byteArrayOf(3), saved.sidecarBytes())
+        assertEquals(PersistenceSaveStatus.SAVED, h.coordinator.state.saveStatus)
+    }
+
+    @Test fun nativeAndSemanticChangesUseOneMonotonicRevisionStream() {
+        val h = harness()
+        val id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = id, sidecar = byteArrayOf(1))
+        val port = SessionPort(byteArrayOf(1))
+        h.coordinator.attachSessionPersistence(port)
+        h.start()
+
+        h.project.replaceSource(
+            "Main.prg",
+            "Function main\n  Speed 2\nFend\n"
+        )
+        port.changeTo(byteArrayOf(9))
+        h.execution.advanceBy(750)
+        h.execution.drain()
+
+        val saved = h.savedSnapshot(id)
+        assertEquals(3L, saved.revision)
+        assertArrayEquals(byteArrayOf(9), saved.sidecarBytes())
+        assertEquals(
+            "Function main\n  Speed 2\nFend\n",
+            saved.exportResources()
+                .getValue("Main.prg")
+                .toString(Charsets.UTF_8)
+        )
+    }
+
+    @Test fun failedSemanticSaveRetainsCommittedGenerationAndCanRetry() {
+        val h = harness()
+        val id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = id, sidecar = byteArrayOf(1))
+        val port = SessionPort(byteArrayOf(1))
+        h.coordinator.attachSessionPersistence(port)
+        h.start()
+        h.slots.files.getValue(id).rejectWrites = true
+
+        port.changeTo(byteArrayOf(2))
+        h.execution.advanceBy(750)
+        h.execution.drain()
+
+        val saved = h.savedSnapshot(id)
+        assertEquals(1L, saved.revision)
+        assertArrayEquals(byteArrayOf(1), saved.sidecarBytes())
+        assertEquals(PersistenceSaveStatus.ERROR, h.coordinator.state.saveStatus)
+        assertTrue(h.coordinator.state.canSave)
+    }
+
+    @Test fun successfulImportAppliesNeutralEmptySessionAndFailedImportKeepsCurrentSession() {
+        val h = harness()
+        h.seed(sidecar = byteArrayOf(6, 6))
+        val port = SessionPort(byteArrayOf(6, 6))
+        h.coordinator.attachSessionPersistence(port)
+        h.start()
+        assertEquals(1, port.applyCalls)
+
+        h.gateway.trees["content://tree/new"] =
+            Tree(
+                "New",
+                linkedMapOf(
+                    "Main.prg" to "Function main\nFend\n".toByteArray()
+                )
+            )
+        h.coordinator.requestImport(readSelection("content://tree/new"))
+        h.execution.drain()
+
+        assertEquals(2, port.prepareCalls)
+        assertEquals(2, port.applyCalls)
+        assertTrue(port.preparedSidecars.last().isEmpty())
+        assertTrue(port.appliedSidecars.last().isEmpty())
+
+        h.gateway.trees["content://tree/bad"] =
+            Tree("Bad", linkedMapOf("../escape.prg" to byteArrayOf(1)))
+        h.coordinator.requestImport(readSelection("content://tree/bad"))
+        h.execution.drain()
+
+        assertEquals(2, port.prepareCalls)
+        assertEquals(2, port.applyCalls)
+    }
+
+    @Test fun externalFolderExportRemainsNativeResourcesOnlyWithSessionPortAttached() {
+        val h = harness()
+        h.seed(sidecar = byteArrayOf(5, 4, 3))
+        val port = SessionPort(byteArrayOf(9, 9, 9))
+        h.coordinator.attachSessionPersistence(port)
+        h.start()
+        h.gateway.trees["content://tree/export"] =
+            Tree("Target", linkedMapOf())
+
+        h.coordinator.exportTo(writeSelection("content://tree/export"))
+        h.execution.drain()
+
+        assertEquals(2, h.gateway.exported.size)
+        assertTrue(
+            h.gateway.exported.keys.none {
+                it.contains("sidecar", ignoreCase = true) ||
+                    it.contains("session", ignoreCase = true)
+            }
+        )
+        assertTrue(port.captureCalls > 0)
+        assertTrue(requireNotNull(h.coordinator.state.lastExport).complete)
     }
 
     @Test fun closeCancelsSubscriptionsAndExecution() {
