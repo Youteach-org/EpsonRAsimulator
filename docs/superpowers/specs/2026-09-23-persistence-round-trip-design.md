@@ -1,13 +1,13 @@
 # Phase 8 — Persistence + Round-Trip: proposed design
 
-Status: Phase 8A persistence foundation is complete with final review fixes verified by Android CI319/run36005882108. Phase 8B Android persistence integration is planned on feature/android-persistence-integration; product implementation has not started on that branch. Phase 7 remains complete.
+Status: Phase 8A is complete. Phase 8B Android persistence integration and its single final-review fix wave are complete on feature/android-persistence-integration; exact final branch head 739bad25c7c382df001cddc13a9941772afac84b passed Android CI342/run36074706509 (unit tests, debug APK, artifact upload). Device/provider acceptance remains unverified. Phase 8C semantic session round-trip is planned on feature/session-round-trip-restore; product implementation has not started.
 Base: 95f21308ca7b845416fe89edd1260b4621fae8fa (PR16 Draft), Android CI308/run35906624796 tests/APK/upload SUCCESS.
 Authority: docs/superpowers/specs/2026-09-16-rcplus-trainer-shared-runtime-design.md, sections12–13,31,35,41; approved implementation sequence item8.
 
 ## Intended outcome
 A learner can close the Android app, reopen the same project and workspace, edit supported source through either experience, and export the native resources without losing unknown files, comments or invalid source. Disk persistence must not create a second live source/runtime authority.
 
-The existing ProjectRuntime loadProject/export/resourceBytes APIs already preserve resource bytes in memory. AppSessionViewModel currently survives configuration changes only; no durable store or Android import/export workflow exists.
+The existing ProjectRuntime loadProject/export/resourceBytes APIs preserve resource bytes in memory. Phase 8B now provides the durable private store, Android import/export workflow, retained persistence coordinator and native-resource autosave; Phase 8C adds the versioned semantic session sidecar without changing those authorities.
 
 ## Transfer choice — folders selected by user, 2026-09-24
 Use Android's document-tree folder selector (Storage Access Framework) for project import and export, plus an app-private working copy and autosave. The user explicitly selected folders; ZIP is not part of this phase.
@@ -77,7 +77,7 @@ Each slice gets a concrete TDD implementation plan and a stacked Draft checkpoin
 ## Scope review
 The design preserves the approved single-authority and byte-preservation constraints. It narrows full simulation persistence to explicit learner project/session data for the first slices. The user selected folders on 2026-09-24; archive transport is excluded. Storage layout/version/limits must be pinned by the written implementation plan before coding.
 
-Next: review `docs/superpowers/plans/2026-09-24-android-persistence-integration.md`, then execute Phase 8B with TDD on the stacked Draft branch. Keep PR17 and PR16 unmerged; do not change `main`.
+Next: review `docs/superpowers/plans/2026-09-24-session-round-trip-restore.md`, then execute Phase 8C with TDD on the stacked Draft branch. Keep PR18, PR17 and PR16 unmerged; do not change `main`.
 
 ## Additional folder acceptance
 - Revoked permissions or a disconnected provider leave the private project recoverable.

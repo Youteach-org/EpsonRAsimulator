@@ -1,6 +1,6 @@
-# Project persistence (Phases 8A–8B)
+# Project persistence (Phases 8A–8C)
 
-Phase8A supplies the foundation; Phase8B connects the Android document-tree picker, URI permissions, retained autosave and saved/dirty/error UI. Phase8C still owns the validated session schema/application. Nothing here starts tasks, executes imported source, connects hardware, or changes ProjectRuntime's authority.
+Phase8A supplies the foundation; Phase8B connects the Android document-tree picker, URI permissions, retained autosave and saved/dirty/error UI; Phase8C adds a validated semantic session sidecar and safe session restore. Nothing here starts tasks, executes imported source, connects hardware, or changes ProjectRuntime's native-resource authority.
 
 ## API boundaries
 - ProjectSnapshot captures exact copied native resources plus a separate opaque application sidecar.
@@ -26,7 +26,7 @@ Big-endian integers, no archive compression and no Java object serialization:
 4. int32 sidecar schema (1), int32 sidecar byte length, application-only opaque bytes.
 5. SHA-256 of all preceding bytes, exactly32 bytes.
 
-Metadata is strict Unicode; native bytes are arbitrary. Trailing data, truncation and checksum mismatch are corruption. An unknown envelope/sidecar version is unsupported and cannot be overwritten by the store. Sidecar V1 is an envelope reservation, not a claim that arbitrary payloads contain valid workspace/robot state:8C must define and validate its payload before applying it.
+Metadata is strict Unicode; native bytes are arbitrary. Trailing data, truncation and checksum mismatch are corruption. An unknown envelope/sidecar version is unsupported and cannot be overwritten by the store. Sidecar envelope V1 now carries the Phase8C semantic payload described below. The payload is decoded and validated before any live project/session mutation.
 
 Native folder export contains only resources, never the sidecar. No synthetic Epson points/project configuration is generated. Current source bytes survive exactly; a last-valid semantic model is not persisted in8A and must be recomputed from current text on reopening.
 
@@ -45,18 +45,27 @@ Missing current with valid previous is an explicit recovered load, and can be sa
 
 These guarantees cover whole-generation visibility and process interruptions between operations. They do not claim storage-device power-loss durability or directory fsync guarantees across platforms. Do not apply this private-filesystem protocol to document providers, where multi-file export is non-atomic.
 
-## Next integration
-Phase8B product integration is implemented and CI-verified; Android device/provider acceptance remains explicitly unverified. Phase8C must define and validate the semantic sidecar, reconcile restored targets/capabilities, and restore a paused Local Simulation session without resuming execution or hardware authority.
+## Semantic session sidecar (Phase 8C)
+The application sidecar uses magic `EPSSES01` and payload schema 1. It persists only learner-facing semantic session state: active experience, robot joint values, teach points, RC+ child-window identity/tool/normalized geometry/mode/z-order/active window, project-tree selection, Visual Lab selected source, and Robot Manager page/training step. Encoded payloads are bounded to 1 MiB, with bounded collection/string counts and finite numeric values.
 
+The sidecar deliberately excludes task programs/status, clock progress/running state, I/O values and labels, command transcript, build/run internals, camera, workcell/tool state, signal bindings, hardware authority and learning progress. Restore always targets the snapshot robot and simulator identity, validates joint/preferred-joint ranges without clamping, then enters paused `LOCAL_SIMULATION` with clock, I/O, tasks, workcell and tools reset to neutral defaults.
 
-## Android integration (Phase 8B)
+Empty sidecar bytes remain compatible with Phase8B snapshots. They restore the snapshot robot at zero joints, no teach points, no experience/window/selection state, default Robot Manager control panel and training step, while Visual source reconciliation may select the first valid source. Missing or no-longer-supported UI targets are reconciled rather than trusted: unavailable windows are dropped, stale active windows select a visible surviving window or null, stale project/function selections fall back to a valid source resource or null, missing Visual sources reconcile to a valid source/null, and unavailable Robot Manager pages fall back to `CONTROL_PANEL`.
+
+Semantic changes and native-resource changes share one monotonic project revision stream, the same serialized 750 ms debounce/autosave path and the same private-generation conflict rules. Startup prepares and validates the semantic restore before mutating `ProjectRuntime`; successful external folder import has no sidecar and therefore applies a neutral semantic session only after the existing replacement transaction succeeds. Native folder export remains resources-only and never writes the sidecar.
+
+The retained `AppSessionViewModel` constructs one `AppProjectSessionPersistence`, attaches it to the coordinator before subscribe/start, and reports active-experience changes through the semantic port. Restore uses an internal experience setter so applying a saved experience does not recursively create a new dirty revision.
+
+Android provider/device acceptance remains explicitly UNVERIFIED. JVM/CI evidence covers codec, coordinator ordering, round-trip/reconciliation and safe runtime reset but does not substitute for provider/device acceptance.
+
+## Android integration (Phases 8B–8C)
 MainActivity supplies a production ViewModel factory using application context only. One AppRuntimeBundle, coordinator, serialized worker and state subscription live for the retained AppSessionViewModel lifetime. Experience switches keep them; ViewModel clearing cancels its subscription and closes the coordinator. Existing non-Android test callers may omit persistence; their persistence controls are disabled.
 
 The global project bar appears above the experience chooser, RC+ Trainer and Visual Lab. Import opens a folder picker; Cancel returns no selection and leaves the active project unchanged. Save flushes the private working copy. Export selects a destination and writes a new project subfolder; it never silently updates the import origin. Save/Export use coordinator eligibility. The replacement dialog routes Save, Discard and Cancel to the coordinator, never directly loading the runtime.
 
 The main experience waits while private startup restoration is Loading. A startup error is shown without exposing a default project as a successful restore. The bar distinguishes Saved, Unsaved changes, Saving, Recovered, Save error and Save conflict. Export details distinguish completed/failed/untouched paths and warn that partial external files can remain. A failed export does not erase the private project.
 
-One active-project record identifies a canonical UUID private slot plus the actually persisted origin grant rights. The source tree URI is never a private path. Native edits are captured on the UI dispatcher and saved by one serialized worker after a750ms debounce; a completed older revision cannot clear newer Dirty edits. Only native project bytes and infrastructure metadata are included in8B. Source execution, task/motion/clock resumption, hardware connections, and semantic workspace/teach-point restoration are not part of this save.
+One active-project record identifies a canonical UUID private slot plus the actually persisted origin grant rights. The source tree URI is never a private path. Native and Phase8C semantic edits are captured into one monotonic revision stream and saved by one serialized worker after a 750 ms debounce; a completed older revision cannot clear newer Dirty edits. Native project bytes remain separate from the app-only sidecar. Source execution, task/motion/clock resumption and hardware connections are never restored from the sidecar.
 
 ### Device acceptance — not executed in this environment
 | Check | Status |

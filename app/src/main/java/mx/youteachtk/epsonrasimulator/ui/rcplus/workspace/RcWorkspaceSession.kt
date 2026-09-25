@@ -1,6 +1,7 @@
 package mx.youteachtk.epsonrasimulator.ui.rcplus.workspace
 
 import mx.youteachtk.epsonrasimulator.runtime.CapabilitySet
+import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceTools
 
 class RcWorkspaceSubscription(
     private val cancelAction: () -> Unit
@@ -113,6 +114,49 @@ class RcWorkspaceSession(
     fun closeWindow(id: RcWindowId): RcWindowManagerState =
         mutate { RcWindowManager.close(it, id) }
 
+    fun restoreReconciled(
+        restored: RcWindowManagerState
+    ): RcWindowManagerState {
+        check(
+            restored.zOrder.size == restored.zOrder.toSet().size &&
+                restored.zOrder.toSet() == restored.windows.keys
+        ) {
+            "Restored RC+ z-order must contain every window exactly once"
+        }
+        restored.windows.forEach { (id, window) ->
+            check(id == window.id) {
+                "Restored RC+ window key must match its id"
+            }
+            check(id.isOwnedBy(window.toolId)) {
+                "Restored RC+ window id is not owned by its tool"
+            }
+            val tool = toolRegistry.descriptor(window.toolId)
+            check(
+                capabilities.containsAll(tool.requiredCapabilities)
+            ) {
+                "Restored RC+ tool is unavailable: ${tool.id.value}"
+            }
+            check(tool.surface == RcToolSurface.CHILD_WINDOW) {
+                "Restored docked RC+ tool cannot be a child window"
+            }
+            check(window.minimizedFrom != RcWindowMode.MINIMIZED) {
+                "Restored RC+ minimizedFrom cannot be MINIMIZED"
+            }
+        }
+        restored.activeWindowId?.let { active ->
+            val window = checkNotNull(restored.windows[active]) {
+                "Restored active RC+ window does not exist"
+            }
+            check(window.mode != RcWindowMode.MINIMIZED) {
+                "Restored active RC+ window cannot be minimized"
+            }
+        }
+
+        val current = state
+        publishIfChanged(current, restored)
+        return state
+    }
+
     fun subscribe(
         listener: (RcWindowManagerState) -> Unit
     ): RcWorkspaceSubscription {
@@ -201,3 +245,30 @@ class RcWorkspaceSession(
         listeners.toList().forEach { it(next) }
     }
 }
+
+
+internal fun RcWindowId.isOwnedBy(
+    toolId: RcToolId
+): Boolean =
+    when (toolId) {
+        RcPlusWorkspaceTools.SOURCE_DOCUMENT ->
+            value.startsWith("source:") &&
+                value.removePrefix("source:").isNotBlank()
+
+        RcPlusWorkspaceTools.POINT_DOCUMENT ->
+            value.startsWith("points:") &&
+                value.removePrefix("points:").isNotBlank()
+
+        RcPlusWorkspaceTools.PRESERVED_RESOURCE ->
+            value.startsWith("resource:") &&
+                value.removePrefix("resource:").isNotBlank()
+
+        RcPlusWorkspaceTools.ROBOT_MANAGER,
+        RcPlusWorkspaceTools.COMMAND_WINDOW,
+        RcPlusWorkspaceTools.IO_MONITOR,
+        RcPlusWorkspaceTools.TASK_MANAGER,
+        RcPlusWorkspaceTools.RUN_WINDOW ->
+            value == toolId.value
+
+        else -> false
+    }

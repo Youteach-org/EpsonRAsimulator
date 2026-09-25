@@ -8,6 +8,9 @@ import mx.youteachtk.epsonrasimulator.project.ProjectRuntimeSubscription
 import mx.youteachtk.epsonrasimulator.project.persistence.android.DocumentTreeGateway
 import mx.youteachtk.epsonrasimulator.project.persistence.android.DocumentTreeProjectDestination
 import mx.youteachtk.epsonrasimulator.project.persistence.android.DocumentTreeProjectSource
+import mx.youteachtk.epsonrasimulator.project.persistence.session.ProjectSessionPersistencePort
+import mx.youteachtk.epsonrasimulator.project.persistence.session.ProjectSessionRestorePlan
+import mx.youteachtk.epsonrasimulator.project.persistence.session.ProjectSessionSubscription
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntime
 
 enum class PersistenceStartupStatus {
@@ -47,6 +50,13 @@ data class ProjectPersistenceState(
 
 interface ProjectPersistenceController {
     val state: ProjectPersistenceState
+
+    fun attachSessionPersistence(port: ProjectSessionPersistencePort) {
+        throw UnsupportedOperationException(
+            "This persistence controller does not support semantic session attachment"
+        )
+    }
+
     fun start()
     fun requestImport(selection: DocumentTreeSelection)
     fun resolveReplacement(decision: ProjectReplacementDecision)
@@ -94,6 +104,8 @@ class ProjectPersistenceCoordinator(
     private var started = false
     private var closed = false
     private var projectSubscription: ProjectRuntimeSubscription? = null
+    private var sessionPort: ProjectSessionPersistencePort? = null
+    private var sessionSubscription: ProjectSessionSubscription? = null
     private var applyingOwnedProject = false
     private var currentToken: SnapshotToken? = null
 
@@ -113,6 +125,18 @@ class ProjectPersistenceCoordinator(
 
     @Volatile
     private var importGeneration = 0L
+
+    override fun attachSessionPersistence(
+        port: ProjectSessionPersistencePort
+    ) {
+        check(!started && !closed) {
+            "Session persistence must be attached before start"
+        }
+        check(sessionPort == null) {
+            "Session persistence is already attached"
+        }
+        sessionPort = port
+    }
 
     override fun start() {
         if (started || closed) return
@@ -324,6 +348,8 @@ class ProjectPersistenceCoordinator(
         debounce = null
         projectSubscription?.cancel()
         projectSubscription = null
+        sessionSubscription?.cancel()
+        sessionSubscription = null
         synchronized(importLock) {
             importGeneration++
             importPublicationRequestId = null
@@ -357,22 +383,31 @@ class ProjectPersistenceCoordinator(
                         PersistenceFailure.CORRUPT,
                         "Active project id does not match its snapshot"
                     )
-                } else if (
-                    loaded.snapshot.adapterId !=
-                        runtime.state.simulatorAdapterId.value ||
-                    loaded.snapshot.robotId != runtime.state.activeRobotId
-                ) {
-                    StartupResult.Failed(
-                        PersistenceFailure.INVALID_METADATA,
-                        "Saved project targets an unavailable simulator or robot"
-                    )
                 } else {
-                    StartupResult.Loaded(
-                        record,
-                        loaded.snapshot,
-                        loaded.token,
-                        loaded.recovered
-                    )
+                    val port = sessionPort
+                    if (
+                        port == null &&
+                        (
+                            loaded.snapshot.adapterId !=
+                                runtime.state.simulatorAdapterId.value ||
+                            loaded.snapshot.robotId != runtime.state.activeRobotId
+                        )
+                    ) {
+                        StartupResult.Failed(
+                            PersistenceFailure.INVALID_METADATA,
+                            "Saved project targets an unavailable simulator or robot"
+                        )
+                    } else {
+                        val restorePlan =
+                            port?.prepareRestore(loaded.snapshot)
+                        StartupResult.Loaded(
+                            record,
+                            loaded.snapshot,
+                            loaded.token,
+                            loaded.recovered,
+                            restorePlan
+                        )
+                    }
                 }
             }
         }
@@ -416,6 +451,7 @@ class ProjectPersistenceCoordinator(
                         result.snapshot.projectName,
                         result.snapshot.exportResources()
                     )
+                    result.restorePlan?.apply()
                 } finally {
                     applyingOwnedProject = false
                 }
@@ -448,17 +484,25 @@ class ProjectPersistenceCoordinator(
 
     private fun subscribeProjectChanges() {
         projectSubscription?.cancel()
+        sessionSubscription?.cancel()
+
         var first = true
         projectSubscription = projectRuntime.subscribe { next ->
             if (first) {
                 first = false
             } else if (!closed && !applyingOwnedProject) {
-                onProjectChanged(next)
+                onDurableStateChanged(next)
+            }
+        }
+
+        sessionSubscription = sessionPort?.subscribe {
+            if (!closed && !applyingOwnedProject) {
+                onDurableStateChanged(projectRuntime.state)
             }
         }
     }
 
-    private fun onProjectChanged(next: ProjectRuntimeState) {
+    private fun onDurableStateChanged(next: ProjectRuntimeState) {
         val projectName = next.projectName ?: return
         var projectId = state.projectId
         if (projectId == null) {
@@ -682,6 +726,9 @@ class ProjectPersistenceCoordinator(
                 if (!isCurrentImport(requestId))
                     return@execute
 
+                val restorePlan =
+                    sessionPort?.prepareRestore(snapshot)
+
                 val saved = when (
                     val save =
                         slotStores.open(newProjectId).save(snapshot, null)
@@ -748,7 +795,8 @@ class ProjectPersistenceCoordinator(
                         snapshot = snapshot,
                         token = saved.token,
                         origin = newOrigin,
-                        previousRecord = previousRecord
+                        previousRecord = previousRecord,
+                        restorePlan = restorePlan
                     )
                 }
             } catch (e: PersistenceException) {
@@ -808,6 +856,7 @@ class ProjectPersistenceCoordinator(
                         result.snapshot.projectName,
                         result.snapshot.exportResources()
                     )
+                    result.restorePlan?.apply()
                 } finally {
                     applyingOwnedProject = false
                 }
@@ -994,7 +1043,8 @@ class ProjectPersistenceCoordinator(
             adapterId = runtime.state.simulatorAdapterId.value,
             robotId = runtime.state.activeRobotId,
             revision = revision,
-            resources = projectRuntime.export()
+            resources = projectRuntime.export(),
+            sidecar = sessionPort?.capture() ?: byteArrayOf()
         )
 
     private fun hasUnsavedWork(): Boolean =
@@ -1041,7 +1091,8 @@ class ProjectPersistenceCoordinator(
             val record: ActiveProjectRecord,
             val snapshot: ProjectSnapshot,
             val token: SnapshotToken,
-            val recovered: Boolean
+            val recovered: Boolean,
+            val restorePlan: ProjectSessionRestorePlan?
         ) : StartupResult
 
         data class Failed(
@@ -1072,7 +1123,8 @@ class ProjectPersistenceCoordinator(
             val snapshot: ProjectSnapshot,
             val token: SnapshotToken,
             val origin: DocumentTreeOrigin,
-            val previousRecord: ActiveProjectRecord?
+            val previousRecord: ActiveProjectRecord?,
+            val restorePlan: ProjectSessionRestorePlan?
         ) : ImportResult
 
         data class NeedsDecision(

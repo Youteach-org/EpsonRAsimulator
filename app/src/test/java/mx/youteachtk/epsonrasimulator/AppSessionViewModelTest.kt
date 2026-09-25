@@ -10,6 +10,12 @@ import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceCont
 import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceState
 import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceSubscription
 import mx.youteachtk.epsonrasimulator.project.persistence.ProjectReplacementDecision
+import mx.youteachtk.epsonrasimulator.project.persistence.ProjectSnapshot
+import mx.youteachtk.epsonrasimulator.project.persistence.session.PersistedExperience
+import mx.youteachtk.epsonrasimulator.project.persistence.session.ProjectSessionCodec
+import mx.youteachtk.epsonrasimulator.project.persistence.session.ProjectSessionPersistencePort
+import mx.youteachtk.epsonrasimulator.project.persistence.session.ProjectSessionSnapshot
+import mx.youteachtk.epsonrasimulator.project.persistence.session.ProjectSessionSubscription
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
 import mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand
 import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
@@ -401,15 +407,32 @@ class AppSessionViewModelTest {
             linkedSetOf<(ProjectPersistenceState) -> Unit>()
 
         var starts = 0
+        var attachments = 0
+        var semanticChanges = 0
         var saves = 0
         var imports = 0
         var exports = 0
         var dismisses = 0
         var closes = 0
         var lastDecision: ProjectReplacementDecision? = null
+        var attachedSessionPort: ProjectSessionPersistencePort? = null
+        var sessionSubscription: ProjectSessionSubscription? = null
+        val operationOrder = mutableListOf<String>()
+
+        override fun attachSessionPersistence(
+            port: ProjectSessionPersistencePort
+        ) {
+            attachments++
+            attachedSessionPort = port
+            operationOrder += "attach"
+        }
 
         override fun start() {
             starts++
+            operationOrder += "start"
+            sessionSubscription = attachedSessionPort?.subscribe {
+                semanticChanges++
+            }
         }
 
         override fun requestImport(selection: DocumentTreeSelection) {
@@ -443,6 +466,7 @@ class AppSessionViewModelTest {
         override fun subscribe(
             listener: (ProjectPersistenceState) -> Unit
         ): ProjectPersistenceSubscription {
+            operationOrder += "subscribe"
             listeners += listener
             listener(state)
             return ProjectPersistenceSubscription {
@@ -452,6 +476,8 @@ class AppSessionViewModelTest {
 
         override fun close() {
             closes++
+            sessionSubscription?.cancel()
+            sessionSubscription = null
         }
 
         fun publish(next: ProjectPersistenceState) {
@@ -459,6 +485,88 @@ class AppSessionViewModelTest {
             listeners.toList().forEach { it(next) }
         }
     }
+
+    @Test
+    fun semanticPersistenceAttachesBeforeUiSubscriptionAndStart() {
+        val persistence = FakePersistence()
+        val session = AppSessionViewModel(
+            initialBundle = AppRuntimeFactory.createDefault(),
+            persistence = persistence
+        )
+
+        assertEquals(1, persistence.attachments)
+        assertEquals(
+            listOf("attach", "subscribe", "start"),
+            persistence.operationOrder.take(3)
+        )
+        assertTrue(persistence.attachedSessionPort != null)
+
+        session.selectExperience(AppExperience.RCPLUS_TRAINER)
+        assertEquals(1, persistence.semanticChanges)
+
+        session.selectExperience(AppExperience.RCPLUS_TRAINER)
+        assertEquals(1, persistence.semanticChanges)
+
+        session.selectExperience(AppExperience.VISUAL_LAB)
+        assertEquals(2, persistence.semanticChanges)
+
+        session.clearExperience()
+        assertEquals(3, persistence.semanticChanges)
+
+        session.clearExperience()
+        assertEquals(3, persistence.semanticChanges)
+    }
+
+    @Test
+    fun restoreSetsExperienceWithoutRecursivelyPublishingDurableChange() {
+        val persistence = FakePersistence()
+        val bundle = AppRuntimeFactory.createDefault()
+        val session = AppSessionViewModel(
+            initialBundle = bundle,
+            persistence = persistence
+        )
+        val port = requireNotNull(persistence.attachedSessionPort)
+
+        session.selectExperience(AppExperience.RCPLUS_TRAINER)
+        persistence.semanticChanges = 0
+
+        val sidecar = ProjectSessionCodec().encode(
+            ProjectSessionSnapshot(
+                activeExperience = PersistedExperience.VISUAL_LAB,
+                jointValues = bundle.runtime.activeRobot().zeroState().values,
+                teachPoints = emptyList(),
+                windows = emptyList(),
+                zOrder = emptyList(),
+                activeWindowId = null,
+                selectedProjectNodeId = null,
+                visualSourcePath = "Main.prg",
+                robotManagerPage = "CONTROL_PANEL",
+                robotManagerTrainingStepDegrees = 1.0
+            )
+        )
+        val snapshot = ProjectSnapshot(
+            projectId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            projectName = "Restored",
+            adapterId = bundle.runtime.state.simulatorAdapterId.value,
+            robotId = bundle.runtime.state.activeRobotId,
+            revision = 1,
+            resources = mapOf(
+                "Main.prg" to "Function main\nFend\n".toByteArray()
+            ),
+            sidecar = sidecar
+        )
+
+        val plan = port.prepareRestore(snapshot)
+        bundle.projectRuntime.loadProject(
+            snapshot.projectName,
+            snapshot.exportResources()
+        )
+        plan.apply()
+
+        assertEquals(AppExperience.VISUAL_LAB, session.activeExperience)
+        assertEquals(0, persistence.semanticChanges)
+    }
+
 
     @Test
     fun persistenceControllerIsRetainedAcrossExperienceSwitchesAndStartedOnce() {

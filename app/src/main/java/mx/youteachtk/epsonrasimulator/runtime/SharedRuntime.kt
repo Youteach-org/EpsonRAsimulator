@@ -1,6 +1,13 @@
 package mx.youteachtk.epsonrasimulator.runtime
 
+import mx.youteachtk.epsonrasimulator.domain.JointState
 import mx.youteachtk.epsonrasimulator.domain.RobotDefinition
+import mx.youteachtk.epsonrasimulator.domain.TeachPoint
+import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClockState
+import mx.youteachtk.epsonrasimulator.runtime.io.IoState
+import mx.youteachtk.epsonrasimulator.runtime.task.TaskRuntimeState
+import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeState
+import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellState
 import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
 
 class SharedRuntime(
@@ -268,6 +275,50 @@ class SharedRuntime(
         return state
     }
 
+
+    fun restoreLocalPersistentSession(
+        robotId: String,
+        jointValues: List<Double>,
+        teachPoints: Map<String, TeachPoint>
+    ): SharedRuntimeState {
+        val robot = robots.require(robotId)
+        validatePersistentJointValues(robot, jointValues)
+
+        val restoredPoints = linkedMapOf<String, TeachPoint>()
+        teachPoints.toSortedMap().forEach { (name, point) ->
+            require(name.isNotBlank() && point.name == name) {
+                "Teach-point map key must match a non-blank point name"
+            }
+            requireFinitePose(point)
+            val preferred = point.preferredJointState
+            if (preferred != null) {
+                validatePersistentJointValues(robot, preferred.values)
+            }
+            restoredPoints[name] = point.copy(
+                preferredJointState =
+                    preferred?.let { JointState(it.values.toList()) }
+            )
+        }
+
+        val next = state.copy(
+            activeRobotId = robot.id,
+            jointState = JointState(jointValues.toList()),
+            teachPoints = restoredPoints,
+            connectionMode = ConnectionMode.LOCAL_SIMULATION,
+            clockState = SimulationClockState(),
+            ioState = IoState(),
+            taskState = TaskRuntimeState(),
+            workcellState = WorkcellState(),
+            toolState = ToolRuntimeState()
+        )
+
+        if (next != state) {
+            state = next
+            listeners.toList().forEach { it(next) }
+        }
+        return state
+    }
+
     fun subscribe(listener: (SharedRuntimeState) -> Unit): RuntimeSubscription {
         listeners += listener
         listener(state)
@@ -308,6 +359,38 @@ class SharedRuntime(
             require(robot.joints[index].contains(value)) {
                 "Initial joint value for ${robot.joints[index].id} is outside its configured range"
             }
+        }
+    }
+
+
+    private fun validatePersistentJointValues(
+        robot: RobotDefinition,
+        values: List<Double>
+    ) {
+        require(values.size == robot.joints.size) {
+            "Persisted joint state must contain exactly ${robot.joints.size} values"
+        }
+        values.forEachIndexed { index, value ->
+            require(value.isFinite()) {
+                "Persisted joint value must be finite"
+            }
+            require(robot.joints[index].contains(value)) {
+                "Persisted joint value for ${robot.joints[index].id} is outside its configured range"
+            }
+        }
+    }
+
+    private fun requireFinitePose(point: TeachPoint) {
+        val pose = point.pose
+        require(
+            pose.x.isFinite() &&
+                pose.y.isFinite() &&
+                pose.z.isFinite() &&
+                pose.rx.isFinite() &&
+                pose.ry.isFinite() &&
+                pose.rz.isFinite()
+        ) {
+            "Persisted teach-point pose must be finite"
         }
     }
 

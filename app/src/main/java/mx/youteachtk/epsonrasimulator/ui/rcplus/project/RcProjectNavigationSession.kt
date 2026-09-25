@@ -40,6 +40,15 @@ class RcProjectNavigationSession {
         )
     }
 
+    fun restoreSelection(nodeId: String?) {
+        publishIfChanged(
+            RcProjectNavigationState(
+                selectedNodeId = nodeId,
+                ranges = emptyMap()
+            )
+        )
+    }
+
     fun navigationRange(
         windowId: RcWindowId
     ): SourceRange? = state.ranges[windowId]
