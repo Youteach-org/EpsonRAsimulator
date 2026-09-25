@@ -113,6 +113,46 @@ class RcWorkspaceSession(
     fun closeWindow(id: RcWindowId): RcWindowManagerState =
         mutate { RcWindowManager.close(it, id) }
 
+    fun restoreReconciled(
+        restored: RcWindowManagerState
+    ): RcWindowManagerState {
+        check(
+            restored.zOrder.size == restored.zOrder.toSet().size &&
+                restored.zOrder.toSet() == restored.windows.keys
+        ) {
+            "Restored RC+ z-order must contain every window exactly once"
+        }
+        restored.windows.forEach { (id, window) ->
+            check(id == window.id) {
+                "Restored RC+ window key must match its id"
+            }
+            val tool = toolRegistry.descriptor(window.toolId)
+            check(
+                capabilities.containsAll(tool.requiredCapabilities)
+            ) {
+                "Restored RC+ tool is unavailable: ${tool.id.value}"
+            }
+            check(tool.surface == RcToolSurface.CHILD_WINDOW) {
+                "Restored docked RC+ tool cannot be a child window"
+            }
+            check(window.minimizedFrom != RcWindowMode.MINIMIZED) {
+                "Restored RC+ minimizedFrom cannot be MINIMIZED"
+            }
+        }
+        restored.activeWindowId?.let { active ->
+            val window = checkNotNull(restored.windows[active]) {
+                "Restored active RC+ window does not exist"
+            }
+            check(window.mode != RcWindowMode.MINIMIZED) {
+                "Restored active RC+ window cannot be minimized"
+            }
+        }
+
+        val current = state
+        publishIfChanged(current, restored)
+        return state
+    }
+
     fun subscribe(
         listener: (RcWindowManagerState) -> Unit
     ): RcWorkspaceSubscription {
