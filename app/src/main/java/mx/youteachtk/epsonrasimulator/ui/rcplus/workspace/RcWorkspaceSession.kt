@@ -113,6 +113,51 @@ class RcWorkspaceSession(
     fun closeWindow(id: RcWindowId): RcWindowManagerState =
         mutate { RcWindowManager.close(it, id) }
 
+    fun restoreState(
+        restored: RcWindowManagerState
+    ): RcWindowManagerState {
+        require(
+            restored.windows.all { (id, window) ->
+                id == window.id
+            }
+        ) {
+            "RC+ restored window map keys must match window ids"
+        }
+        require(restored.zOrder.size == restored.zOrder.toSet().size) {
+            "RC+ restored z-order must not contain duplicates"
+        }
+        require(restored.zOrder.all(restored.windows::containsKey)) {
+            "RC+ restored z-order references a missing window"
+        }
+        require(
+            restored.activeWindowId == null ||
+                restored.activeWindowId in restored.windows
+        ) {
+            "RC+ restored active window is missing"
+        }
+        restored.windows.values.forEach { window ->
+            val tool = toolRegistry.descriptor(window.toolId)
+            require(
+                tool.surface == RcToolSurface.CHILD_WINDOW &&
+                    capabilities.containsAll(tool.requiredCapabilities)
+            ) {
+                "RC+ restored tool is unavailable: " + window.toolId.value
+            }
+        }
+        val active = restored.activeWindowId
+        require(
+            active == null ||
+                restored.windows.getValue(active).mode !=
+                    RcWindowMode.MINIMIZED
+        ) {
+            "RC+ restored active window cannot be minimized"
+        }
+
+        val current = state
+        publishIfChanged(current, restored)
+        return state
+    }
+
     fun subscribe(
         listener: (RcWindowManagerState) -> Unit
     ): RcWorkspaceSubscription {
