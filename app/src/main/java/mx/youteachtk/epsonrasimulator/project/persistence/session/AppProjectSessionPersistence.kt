@@ -25,6 +25,7 @@ import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowInstance
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowManagerState
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowMode
 import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWorkspaceSession
+import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.isOwnedBy
 import mx.youteachtk.epsonrasimulator.ui.visual.programming.VisualProgrammingSession
 
 class AppProjectSessionPersistence(
@@ -155,9 +156,13 @@ class AppProjectSessionPersistence(
                     return@forEach
                 }
                 val id = RcWindowId(persisted.id)
+                val toolId = RcToolId(persisted.toolId)
+                if (!id.isOwnedBy(toolId)) {
+                    invalid("Persisted RC+ window id does not belong to its tool")
+                }
                 restoredWindows[id] = RcWindowInstance(
                     id = id,
-                    toolId = RcToolId(persisted.toolId),
+                    toolId = toolId,
                     normalBounds = RcRect(
                         persisted.x,
                         persisted.y,
@@ -259,10 +264,22 @@ class AppProjectSessionPersistence(
         externalListeners += listener
 
         var runtimeInitial = true
-        val runtimeSubscription = bundle.runtime.subscribe {
+        var durableRobotId = bundle.runtime.state.activeRobotId
+        var durableJointState = bundle.runtime.state.jointState
+        var durableTeachPoints = bundle.runtime.state.teachPoints
+        val runtimeSubscription = bundle.runtime.subscribe { next ->
+            val durableChanged =
+                next.activeRobotId != durableRobotId ||
+                    next.jointState != durableJointState ||
+                    next.teachPoints != durableTeachPoints
+
+            durableRobotId = next.activeRobotId
+            durableJointState = next.jointState
+            durableTeachPoints = next.teachPoints
+
             if (runtimeInitial) {
                 runtimeInitial = false
-            } else {
+            } else if (durableChanged) {
                 notifyListener(listener)
             }
         }
