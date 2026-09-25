@@ -45,6 +45,27 @@ jobs:
             throw "Expected ready=false for an empty root."
           }
 
+      - name: Verify inspect output is proprietary-free
+        shell: pwsh
+        run: |
+          $outputDir = Resolve-Path "windows-bridge/src/EpsonRa.Bridge.Inspect/bin/Release/net48"
+          $rcapi = Get-ChildItem $outputDir -Recurse -File | Where-Object { $_.Name -ieq "RCAPINet.dll" }
+          if ($rcapi) {
+            throw "Proprietary RCAPINet.dll must not be present in inspect output."
+          }
+          $vendorDlls = Get-ChildItem $outputDir -Recurse -File -Filter *.dll | Where-Object {
+            $_.VersionInfo.CompanyName -match "SEIKO EPSON"
+          }
+          if ($vendorDlls) {
+            throw "SEIKO EPSON assemblies must not be present in inspect output."
+          }
+          $referencePackages = Get-ChildItem $outputDir -Recurse -Force | Where-Object {
+            $_.Name -like "Microsoft.NETFramework.ReferenceAssemblies*"
+          }
+          if ($referencePackages) {
+            throw "Reference-assembly packages must remain build-only."
+          }
+
       - name: Upload TRX
         if: always()
         uses: actions/upload-artifact@v4
