@@ -15,6 +15,7 @@ import mx.youteachtk.epsonrasimulator.runtime.task.TaskProgram
 import mx.youteachtk.epsonrasimulator.runtime.task.TaskStatus
 import mx.youteachtk.epsonrasimulator.runtime.tool.FunctionalToolDefinition
 import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeId
+import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeState
 import mx.youteachtk.epsonrasimulator.runtime.tool.TwoFingerGripperSpec
 import mx.youteachtk.epsonrasimulator.runtime.workcell.AxisAlignedBox
 import mx.youteachtk.epsonrasimulator.runtime.workcell.CollisionShapeComponent
@@ -28,6 +29,7 @@ import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntityId
 import mx.youteachtk.epsonrasimulator.robot.EpsonRobotProvider
 import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
@@ -248,6 +250,181 @@ class SharedRuntimeTest {
         assertEquals(25.0, runtime.state.toolState.mountPose.x, 0.0)
         assertEquals(50.0, runtime.state.toolState.mountPose.y, 0.0)
         assertEquals(75.0, runtime.state.toolState.mountPose.z, 0.0)
+    }
+
+
+    @Test
+    fun persistentSessionRestoreResetsAllTransientExecutionDomains() {
+        val runtime = runtime()
+        val input = DigitalIoAddress(3)
+        val output = DigitalIoAddress(5)
+        val taskId = TaskId("persisted-session")
+        val part = testPart("persisted-part", 25.0)
+        val tool = testGripper(DigitalIoAddress(6))
+
+        runtime.dispatch(RuntimeCommand.StartClock)
+        runtime.dispatch(RuntimeCommand.AdvanceSimulation(250L))
+        runtime.dispatch(RuntimeCommand.SetDigitalInput(input, true))
+        runtime.dispatch(RuntimeCommand.SetDigitalOutput(output, true))
+        runtime.dispatch(
+            RuntimeCommand.LoadTask(
+                TaskProgram(
+                    taskId,
+                    "persisted-session",
+                    listOf(SimAction.Delay(1_000L))
+                )
+            )
+        )
+        runtime.dispatch(RuntimeCommand.StartTask(taskId))
+        runtime.dispatch(RuntimeCommand.UpsertWorkcellEntity(part))
+        runtime.dispatch(RuntimeCommand.RegisterFunctionalTool(tool))
+        runtime.dispatch(RuntimeCommand.SelectFunctionalTool(tool.id))
+
+        val joints = runtime.activeRobot().zeroState().values.toMutableList()
+        joints[0] = 10.0
+        val point = TeachPoint(
+            name = "P1",
+            pose = CartesianPose(100.0, 200.0, 300.0, 1.0, 2.0, 3.0),
+            preferredJointState = JointState(joints)
+        )
+
+        runtime.restoreLocalPersistentSession(
+            robotId = "epson-c4-a601s",
+            jointValues = joints,
+            teachPoints = mapOf(point.name to point)
+        )
+
+        assertEquals(ConnectionMode.LOCAL_SIMULATION, runtime.state.connectionMode)
+        assertEquals(JointState(joints), runtime.state.jointState)
+        assertEquals(mapOf("P1" to point), runtime.state.teachPoints)
+        assertFalse(runtime.state.clockState.running)
+        assertEquals(0L, runtime.state.clockState.timeMillis)
+        assertEquals(1.0, runtime.state.clockState.speedScale, 0.0)
+        assertTrue(runtime.state.ioState.inputs.isEmpty())
+        assertTrue(runtime.state.ioState.outputs.isEmpty())
+        assertTrue(runtime.state.ioState.inputLabels.isEmpty())
+        assertTrue(runtime.state.ioState.outputLabels.isEmpty())
+        assertTrue(runtime.state.taskState.tasks.isEmpty())
+        assertTrue(runtime.state.taskState.order.isEmpty())
+        assertTrue(runtime.state.workcellState.entities.isEmpty())
+        assertTrue(runtime.state.workcellState.order.isEmpty())
+        assertTrue(runtime.state.workcellState.bindings.isEmpty())
+        assertTrue(runtime.state.workcellState.attachments.isEmpty())
+        assertEquals(ToolRuntimeState(), runtime.state.toolState)
+    }
+
+    @Test
+    fun persistentSessionRestorePublishesExactlyOneCanonicalState() {
+        val runtime = runtime()
+        runtime.dispatch(RuntimeCommand.StartClock)
+        runtime.dispatch(RuntimeCommand.SetDigitalInput(DigitalIoAddress(1), true))
+        val observed = mutableListOf<SharedRuntimeState>()
+        val subscription = runtime.subscribe { observed += it }
+        val before = observed.size
+
+        val joints = runtime.activeRobot().zeroState().values
+        runtime.restoreLocalPersistentSession(
+            robotId = "epson-c4-a601s",
+            jointValues = joints,
+            teachPoints = emptyMap()
+        )
+
+        assertEquals(before + 1, observed.size)
+        assertEquals(runtime.state, observed.last())
+        subscription.cancel()
+    }
+
+    @Test
+    fun persistentSessionRestoreRejectsInvalidRobotAndJointPayloadWithoutMutation() {
+        val runtime = runtime()
+        val valid = runtime.activeRobot().zeroState().values
+
+        assertPersistentRestoreRejected(
+            runtime,
+            robotId = "missing-robot",
+            jointValues = valid,
+            teachPoints = emptyMap()
+        )
+        assertPersistentRestoreRejected(
+            runtime,
+            jointValues = valid.dropLast(1),
+            teachPoints = emptyMap()
+        )
+        assertPersistentRestoreRejected(
+            runtime,
+            jointValues = valid.toMutableList().apply { this[0] = Double.NaN },
+            teachPoints = emptyMap()
+        )
+        assertPersistentRestoreRejected(
+            runtime,
+            jointValues = valid.toMutableList().apply { this[0] = 999.0 },
+            teachPoints = emptyMap()
+        )
+    }
+
+    @Test
+    fun persistentSessionRestoreRejectsInvalidTeachPointPayloadWithoutMutation() {
+        val runtime = runtime()
+        val valid = runtime.activeRobot().zeroState().values
+
+        assertPersistentRestoreRejected(
+            runtime,
+            jointValues = valid,
+            teachPoints = mapOf(
+                "P1" to TeachPoint(
+                    name = "P1",
+                    pose = CartesianPose(Double.NaN, 0.0, 0.0)
+                )
+            )
+        )
+        assertPersistentRestoreRejected(
+            runtime,
+            jointValues = valid,
+            teachPoints = mapOf(
+                "P1" to TeachPoint(
+                    name = "P1",
+                    pose = CartesianPose(1.0, 2.0, 3.0),
+                    preferredJointState = JointState(valid.dropLast(1))
+                )
+            )
+        )
+        assertPersistentRestoreRejected(
+            runtime,
+            jointValues = valid,
+            teachPoints = mapOf(
+                "P1" to TeachPoint(
+                    name = "P1",
+                    pose = CartesianPose(1.0, 2.0, 3.0),
+                    preferredJointState =
+                        JointState(valid.toMutableList().apply { this[0] = 999.0 })
+                )
+            )
+        )
+    }
+
+    private fun assertPersistentRestoreRejected(
+        runtime: SharedRuntime,
+        robotId: String = "epson-c4-a601s",
+        jointValues: List<Double>,
+        teachPoints: Map<String, TeachPoint>
+    ) {
+        val before = runtime.state
+        val observed = mutableListOf<SharedRuntimeState>()
+        val subscription = runtime.subscribe { observed += it }
+
+        try {
+            runtime.restoreLocalPersistentSession(
+                robotId = robotId,
+                jointValues = jointValues,
+                teachPoints = teachPoints
+            )
+            fail("Expected persistent-session restore to be rejected")
+        } catch (_: IllegalArgumentException) {
+        }
+
+        assertEquals(before, runtime.state)
+        assertEquals(1, observed.size)
+        subscription.cancel()
     }
 
     private fun testSensor(id: String, x: Double): WorkcellEntity =
