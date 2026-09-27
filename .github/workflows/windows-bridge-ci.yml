@@ -70,6 +70,21 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File windows-bridge/probes/virtual-controller-probe.ps1 -SelfTest
 
+      - name: Verify virtual controller probe preflight output
+        shell: pwsh
+        run: |
+          $emptyRoot = Join-Path $env:RUNNER_TEMP "epson-probe-empty"
+          New-Item -ItemType Directory -Path $emptyRoot -Force | Out-Null
+          $jsonText = & pwsh -NoProfile -File windows-bridge/probes/virtual-controller-probe.ps1 -Stage Preflight -InstallRoot $emptyRoot
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 2) {
+            throw "Expected probe preflight exit code 2 for an empty root, got $exitCode."
+          }
+          $json = $jsonText | ConvertFrom-Json
+          if ($json.schemaVersion -ne 1 -or $json.stage -ne "Preflight" -or $json.success -ne $false) {
+            throw "Probe preflight did not return the expected schema."
+          }
+
       - name: Upload TRX
         if: always()
         uses: actions/upload-artifact@v4
