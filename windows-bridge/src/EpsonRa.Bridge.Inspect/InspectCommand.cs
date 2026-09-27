@@ -71,23 +71,38 @@ namespace EpsonRa.Bridge.Inspect
 
         private static bool IsFullyQualifiedWindowsPath(string candidate)
         {
-            if (string.IsNullOrWhiteSpace(candidate) || !Path.IsPathRooted(candidate))
+            try
+            {
+                if (string.IsNullOrWhiteSpace(candidate) || !Path.IsPathRooted(candidate))
+                {
+                    return false;
+                }
+
+                if (candidate.Length >= 2 &&
+                    IsDirectorySeparator(candidate[0]) &&
+                    IsDirectorySeparator(candidate[1]))
+                {
+                    return true;
+                }
+
+                var root = Path.GetPathRoot(candidate);
+                return !string.IsNullOrEmpty(root) &&
+                    root.Length >= 3 &&
+                    root[1] == Path.VolumeSeparatorChar &&
+                    IsDirectorySeparator(root[2]);
+            }
+            catch (ArgumentException)
             {
                 return false;
             }
-
-            if (candidate.Length >= 2 &&
-                IsDirectorySeparator(candidate[0]) &&
-                IsDirectorySeparator(candidate[1]))
+            catch (NotSupportedException)
             {
-                return true;
+                return false;
             }
-
-            var root = Path.GetPathRoot(candidate);
-            return !string.IsNullOrEmpty(root) &&
-                root.Length >= 3 &&
-                root[1] == Path.VolumeSeparatorChar &&
-                IsDirectorySeparator(root[2]);
+            catch (PathTooLongException)
+            {
+                return false;
+            }
         }
 
         private static bool IsDirectorySeparator(char value)
@@ -132,3 +147,4 @@ namespace EpsonRa.Bridge.Inspect
         }
     }
 }
+

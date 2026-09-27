@@ -13,6 +13,16 @@ namespace EpsonRa.Bridge.Readiness
     {
         private const string ProductDisplayName = "EPSON RC+ 7.0";
         private const string UninstallPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
+        private readonly Func<string, FileAttributes> readAttributes;
+
+        public WindowsReadinessEnvironment() : this(File.GetAttributes)
+        {
+        }
+
+        public WindowsReadinessEnvironment(Func<string, FileAttributes> readAttributes)
+        {
+            this.readAttributes = readAttributes ?? throw new ArgumentNullException(nameof(readAttributes));
+        }
 
         public IReadOnlyList<string> DiscoverRoots()
         {
@@ -77,7 +87,15 @@ namespace EpsonRa.Bridge.Readiness
             bool rootExists;
             try
             {
-                rootExists = Directory.Exists(root);
+                rootExists = (readAttributes(root) & FileAttributes.Directory) != 0;
+            }
+            catch (FileNotFoundException)
+            {
+                rootExists = false;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                rootExists = false;
             }
             catch (Exception ex) when (IsExpectedMetadataException(ex))
             {
@@ -122,13 +140,27 @@ namespace EpsonRa.Bridge.Readiness
             return checks;
         }
 
-        private static ReadinessCheck InspectExecutable(string path)
+        private ReadinessCheck InspectExecutable(string path)
         {
             try
             {
-                if (!File.Exists(path))
+                FileAttributes attributes;
+                try
+                {
+                    attributes = readAttributes(path);
+                }
+                catch (FileNotFoundException)
                 {
                     return new ReadinessCheck("rcPlusExecutable", CheckStatus.MISSING, "erc70.exe is missing.");
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    return new ReadinessCheck("rcPlusExecutable", CheckStatus.MISSING, "erc70.exe is missing.");
+                }
+
+                if ((attributes & FileAttributes.Directory) != 0)
+                {
+                    return new ReadinessCheck("rcPlusExecutable", CheckStatus.INVALID, "erc70.exe path is a directory.");
                 }
 
                 var info = new FileInfo(path);
@@ -154,13 +186,27 @@ namespace EpsonRa.Bridge.Readiness
             }
         }
 
-        private static ReadinessCheck InspectApiAssembly(string path)
+        private ReadinessCheck InspectApiAssembly(string path)
         {
             try
             {
-                if (!File.Exists(path))
+                FileAttributes attributes;
+                try
+                {
+                    attributes = readAttributes(path);
+                }
+                catch (FileNotFoundException)
                 {
                     return new ReadinessCheck("apiAssembly", CheckStatus.MISSING, "RCAPINet.dll is missing.");
+                }
+                catch (DirectoryNotFoundException)
+                {
+                    return new ReadinessCheck("apiAssembly", CheckStatus.MISSING, "RCAPINet.dll is missing.");
+                }
+
+                if ((attributes & FileAttributes.Directory) != 0)
+                {
+                    return new ReadinessCheck("apiAssembly", CheckStatus.INVALID, "RCAPINet.dll path is a directory.");
                 }
 
                 var fileInfo = new FileInfo(path);
@@ -272,3 +318,4 @@ namespace EpsonRa.Bridge.Readiness
         }
     }
 }
+

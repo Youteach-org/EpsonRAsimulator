@@ -181,13 +181,13 @@ namespace EpsonRa.Bridge.Readiness
             out string normalized)
         {
             normalized = null;
-            if (!IsFullyQualifiedWindowsPath(candidate))
-            {
-                return false;
-            }
-
             try
             {
+                if (!IsFullyQualifiedWindowsPath(candidate))
+                {
+                    return false;
+                }
+
                 var full = Path.GetFullPath(candidate);
                 var pathRoot = Path.GetPathRoot(full);
                 if (!string.Equals(full, pathRoot, StringComparison.OrdinalIgnoreCase))
@@ -213,3 +213,4 @@ namespace EpsonRa.Bridge.Readiness
         }
     }
 }
+
