@@ -113,6 +113,13 @@ class RcWorkspaceSession(
     fun closeWindow(id: RcWindowId): RcWindowManagerState =
         mutate { RcWindowManager.close(it, id) }
 
+    fun restoreState(
+        restored: RcWindowManagerState
+    ): RcWindowManagerState {
+        publishIfChanged(state, restored)
+        return state
+    }
+
     fun subscribe(
         listener: (RcWindowManagerState) -> Unit
     ): RcWorkspaceSubscription {
