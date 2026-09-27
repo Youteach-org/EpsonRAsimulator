@@ -48,6 +48,12 @@ The 7.5 User Guide also documents an Auto Connect option in PC to Controller Com
 
 EPSON's 7.5.3 release notes list the release's documented changes/fixes but do not provide evidence that changes the connection-lifecycle wording above. This is supporting context only, not a substitute for Rev20.
 
+## Additional selection-path finding
+
+The adjacent official API references expose no documented pre-initialization controller selector. `Initialize()` takes no target argument. `ServerInstance` selects the RC+ server instance and is required before initialization when explicitly used, but it does not identify a configured connection by name/type. The documented explicit controller selector remains `Connect(...)`.
+
+Therefore `ServerInstance` cannot be treated as a safety substitute for selecting a Virtual connection. No documented Rev19/Rev21 API path was found that pins a Virtual target by identity before RC+ server initialization. Exact Rev20 remains the required authority for deciding whether activation/enumeration can be performed without an unintended current/last-used connection.
+
 ## Safety ruling
 
 Do NOT execute the previously proposed one-shot sequence
