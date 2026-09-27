@@ -91,6 +91,26 @@ jobs:
             throw "Probe preflight did not return the expected schema."
           }
 
+      - name: Verify probe invalid arguments stay structured
+        shell: pwsh
+        run: |
+          $jsonFile = Join-Path $env:RUNNER_TEMP "virtual-probe-invalid.json"
+          $errorFile = Join-Path $env:RUNNER_TEMP "virtual-probe-invalid.err"
+          $process = Start-Process -FilePath pwsh -ArgumentList @(
+            "-NoProfile",
+            "-File", "windows-bridge/probes/virtual-controller-probe.ps1",
+            "-Stage", "NotAStage",
+            "-ServerInstance", "11"
+          ) -Wait -PassThru -NoNewWindow -RedirectStandardOutput $jsonFile -RedirectStandardError $errorFile
+          if ($process.ExitCode -ne 64) {
+            throw "Expected invalid-argument exit code 64, got $($process.ExitCode)."
+          }
+          $jsonText = Get-Content $jsonFile -Raw
+          $json = $jsonText | ConvertFrom-Json
+          if ($json.schemaVersion -ne 1 -or $json.status -ne "INVALID_ARGUMENTS" -or $json.success -ne $false) {
+            throw "Invalid arguments did not return the expected JSON schema."
+          }
+
       - name: Upload TRX
         if: always()
         uses: actions/upload-artifact@v4
