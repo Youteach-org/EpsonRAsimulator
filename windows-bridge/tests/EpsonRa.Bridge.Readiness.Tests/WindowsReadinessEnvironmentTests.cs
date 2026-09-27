@@ -103,6 +103,58 @@ namespace EpsonRa.Bridge.Readiness.Tests
             Assert.AreEqual(CheckStatus.MISSING, checks.Single(c => c.Name == "apiAssembly").Status);
         }
 
+        [TestMethod]
+        public void DeniedRootMetadataIsInvalidRatherThanMissing()
+        {
+            var environment = new WindowsReadinessEnvironment(path =>
+            {
+                if (path == root) throw new UnauthorizedAccessException("denied");
+                return File.GetAttributes(path);
+            });
+
+            var checks = environment.InspectRoot(root);
+
+            Assert.AreEqual(CheckStatus.INVALID, checks.Single(c => c.Name == "installRoot").Status);
+            Assert.AreEqual(CheckStatus.MISSING, checks.Single(c => c.Name == "rcPlusExecutable").Status);
+            Assert.AreEqual(CheckStatus.MISSING, checks.Single(c => c.Name == "apiAssembly").Status);
+        }
+
+        [TestMethod]
+        public void DeniedExecutableMetadataIsInvalidRatherThanMissing()
+        {
+            Directory.CreateDirectory(Path.Combine(root, "exe"));
+            var executable = Path.Combine(root, "exe", "erc70.exe");
+            var environment = new WindowsReadinessEnvironment(path =>
+            {
+                if (path == executable) throw new UnauthorizedAccessException("denied");
+                return File.GetAttributes(path);
+            });
+
+            var checks = environment.InspectRoot(root);
+
+            Assert.AreEqual(CheckStatus.PRESENT, checks.Single(c => c.Name == "installRoot").Status);
+            Assert.AreEqual(CheckStatus.INVALID, checks.Single(c => c.Name == "rcPlusExecutable").Status);
+            Assert.AreEqual(CheckStatus.MISSING, checks.Single(c => c.Name == "apiAssembly").Status);
+        }
+
+        [TestMethod]
+        public void ApiMetadataIoErrorIsInvalidRatherThanMissing()
+        {
+            PrepareExecutable();
+            var api = ApiAssemblyPath();
+            var environment = new WindowsReadinessEnvironment(path =>
+            {
+                if (path == api) throw new IOException("metadata failed");
+                return File.GetAttributes(path);
+            });
+
+            var checks = environment.InspectRoot(root);
+
+            Assert.AreEqual(CheckStatus.PRESENT, checks.Single(c => c.Name == "installRoot").Status);
+            Assert.AreEqual(CheckStatus.PRESENT, checks.Single(c => c.Name == "rcPlusExecutable").Status);
+            Assert.AreEqual(CheckStatus.INVALID, checks.Single(c => c.Name == "apiAssembly").Status);
+        }
+
         private static string FixtureAssemblyPath()
         {
             var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "RCAPINet.dll");
@@ -129,3 +181,4 @@ namespace EpsonRa.Bridge.Readiness.Tests
         }
     }
 }
+

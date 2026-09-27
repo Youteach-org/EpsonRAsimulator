@@ -96,6 +96,32 @@ namespace EpsonRa.Bridge.Readiness.Tests
         }
 
         [TestMethod]
+        public void MalformedExplicitRootIsInvalidWithoutDiscoveryOrInspection()
+        {
+            var env = new FakeEnvironment(new[] { @"C:\Other" });
+
+            var report = new ReadinessInspector(env).Inspect(@"C:\bad|root");
+
+            Assert.IsFalse(report.Ready);
+            Assert.AreEqual(CheckStatus.INVALID, report.Checks.Single(c => c.Name == "installRoot").Status);
+            Assert.AreEqual(0, env.DiscoveryCalls);
+            Assert.AreEqual(0, env.InspectedRoots.Count);
+        }
+
+        [TestMethod]
+        public void MalformedDiscoveredRootIsInvalidWithoutInspectingAnotherCandidate()
+        {
+            var env = new FakeEnvironment(new[] { @"C:\bad|root", @"C:\Other" });
+
+            var report = new ReadinessInspector(env).Inspect(null);
+
+            Assert.IsFalse(report.Ready);
+            Assert.AreEqual(CheckStatus.INVALID, report.Checks.Single(c => c.Name == "installRoot").Status);
+            Assert.AreEqual(1, env.DiscoveryCalls);
+            Assert.AreEqual(0, env.InspectedRoots.Count);
+        }
+
+        [TestMethod]
         public void DriveRelativeAndRootRelativeExplicitRootsAreInvalidWithoutFallback()
         {
             foreach (var candidate in new[] { @"C:EpsonRC70", @"\EpsonRC70" })
@@ -207,3 +233,4 @@ namespace EpsonRa.Bridge.Readiness.Tests
         }
     }
 }
+

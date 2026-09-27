@@ -89,6 +89,29 @@ namespace EpsonRa.Bridge.Readiness.Tests
         }
 
         [TestMethod]
+        public void MalformedInstallRootReturnsOneJsonUsageErrorWithoutInspection()
+        {
+            var env = new CommandEnvironment();
+            var command = new InspectCommand(new ReadinessInspector(env));
+            var output = new StringWriter();
+            var errors = new StringWriter();
+
+            var exit = command.Run(
+                new[] { "inspect", "--install-root", @"C:\bad|root" },
+                output,
+                errors);
+
+            Assert.AreEqual(64, exit);
+            var lines = output.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
+            Assert.AreEqual(1, lines.Length);
+            var json = (IDictionary<string, object>)new JavaScriptSerializer().DeserializeObject(lines[0]);
+            Assert.AreEqual("INVALID_ARGUMENTS", json["errorCode"]);
+            Assert.AreEqual(0, env.DiscoveryCalls);
+            Assert.AreEqual(0, env.InspectCalls);
+            StringAssert.Contains(errors.ToString(), "Usage:");
+        }
+
+        [TestMethod]
         public void UnexpectedHostErrorReturnsStableJsonWithoutSecretExceptionText()
         {
             var env = new CommandEnvironment
@@ -140,3 +163,4 @@ namespace EpsonRa.Bridge.Readiness.Tests
         }
     }
 }
+
