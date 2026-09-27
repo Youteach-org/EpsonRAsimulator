@@ -54,6 +54,12 @@ The adjacent official API references expose no documented pre-initialization con
 
 Therefore `ServerInstance` cannot be treated as a safety substitute for selecting a Virtual connection. No documented Rev19/Rev21 API path was found that pins a Virtual target by identity before RC+ server initialization. Exact Rev20 remains the required authority for deciding whether activation/enumeration can be performed without an unintended current/last-used connection.
 
+## RC+ 7.5.3 release-note cross-check
+
+EPSON's published 7.5.3 release notes list RC+ Express Advanced, Vision Guide changes, a USB communications driver change, Force Guide changes, and Simulator fixes. They do not list an RC+ API `Connect`, `Initialize`, `GetConnectionInfo`, `ServerInstance`, or controller-selection behavior change.
+
+This makes the matching Rev19/Rev21 lifecycle text useful for identifying risks around the installed 7.5.3 build, but it is not evidence that Rev20 is identical. The installed Rev20 remains the execution gate.
+
 ## Safety ruling
 
 Do NOT execute the previously proposed one-shot sequence
