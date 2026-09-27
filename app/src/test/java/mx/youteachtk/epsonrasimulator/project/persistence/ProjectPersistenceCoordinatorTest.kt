@@ -251,12 +251,48 @@ class ProjectPersistenceCoordinatorTest {
         }
     }
 
+    private class SemanticHarness {
+        val bridge = SemanticSessionBridge()
+        var current = SemanticSessionSnapshot()
+            private set
+        var restored: SemanticSessionSnapshot? = null
+            private set
+        var restoreCalls = 0
+            private set
+        var reconcileCalls = 0
+            private set
+
+        init {
+            bridge.bind(
+                capture = { current },
+                restore = { snapshot, _, _ ->
+                    restoreCalls++
+                    restored = snapshot
+                    current =
+                        snapshot ?:
+                            SemanticSessionSnapshot()
+                },
+                reconcile = { _, _ ->
+                    reconcileCalls++
+                }
+            )
+        }
+
+        fun edit(
+            snapshot: SemanticSessionSnapshot
+        ) {
+            current = snapshot
+            bridge.notifyPotentialChange()
+        }
+    }
+
     private data class Harness(
         val bundle: AppRuntimeBundle,
         val records: RecordStore,
         val slots: MemorySlots,
         val gateway: Gateway,
         val execution: TestExecution,
+        val semantic: SemanticHarness,
         val coordinator: ProjectPersistenceCoordinator
     ) {
         val project: ProjectRuntime get() = bundle.projectRuntime
@@ -277,12 +313,13 @@ class ProjectPersistenceCoordinatorTest {
                 "22222222-2222-4222-8222-222222222222",
                 "33333333-3333-4333-8333-333333333333"
             )
-        )
+        ),
+        records: RecordStore = RecordStore(),
+        slots: MemorySlots = MemorySlots(),
+        gateway: Gateway = Gateway(),
+        semantic: SemanticHarness = SemanticHarness()
     ): Harness {
         val bundle = AppRuntimeFactory.createDefault()
-        val records = RecordStore()
-        val slots = MemorySlots()
-        val gateway = Gateway()
         val execution = TestExecution()
         val coordinator = ProjectPersistenceCoordinator(
             projectRuntime = bundle.projectRuntime,
@@ -292,9 +329,19 @@ class ProjectPersistenceCoordinatorTest {
             documentGateway = gateway,
             execution = execution,
             idGenerator = { ids.removeFirst() },
-            autosaveDebounceMillis = 750
+            autosaveDebounceMillis = 750,
+            semanticSession = semantic.bridge,
+            semanticCodec = SemanticSessionCodec()
         )
-        return Harness(bundle, records, slots, gateway, execution, coordinator)
+        return Harness(
+            bundle,
+            records,
+            slots,
+            gateway,
+            execution,
+            semantic,
+            coordinator
+        )
     }
 
     private fun Harness.seed(
@@ -302,7 +349,9 @@ class ProjectPersistenceCoordinatorTest {
         name: String = "Saved Demo",
         revision: Long = 1,
         source: String = "Function main\nFend\n",
-        origin: DocumentTreeOrigin? = null
+        origin: DocumentTreeOrigin? = null,
+        resources: Map<String, ByteArray>? = null,
+        semanticSnapshot: SemanticSessionSnapshot? = null
     ): SnapshotToken {
         val snapshot = ProjectSnapshot(
             projectId = id,
@@ -310,10 +359,15 @@ class ProjectPersistenceCoordinatorTest {
             adapterId = bundle.runtime.state.simulatorAdapterId.value,
             robotId = bundle.runtime.state.activeRobotId,
             revision = revision,
-            resources = linkedMapOf(
-                "Main.prg" to source.toByteArray(),
-                "opaque.bin" to byteArrayOf(0, -1)
-            )
+            resources =
+                resources ?: linkedMapOf(
+                    "Main.prg" to source.toByteArray(),
+                    "opaque.bin" to byteArrayOf(0, -1)
+                ),
+            sidecar =
+                semanticSnapshot?.let {
+                    SemanticSessionCodec().encode(it)
+                } ?: byteArrayOf()
         )
         val saved = slots.open(id).save(snapshot, null) as StoreSave.Saved
         records.record = ActiveProjectRecord(id, origin)
@@ -788,4 +842,330 @@ class ProjectPersistenceCoordinatorTest {
 
         assertTrue(h.execution.closed)
     }
+
+    @Test
+    fun semanticOnlyChangeCreatesDebouncedSnapshotRevision() {
+        val h = harness()
+        val id =
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = id)
+        h.start()
+
+        h.semantic.edit(
+            SemanticSessionSnapshot(
+                activeExperienceId = "visual-lab"
+            )
+        )
+
+        assertEquals(
+            PersistenceSaveStatus.DIRTY,
+            h.coordinator.state.saveStatus
+        )
+        h.execution.advanceBy(749)
+        h.execution.drain()
+        assertEquals(
+            1L,
+            h.savedSnapshot(id).revision
+        )
+
+        h.execution.advanceBy(1)
+        h.execution.drain()
+
+        val saved = h.savedSnapshot(id)
+        assertEquals(2L, saved.revision)
+        assertEquals(
+            "visual-lab",
+            SemanticSessionCodec()
+                .decode(saved.sidecarBytes())
+                ?.activeExperienceId
+        )
+        assertEquals(
+            PersistenceSaveStatus.SAVED,
+            h.coordinator.state.saveStatus
+        )
+    }
+
+    @Test
+    fun semanticEditDuringOlderSaveRemainsDirtyUntilNewestRevisionCommits() {
+        val h = harness()
+        val id =
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = id)
+        h.start()
+
+        h.semantic.edit(
+            SemanticSessionSnapshot(
+                activeExperienceId =
+                    "rcplus-trainer"
+            )
+        )
+        h.execution.advanceBy(750)
+        h.execution.runWorkerAll()
+        h.execution.runUiAll()
+        h.execution.runWorkerAll()
+
+        h.semantic.edit(
+            SemanticSessionSnapshot(
+                activeExperienceId = "visual-lab"
+            )
+        )
+        assertEquals(
+            PersistenceSaveStatus.DIRTY,
+            h.coordinator.state.saveStatus
+        )
+
+        h.execution.runUiAll()
+        assertEquals(
+            PersistenceSaveStatus.DIRTY,
+            h.coordinator.state.saveStatus
+        )
+
+        h.execution.advanceBy(750)
+        h.execution.drain()
+
+        val saved = h.savedSnapshot(id)
+        assertEquals(3L, saved.revision)
+        assertEquals(
+            "visual-lab",
+            SemanticSessionCodec()
+                .decode(saved.sidecarBytes())
+                ?.activeExperienceId
+        )
+    }
+
+    @Test
+    fun startupRestoresSemanticSessionAfterNativeProjectValidation() {
+        val h = harness()
+        val semantic = SemanticSessionSnapshot(
+            activeExperienceId = "visual-lab",
+            jointValues =
+                listOf(
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                )
+        )
+        h.seed(semanticSnapshot = semantic)
+
+        h.start()
+
+        assertEquals("Saved Demo", h.project.state.projectName)
+        assertEquals(1, h.semantic.restoreCalls)
+        assertEquals(semantic, h.semantic.restored)
+    }
+
+    @Test
+    fun corruptSemanticSidecarAbortsStartupBeforePublishingRestoredSession() {
+        val h = harness()
+        val id =
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        val snapshot = ProjectSnapshot(
+            projectId = id,
+            projectName = "Saved Demo",
+            adapterId =
+                h.bundle.runtime.state
+                    .simulatorAdapterId.value,
+            robotId =
+                h.bundle.runtime.state.activeRobotId,
+            revision = 1,
+            resources = mapOf(
+                "Main.prg" to
+                    "Function main\nFend\n"
+                        .toByteArray()
+            ),
+            sidecar = byteArrayOf(1, 2, 3)
+        )
+        assertTrue(
+            h.slots.open(id).save(snapshot, null) is
+                StoreSave.Saved
+        )
+        h.records.record =
+            ActiveProjectRecord(id, null)
+
+        h.start()
+
+        assertEquals(
+            PersistenceStartupStatus.ERROR,
+            h.coordinator.state.startup
+        )
+        assertNull(h.project.state.projectName)
+        assertEquals(0, h.semantic.restoreCalls)
+    }
+
+    @Test
+    fun legacyEmptySidecarRestoresNativeProjectWithNeutralSession() {
+        val h = harness()
+        h.semantic.edit(
+            SemanticSessionSnapshot(
+                activeExperienceId = "visual-lab"
+            )
+        )
+        h.seed()
+
+        h.start()
+
+        assertEquals("Saved Demo", h.project.state.projectName)
+        assertEquals(1, h.semantic.restoreCalls)
+        assertNull(h.semantic.restored)
+        assertEquals(
+            SemanticSessionSnapshot(),
+            h.semantic.current
+        )
+    }
+
+    @Test
+    fun importWithoutSidecarReconcilesToNeutralProjectSession() {
+        val h = harness()
+        h.seed(
+            semanticSnapshot =
+                SemanticSessionSnapshot(
+                    activeExperienceId =
+                        "visual-lab"
+                )
+        )
+        h.start()
+        assertEquals(
+            "visual-lab",
+            h.semantic.current.activeExperienceId
+        )
+
+        h.gateway.trees[
+            "content://tree/new"
+        ] = Tree(
+            "New",
+            linkedMapOf(
+                "Main.prg" to
+                    "Function main\nFend\n"
+                        .toByteArray()
+            )
+        )
+
+        h.coordinator.requestImport(
+            readSelection("content://tree/new")
+        )
+        h.execution.drain()
+
+        assertEquals("New", h.project.state.projectName)
+        assertEquals(
+            SemanticSessionSnapshot(),
+            h.semantic.current
+        )
+        assertNull(h.semantic.restored)
+    }
+
+    @Test
+    fun nativeExportNeverContainsSemanticSidecarMetadata() {
+        val h = harness()
+        val marker =
+            "semantic-only-marker-9c35"
+        h.seed(
+            semanticSnapshot =
+                SemanticSessionSnapshot(
+                    projectSelectedNodeId = marker
+                )
+        )
+        h.start()
+        h.gateway.trees[
+            "content://tree/export"
+        ] = Tree(
+            "Target",
+            linkedMapOf()
+        )
+
+        h.coordinator.exportTo(
+            writeSelection(
+                "content://tree/export"
+            )
+        )
+        h.execution.drain()
+
+        assertTrue(
+            h.gateway.exported.isNotEmpty()
+        )
+        h.gateway.exported.values.forEach {
+            bytes ->
+            assertFalse(
+                bytes.toString(Charsets.UTF_8)
+                    .contains(marker)
+            )
+        }
+    }
+
+    @Test
+    fun semanticRoundTripPreservesUntouchedNativeBytesExactly() {
+        val resources = linkedMapOf(
+            "Main.prg" to
+                "Function main\nFend\n"
+                    .toByteArray(),
+            "Robot.pts" to
+                byteArrayOf(0, 1, 2, -1, 127),
+            "opaque.bin" to
+                byteArrayOf(-1, -2, 0, 13)
+        )
+        val semantic = SemanticSessionSnapshot(
+            activeExperienceId =
+                "rcplus-trainer",
+            jointValues =
+                listOf(
+                    2.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0
+                )
+        )
+        val h = harness()
+        val id =
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(
+            id = id,
+            resources = resources,
+            semanticSnapshot = semantic
+        )
+        h.start()
+
+        h.semantic.edit(
+            semantic.copy(
+                activeExperienceId = "visual-lab"
+            )
+        )
+        h.execution.advanceBy(750)
+        h.execution.drain()
+
+        val saved = h.savedSnapshot(id)
+        resources.forEach { (path, expected) ->
+            assertArrayEquals(
+                expected,
+                saved.exportResources()
+                    .getValue(path)
+            )
+        }
+
+        val reopenedSemantic = SemanticHarness()
+        val reopened = harness(
+            records = h.records,
+            slots = h.slots,
+            gateway = h.gateway,
+            semantic = reopenedSemantic
+        )
+        reopened.start()
+
+        resources.forEach { (path, expected) ->
+            assertArrayEquals(
+                expected,
+                reopened.project
+                    .resourceBytes(path)
+            )
+        }
+        assertEquals(
+            "visual-lab",
+            reopened.semantic.current
+                .activeExperienceId
+        )
+    }
+
 }
