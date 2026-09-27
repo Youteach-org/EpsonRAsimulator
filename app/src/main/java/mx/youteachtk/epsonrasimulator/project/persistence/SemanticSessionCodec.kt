@@ -51,7 +51,7 @@ class SemanticSessionCodec(
             }
 
             data.writeInt(snapshot.workspace.zOrder.size)
-            snapshot.workspace.zOrder.forEach(data::writeText)
+            snapshot.workspace.zOrder.forEach { value ->\n                data.writeText(value)\n            }
             data.writeNullableText(snapshot.workspace.activeWindowId)
 
             data.writeNullableText(snapshot.projectSelectedNodeId)
