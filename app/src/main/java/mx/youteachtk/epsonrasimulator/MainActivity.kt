@@ -15,6 +15,7 @@ import androidx.lifecycle.ViewModelProvider
 import java.io.File
 import mx.youteachtk.epsonrasimulator.project.persistence.ExecutorPersistenceExecution
 import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceCoordinator
+import mx.youteachtk.epsonrasimulator.project.persistence.SemanticSessionBridge
 import mx.youteachtk.epsonrasimulator.project.persistence.android.AndroidActiveProjectRecordStore
 import mx.youteachtk.epsonrasimulator.project.persistence.android.AndroidDocumentTreeGateway
 import mx.youteachtk.epsonrasimulator.project.persistence.android.AndroidProjectSlotStoreFactory
@@ -30,16 +31,22 @@ class MainActivity : ComponentActivity() {
                 val bundle = AppRuntimeFactory.createDefault()
                 val handler = Handler(Looper.getMainLooper())
                 val execution = ExecutorPersistenceExecution { block -> handler.post { block() } }
+                val semanticSession = SemanticSessionBridge()
                 val coordinator = ProjectPersistenceCoordinator(
                     projectRuntime = bundle.projectRuntime,
                     runtime = bundle.runtime,
                     activeRecordStore = AndroidActiveProjectRecordStore(File(app.filesDir, "persistence")),
                     slotStores = AndroidProjectSlotStoreFactory(File(app.filesDir, "projects")),
                     documentGateway = AndroidDocumentTreeGateway(app.contentResolver),
-                    execution = execution
+                    execution = execution,
+                    semanticSession = semanticSession
                 )
                 @Suppress("UNCHECKED_CAST")
-                return AppSessionViewModel(bundle, coordinator) as T
+                return AppSessionViewModel(
+                    bundle,
+                    coordinator,
+                    semanticSession
+                ) as T
             }
         }
     }
