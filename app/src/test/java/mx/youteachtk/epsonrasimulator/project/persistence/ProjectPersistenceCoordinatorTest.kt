@@ -261,12 +261,18 @@ class ProjectPersistenceCoordinatorTest {
             private set
         var reconcileCalls = 0
             private set
+        var rejectRestore = false
 
         init {
             bridge.bind(
                 capture = { current },
                 restore = { snapshot, _, _ ->
                     restoreCalls++
+                    if (rejectRestore) {
+                        throw IllegalArgumentException(
+                            "semantic restore rejected"
+                        )
+                    }
                     restored = snapshot
                     current =
                         snapshot ?:
@@ -283,6 +289,12 @@ class ProjectPersistenceCoordinatorTest {
         ) {
             current = snapshot
             bridge.notifyPotentialChange()
+        }
+
+        fun replaceSilently(
+            snapshot: SemanticSessionSnapshot
+        ) {
+            current = snapshot
         }
     }
 
@@ -1166,6 +1178,128 @@ class ProjectPersistenceCoordinatorTest {
             reopened.semantic.current
                 .activeExperienceId
         )
+    }
+
+
+    @Test
+    fun semanticRestoreValidationFailureBecomesStartupError() {
+        val h = harness()
+        h.seed(
+            semanticSnapshot =
+                SemanticSessionSnapshot(
+                    jointValues =
+                        listOf(
+                            999.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        )
+                )
+        )
+        h.semantic.rejectRestore = true
+
+        h.start()
+
+        assertEquals(
+            PersistenceStartupStatus.ERROR,
+            h.coordinator.state.startup
+        )
+        assertEquals(
+            PersistenceSaveStatus.ERROR,
+            h.coordinator.state.saveStatus
+        )
+        assertEquals(1, h.semantic.restoreCalls)
+    }
+
+    @Test
+    fun oversizedSemanticEditReportsErrorWithoutOverwritingCommittedGeneration() {
+        val h = harness()
+        val id =
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        h.seed(id = id)
+        h.start()
+        val points =
+            linkedMapOf<String, SemanticTeachPointSnapshot>()
+        repeat(4097) { index ->
+            points["P$index"] =
+                SemanticTeachPointSnapshot(
+                    pose =
+                        SemanticPoseSnapshot(
+                            index.toDouble(),
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        )
+                )
+        }
+
+        h.semantic.edit(
+            SemanticSessionSnapshot(
+                teachPoints = points
+            )
+        )
+
+        assertEquals(
+            PersistenceSaveStatus.ERROR,
+            h.coordinator.state.saveStatus
+        )
+        assertTrue(h.coordinator.state.canSave)
+        assertEquals(
+            1L,
+            h.savedSnapshot(id).revision
+        )
+    }
+
+    @Test
+    fun nativeExportDoesNotDependOnSemanticSidecarEncodability() {
+        val h = harness()
+        h.seed()
+        h.start()
+        val points =
+            linkedMapOf<String, SemanticTeachPointSnapshot>()
+        repeat(4097) { index ->
+            points["P$index"] =
+                SemanticTeachPointSnapshot(
+                    pose =
+                        SemanticPoseSnapshot(
+                            index.toDouble(),
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        )
+                )
+        }
+        h.semantic.replaceSilently(
+            SemanticSessionSnapshot(
+                teachPoints = points
+            )
+        )
+        h.gateway.trees[
+            "content://tree/export"
+        ] = Tree(
+            "Target",
+            linkedMapOf()
+        )
+
+        h.coordinator.exportTo(
+            writeSelection(
+                "content://tree/export"
+            )
+        )
+        h.execution.drain()
+
+        val result =
+            requireNotNull(
+                h.coordinator.state.lastExport
+            )
+        assertTrue(result.complete)
+        assertTrue(h.gateway.exported.isNotEmpty())
     }
 
 }
