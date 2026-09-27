@@ -16,3 +16,8 @@ Branch: `feature/semantic-session-restoration`.
 - Preserved execution contract: native/inline implementation with TDD, then exactly one final independent whole-branch review and one RED→GREEN fix wave if needed.
 - Keep this work stacked on PR #18; no merge/main changes.
 - Device/provider acceptance remains UNVERIFIED until actually exercised on hardware/provider.
+
+- Execution ruling: container checkout could not resolve github.com, so this session uses the isolated remote feature branch plus GitHub Android CI as the authoritative RED/GREEN executor. Cost if wrong: slower feedback and no local Gradle/device claim; every completion claim still requires fresh CI evidence.
+- Task1 RED: `953e321e9d7b3007ecd865f0aea734cfb80ff0cd`; Android CI423/run `36338362910` failed unit-test compilation on the missing `SemanticSessionCodec` and semantic DTO APIs, exactly as intended.
+- Task1 implementation: `3ff551c` snapshot DTOs + `107c4ee` codec. CI424 exposed one Kotlin bound-extension reference compile error; `f179bda` corrected that but encoded literal newline escape characters, exposed by CI425. `9820494` corrected the writer syntax without changing tests or behavior.
+- Task1 complete: `9820494ed2ab962b0922cdf2e8851733719182d7`; Android CI426/run `36338732652` Unit tests SUCCESS, debug APK SUCCESS, artifact upload SUCCESS. Semantic sidecar schema 1 now has deterministic encoding, strict bounds/finite-number validation, future-version rejection, corruption/trailing-data rejection, and Phase8B empty-sidecar compatibility.
