@@ -78,7 +78,9 @@ class ProjectPersistenceCoordinator(
     private val execution: PersistenceExecution,
     private val folderTransfer: ProjectFolderTransfer = ProjectFolderTransfer(),
     private val idGenerator: () -> String = { UUID.randomUUID().toString() },
-    private val autosaveDebounceMillis: Long = 750
+    private val autosaveDebounceMillis: Long = 750,
+    private val semanticSession: SemanticSessionBridge? = null,
+    private val semanticCodec: SemanticSessionCodec = SemanticSessionCodec()
 ) : ProjectPersistenceController {
     init {
         require(autosaveDebounceMillis >= 0)
@@ -94,6 +96,7 @@ class ProjectPersistenceCoordinator(
     private var started = false
     private var closed = false
     private var projectSubscription: ProjectRuntimeSubscription? = null
+    private var semanticSubscription: SemanticSessionSubscription? = null
     private var applyingOwnedProject = false
     private var currentToken: SnapshotToken? = null
 
@@ -324,6 +327,8 @@ class ProjectPersistenceCoordinator(
         debounce = null
         projectSubscription?.cancel()
         projectSubscription = null
+        semanticSubscription?.cancel()
+        semanticSubscription = null
         synchronized(importLock) {
             importGeneration++
             importPublicationRequestId = null
@@ -367,11 +372,22 @@ class ProjectPersistenceCoordinator(
                         "Saved project targets an unavailable simulator or robot"
                     )
                 } else {
+                    val semantic = try {
+                        semanticCodec.decode(
+                            loaded.snapshot.sidecarBytes()
+                        )
+                    } catch (error: PersistenceException) {
+                        return StartupResult.Failed(
+                            error.reason,
+                            "Cannot restore saved semantic session"
+                        )
+                    }
                     StartupResult.Loaded(
                         record,
                         loaded.snapshot,
                         loaded.token,
-                        loaded.recovered
+                        loaded.recovered,
+                        semantic
                     )
                 }
             }
@@ -397,6 +413,7 @@ class ProjectPersistenceCoordinator(
                     )
                 )
                 subscribeProjectChanges()
+                subscribeSemanticChanges()
             }
 
             is StartupResult.Failed -> {
@@ -415,6 +432,11 @@ class ProjectPersistenceCoordinator(
                     projectRuntime.loadProject(
                         result.snapshot.projectName,
                         result.snapshot.exportResources()
+                    )
+                    semanticSession?.restore(
+                        result.semantic,
+                        projectRuntime.state,
+                        result.snapshot.robotId
                     )
                 } finally {
                     applyingOwnedProject = false
@@ -442,6 +464,7 @@ class ProjectPersistenceCoordinator(
                     )
                 )
                 subscribeProjectChanges()
+                subscribeSemanticChanges()
             }
         }
     }
@@ -458,8 +481,36 @@ class ProjectPersistenceCoordinator(
         }
     }
 
-    private fun onProjectChanged(next: ProjectRuntimeState) {
+    private fun subscribeSemanticChanges() {
+        semanticSubscription?.cancel()
+        semanticSubscription =
+            semanticSession?.subscribe {
+                if (
+                    !closed &&
+                    state.startup ==
+                        PersistenceStartupStatus.READY
+                ) {
+                    onSemanticChanged()
+                }
+            }
+    }
+
+    private fun onProjectChanged(
+        next: ProjectRuntimeState
+    ) {
         val projectName = next.projectName ?: return
+        markCurrentProjectDirty(projectName)
+    }
+
+    private fun onSemanticChanged() {
+        val projectName =
+            projectRuntime.state.projectName ?: return
+        markCurrentProjectDirty(projectName)
+    }
+
+    private fun markCurrentProjectDirty(
+        projectName: String
+    ) {
         var projectId = state.projectId
         if (projectId == null) {
             projectId = idGenerator()
@@ -475,7 +526,11 @@ class ProjectPersistenceCoordinator(
                 importPublicationInvalidatedByEdit = true
             }
         }
-        val snapshot = captureSnapshot(projectId, projectName, currentRevision)
+        val snapshot = captureSnapshot(
+            projectId,
+            projectName,
+            currentRevision
+        )
         pendingSnapshot = snapshot
         publish(
             state.copy(
@@ -486,7 +541,9 @@ class ProjectPersistenceCoordinator(
                 message = null
             )
         )
-        if (!saveInFlight) scheduleAutosave()
+        if (!saveInFlight) {
+            scheduleAutosave()
+        }
     }
 
     private fun scheduleAutosave() {
@@ -808,6 +865,11 @@ class ProjectPersistenceCoordinator(
                         result.snapshot.projectName,
                         result.snapshot.exportResources()
                     )
+                    semanticSession?.restore(
+                        null,
+                        projectRuntime.state,
+                        result.snapshot.robotId
+                    )
                 } finally {
                     applyingOwnedProject = false
                 }
@@ -994,7 +1056,11 @@ class ProjectPersistenceCoordinator(
             adapterId = runtime.state.simulatorAdapterId.value,
             robotId = runtime.state.activeRobotId,
             revision = revision,
-            resources = projectRuntime.export()
+            resources = projectRuntime.export(),
+            sidecar =
+                semanticSession?.capture()?.let {
+                    semanticCodec.encode(it)
+                } ?: byteArrayOf()
         )
 
     private fun hasUnsavedWork(): Boolean =
@@ -1041,7 +1107,8 @@ class ProjectPersistenceCoordinator(
             val record: ActiveProjectRecord,
             val snapshot: ProjectSnapshot,
             val token: SnapshotToken,
-            val recovered: Boolean
+            val recovered: Boolean,
+            val semantic: SemanticSessionSnapshot?
         ) : StartupResult
 
         data class Failed(
