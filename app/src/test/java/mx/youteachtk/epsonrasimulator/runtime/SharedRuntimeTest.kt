@@ -250,6 +250,98 @@ class SharedRuntimeTest {
         assertEquals(75.0, runtime.state.toolState.mountPose.z, 0.0)
     }
 
+    @Test
+    fun restorePausedLocalSessionRestoresOnlyDurableRobotState() {
+        val runtime = runtime()
+        val taskId = TaskId("old-task")
+        val oldOutput = DigitalIoAddress(7)
+        val oldTool = testGripper(DigitalIoAddress(8))
+
+        runtime.dispatch(RuntimeCommand.StartClock)
+        runtime.dispatch(
+            RuntimeCommand.SetDigitalOutput(
+                oldOutput,
+                true
+            )
+        )
+        runtime.dispatch(
+            RuntimeCommand.LoadTask(
+                TaskProgram(
+                    taskId,
+                    "Old task",
+                    emptyList()
+                )
+            )
+        )
+        runtime.dispatch(
+            RuntimeCommand.StartTask(taskId)
+        )
+        runtime.dispatch(
+            RuntimeCommand.UpsertWorkcellEntity(
+                testPart("old-part", 25.0)
+            )
+        )
+        runtime.dispatch(
+            RuntimeCommand.RegisterFunctionalTool(
+                oldTool
+            )
+        )
+        runtime.dispatch(
+            RuntimeCommand.SelectFunctionalTool(
+                oldTool.id
+            )
+        )
+
+        val restoredValues =
+            listOf(12.0, -10.0, 8.0, 4.0, -3.0, 2.0)
+        val restoredPoint = TeachPoint(
+            name = "P9",
+            pose = CartesianPose(
+                100.0,
+                200.0,
+                300.0,
+                10.0,
+                20.0,
+                30.0
+            ),
+            preferredJointState =
+                JointState(restoredValues)
+        )
+
+        runtime.restorePausedLocalSession(
+            robotId = "epson-c4-a601s",
+            jointValues = restoredValues,
+            teachPoints = mapOf(
+                restoredPoint.name to restoredPoint
+            )
+        )
+
+        val state = runtime.state
+        assertEquals(
+            restoredValues,
+            state.jointState.values
+        )
+        assertEquals(
+            mapOf("P9" to restoredPoint),
+            state.teachPoints
+        )
+        assertEquals(
+            ConnectionMode.LOCAL_SIMULATION,
+            state.connectionMode
+        )
+        assertEquals(0L, state.clockState.timeMillis)
+        assertTrue(!state.clockState.running)
+        assertEquals(1.0, state.clockState.speedScale, 0.0)
+        assertTrue(state.ioState.inputs.isEmpty())
+        assertTrue(state.ioState.outputs.isEmpty())
+        assertTrue(state.taskState.tasks.isEmpty())
+        assertTrue(state.taskState.order.isEmpty())
+        assertTrue(state.workcellState.entities.isEmpty())
+        assertTrue(state.workcellState.order.isEmpty())
+        assertTrue(state.toolState.definitions.isEmpty())
+        assertEquals(null, state.toolState.activeToolId)
+    }
+
     private fun testSensor(id: String, x: Double): WorkcellEntity =
         WorkcellEntity(
             id = WorkcellEntityId(id),
