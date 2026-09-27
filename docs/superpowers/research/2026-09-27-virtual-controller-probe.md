@@ -60,6 +60,37 @@ EPSON's published 7.5.3 release notes list RC+ Express Advanced, Vision Guide ch
 
 This makes the matching Rev19/Rev21 lifecycle text useful for identifying risks around the installed 7.5.3 build, but it is not evidence that Rev20 is identical. The installed Rev20 remains the execution gate.
 
+## Recovery of prior Codex state
+
+The prior Codex workspace is not recoverable from this repository. No committed `outputs/handoff-epsonrasimulator.txt`, Rev20 PDF, Rev20 extraction, native probe source, or native probe result exists on the Phase 9A/9B branches, PR comments, or Phase 9B workflow artifacts. Codex did persist the Phase 9B inventory/result stating that the Rev20 manual existed in its Epson-equipped Windows environment, but not the manual contents themselves.
+
+Therefore this spike must not depend on the user supplying that PDF. The missing artifact is a non-persisted Codex workspace asset, not a user-owned prerequisite.
+
+## Bracketing-manual comparison
+
+Official Rev19 and Rev21 were compared directly for the exact APIs used by the proposed probe. Across both revisions, the relevant contracts are materially unchanged:
+
+- `ServerInstance`: same semantics, range 1..10, set before Initialize/other methods; each server instance corresponds to one controller/project.
+- initialization: first method/property access initializes implicitly; `Initialize()` starts RC+ as a server process.
+- `Connect`: same string/name and integer overloads; `-1` means the last successful connection; automatic connection is still documented when controller communication is needed.
+- `GetConnectionInfo()`: same return type and same connection-table source.
+- `GetCurrentConnectionInfo()`: same current-connection contract.
+- `SpelConnectionInfo`: same ConnectionName, ConnectionNumber, ConnectionType fields; virtual/USB IP address remains blank.
+- `SpelConnectionType`: USB=1, Ethernet=2, Virtual=3 in both revisions.
+- `Dispose()`: still required for correct shutdown of the associated RC+ server process.
+
+Because Rev20 lies between two revisions with matching contracts, this is sufficient to freeze the probe interface and fail-closed policy. It is NOT proof that Rev20 contains no wording change around initialization/autoconnection, so native execution still requires an Epson-equipped environment where behavior can be observed safely.
+
+## Revised execution gate
+
+Exact Rev20 text is no longer treated as a file the user must provide. The gate for native execution is now behavioral and environmental:
+
+1. run only on an Epson-equipped Windows environment containing RCAPINet and a configured Virtual target;
+2. do not use `Connect(-1)` or any default/last-used fallback;
+3. do not proceed if the environment cannot prove the requested target is Virtual before any operation that could acquire physical-controller authority;
+4. if initialization produces an unexpected current connection before the explicit Virtual selection, abort immediately and record the probe as failed/inconclusive;
+5. never issue project, robot, motor, motion, task, I/O or arbitrary SPEL operations in this spike.
+
 ## Safety ruling
 
 Do NOT execute the previously proposed one-shot sequence
@@ -174,8 +205,8 @@ Timeout, process crash, ambiguous target, unexpected implicit connection, cleanu
 
 The GitHub `windows-latest` workflow has no Epson installation and cannot run this native acceptance. It remains suitable only for proprietary-free unit/build checks.
 
-The actual native probes require the Epson-equipped Windows machine containing the installed Rev20 and RCAPINet.dll. Until that machine/file is accessible, native execution remains blocked and no connection claim is made.
+The actual native probes require an Epson-equipped Windows environment containing RCAPINet and a configured Virtual controller. The earlier Codex environment satisfied the installation-discovery side of that requirement, but its local workspace is not available from this session. Until an equivalent environment is accessible, native execution remains blocked and no connection claim is made.
 
 ## Next action
 
-Obtain direct read access to the installed Rev20 PDF and close Gate 0. Only after Gate 0 passes should a throwaway Probe A be compiled/run. Probe B remains conditional on Probe A.
+Use the bracketing-manual evidence above to keep the probe contract frozen. Resume native work only in an Epson-equipped Windows environment. First observe initialization/connection behavior with the fail-closed gate; then run Probe A only if no physical/default authority was acquired. Probe B remains conditional on Probe A.
