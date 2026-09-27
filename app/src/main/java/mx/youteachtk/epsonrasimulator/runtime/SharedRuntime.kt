@@ -1,6 +1,7 @@
 package mx.youteachtk.epsonrasimulator.runtime
 
 import mx.youteachtk.epsonrasimulator.domain.RobotDefinition
+import mx.youteachtk.epsonrasimulator.domain.TeachPoint
 import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
 
 class SharedRuntime(
@@ -265,6 +266,94 @@ class SharedRuntime(
             listeners.toList().forEach { it(next) }
         }
 
+        return state
+    }
+
+    fun restorePausedLocalSession(
+        robotId: String,
+        jointValues: List<Double>?,
+        teachPoints: Map<String, TeachPoint>
+    ): SharedRuntimeState {
+        val robot = robots.require(robotId)
+        val values =
+            (jointValues ?: robot.zeroState().values)
+                .toList()
+
+        require(values.size == robot.joints.size) {
+            "Restored joint state does not match active robot"
+        }
+        values.forEachIndexed { index, value ->
+            require(value.isFinite()) {
+                "Restored joint value must be finite"
+            }
+            require(robot.joints[index].contains(value)) {
+                "Restored joint value for " +
+                    robot.joints[index].id +
+                    " is outside its configured range"
+            }
+        }
+
+        val restoredPoints = teachPoints.toMap()
+        restoredPoints.forEach { (name, point) ->
+            require(
+                name.isNotBlank() &&
+                    name == point.name
+            ) {
+                "Restored teach point name is invalid"
+            }
+            val pose = point.pose
+            require(
+                listOf(
+                    pose.x,
+                    pose.y,
+                    pose.z,
+                    pose.rx,
+                    pose.ry,
+                    pose.rz
+                ).all(Double::isFinite)
+            ) {
+                "Restored teach point pose must be finite"
+            }
+            point.preferredJointState?.let {
+                    preferred ->
+                require(
+                    preferred.values.size ==
+                        robot.joints.size
+                ) {
+                    "Restored preferred joint state " +
+                        "does not match active robot"
+                }
+                preferred.values.forEachIndexed {
+                        index, value ->
+                    require(
+                        value.isFinite() &&
+                            robot.joints[index]
+                                .contains(value)
+                    ) {
+                        "Restored preferred joint value " +
+                            "is invalid"
+                    }
+                }
+            }
+        }
+
+        val next = SharedRuntimeState(
+            simulatorAdapterId =
+                state.simulatorAdapterId,
+            trainingProfileId =
+                state.trainingProfileId,
+            activeRobotId = robot.id,
+            jointState =
+                robot.validatedState(values),
+            teachPoints = restoredPoints,
+            connectionMode =
+                ConnectionMode.LOCAL_SIMULATION
+        )
+
+        if (next != state) {
+            state = next
+            listeners.toList().forEach { it(next) }
+        }
         return state
     }
 

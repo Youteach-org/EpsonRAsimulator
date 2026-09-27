@@ -10,6 +10,15 @@ import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceCont
 import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceState
 import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceSubscription
 import mx.youteachtk.epsonrasimulator.project.persistence.ProjectReplacementDecision
+import mx.youteachtk.epsonrasimulator.domain.CartesianPose
+import mx.youteachtk.epsonrasimulator.domain.TeachPoint
+import mx.youteachtk.epsonrasimulator.project.persistence.SemanticPoseSnapshot
+import mx.youteachtk.epsonrasimulator.project.persistence.SemanticRobotManagerSnapshot
+import mx.youteachtk.epsonrasimulator.project.persistence.SemanticSessionBridge
+import mx.youteachtk.epsonrasimulator.project.persistence.SemanticSessionSnapshot
+import mx.youteachtk.epsonrasimulator.project.persistence.SemanticTeachPointSnapshot
+import mx.youteachtk.epsonrasimulator.project.persistence.SemanticWindowSnapshot
+import mx.youteachtk.epsonrasimulator.project.persistence.SemanticWorkspaceSnapshot
 import mx.youteachtk.epsonrasimulator.runtime.AppRuntimeFactory
 import mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand
 import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
@@ -19,6 +28,8 @@ import mx.youteachtk.epsonrasimulator.runtime.task.TaskProgram
 import mx.youteachtk.epsonrasimulator.runtime.task.TaskStatus
 import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceCommands
 import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceCatalog
+import mx.youteachtk.epsonrasimulator.ui.rcplus.RcPlusWorkspaceTools
+import mx.youteachtk.epsonrasimulator.ui.rcplus.workspace.RcWindowId
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcPointController
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectController
 import mx.youteachtk.epsonrasimulator.ui.rcplus.project.RcProjectExplorerProjection
@@ -589,6 +600,430 @@ class AppSessionViewModelTest {
         store.clear()
 
         assertEquals(1, persistence.closes)
+    }
+
+
+    @Test
+    fun semanticCaptureContainsOnlyApprovedDurableSessionFields() {
+        val bridge = SemanticSessionBridge()
+        val bundle = AppRuntimeFactory.createDefault()
+        bundle.projectRuntime.loadProject(
+            "Demo",
+            linkedMapOf(
+                "Main.prg" to
+                    "Function main\nFend\n".toByteArray(),
+                "Robot.pts" to byteArrayOf(1, 2, 3)
+            )
+        )
+        val session = AppSessionViewModel(
+            initialBundle = bundle,
+            semanticSession = bridge
+        )
+
+        session.selectExperience(
+            AppExperience.RCPLUS_TRAINER
+        )
+        bundle.runtime.dispatch(
+            RuntimeCommand.SetJointValue(0, 12.0)
+        )
+        bundle.runtime.dispatch(
+            RuntimeCommand.SaveTeachPoint(
+                TeachPoint(
+                    "P1",
+                    CartesianPose(
+                        100.0,
+                        200.0,
+                        300.0
+                    )
+                )
+            )
+        )
+        session.workspaceSession.openWindow(
+            RcWindowId("source:Main.prg"),
+            RcPlusWorkspaceTools.SOURCE_DOCUMENT
+        )
+        session.projectNavigationSession.select(
+            "resource:Main.prg"
+        )
+        session.visualProgrammingSession.selectSource(
+            "Main.prg"
+        )
+        session.robotManagerSession.selectPage(
+            RcRobotManagerPageId.JOG_TEACH
+        )
+        session.robotManagerSession
+            .setTrainingStepDegrees(5.0)
+
+        bundle.runtime.dispatch(
+            RuntimeCommand.StartClock
+        )
+        bundle.runtime.dispatch(
+            RuntimeCommand.SetDigitalOutput(
+                DigitalIoAddress(9),
+                true
+            )
+        )
+
+        val snapshot =
+            requireNotNull(bridge.capture())
+
+        assertEquals(
+            "rcplus-trainer",
+            snapshot.activeExperienceId
+        )
+        assertEquals(
+            12.0,
+            snapshot.jointValues.first(),
+            0.0
+        )
+        assertTrue("P1" in snapshot.teachPoints)
+        assertEquals(
+            listOf("source:Main.prg"),
+            snapshot.workspace.windows.map { it.id }
+        )
+        assertEquals(
+            "resource:Main.prg",
+            snapshot.projectSelectedNodeId
+        )
+        assertEquals(
+            "Main.prg",
+            snapshot.visualSelectedSourcePath
+        )
+        assertEquals(
+            "JOG_TEACH",
+            snapshot.robotManager.selectedPageId
+        )
+        assertEquals(
+            5.0,
+            snapshot.robotManager.trainingStepDegrees,
+            0.0
+        )
+    }
+
+    @Test
+    fun restoreAppliesExperienceWorkspaceSelectionsRobotManagerJointsAndTeachPoints() {
+        val bridge = SemanticSessionBridge()
+        val bundle = AppRuntimeFactory.createDefault()
+        bundle.projectRuntime.loadProject(
+            "Demo",
+            linkedMapOf(
+                "Main.prg" to
+                    "Function main\nFend\n".toByteArray(),
+                "Robot.pts" to byteArrayOf(1, 2, 3)
+            )
+        )
+        val session = AppSessionViewModel(
+            initialBundle = bundle,
+            semanticSession = bridge
+        )
+        val jointValues =
+            listOf(12.0, -10.0, 8.0, 4.0, -3.0, 2.0)
+
+        bridge.restore(
+            SemanticSessionSnapshot(
+                activeExperienceId = "visual-lab",
+                jointValues = jointValues,
+                teachPoints = mapOf(
+                    "P5" to
+                        SemanticTeachPointSnapshot(
+                            pose = SemanticPoseSnapshot(
+                                10.0,
+                                20.0,
+                                30.0,
+                                1.0,
+                                2.0,
+                                3.0
+                            ),
+                            preferredJointValues =
+                                jointValues
+                        )
+                ),
+                workspace =
+                    SemanticWorkspaceSnapshot(
+                        windows = listOf(
+                            SemanticWindowSnapshot(
+                                id = "source:Main.prg",
+                                toolId =
+                                    "source-document",
+                                x = 0.1f,
+                                y = 0.1f,
+                                width = 0.6f,
+                                height = 0.6f,
+                                modeId = "normal",
+                                minimizedFromId =
+                                    "normal"
+                            )
+                        ),
+                        zOrder =
+                            listOf("source:Main.prg"),
+                        activeWindowId =
+                            "source:Main.prg"
+                    ),
+                projectSelectedNodeId =
+                    "resource:Main.prg",
+                visualSelectedSourcePath =
+                    "Main.prg",
+                robotManager =
+                    SemanticRobotManagerSnapshot(
+                        selectedPageId = "JOG_TEACH",
+                        trainingStepDegrees = 2.5
+                    )
+            ),
+            bundle.projectRuntime.state,
+            "epson-c4-a601s"
+        )
+
+        assertEquals(
+            AppExperience.VISUAL_LAB,
+            session.activeExperience
+        )
+        assertEquals(
+            jointValues,
+            bundle.runtime.state.jointState.values
+        )
+        assertTrue(
+            "P5" in bundle.runtime.state.teachPoints
+        )
+        assertEquals(
+            listOf("source:Main.prg"),
+            session.workspaceSession.state
+                .windows.keys.map { it.value }
+        )
+        assertEquals(
+            "resource:Main.prg",
+            session.projectNavigationSession
+                .selectedNodeId
+        )
+        assertEquals(
+            "Main.prg",
+            session.visualProgrammingSession
+                .state.selectedSourcePath
+        )
+        assertEquals(
+            RcRobotManagerPageId.JOG_TEACH,
+            session.robotManagerSession
+                .state.selectedPage
+        )
+        assertEquals(
+            2.5,
+            session.robotManagerSession
+                .state.trainingStepDegrees,
+            0.0
+        )
+    }
+
+    @Test
+    fun restoreReconcilesMissingWindowsSelectionsAndRobotPage() {
+        val bridge = SemanticSessionBridge()
+        val bundle = AppRuntimeFactory.createDefault()
+        bundle.projectRuntime.loadProject(
+            "Demo",
+            mapOf(
+                "Main.prg" to
+                    "Function main\nFend\n".toByteArray()
+            )
+        )
+        val session = AppSessionViewModel(
+            initialBundle = bundle,
+            semanticSession = bridge
+        )
+
+        bridge.restore(
+            SemanticSessionSnapshot(
+                activeExperienceId =
+                    "rcplus-trainer",
+                jointValues =
+                    bundle.runtime.state.jointState.values,
+                workspace =
+                    SemanticWorkspaceSnapshot(
+                        windows = listOf(
+                            SemanticWindowSnapshot(
+                                "source:Main.prg",
+                                "source-document",
+                                0.1f,
+                                0.1f,
+                                0.5f,
+                                0.5f,
+                                "normal",
+                                "normal"
+                            ),
+                            SemanticWindowSnapshot(
+                                "source:Missing.prg",
+                                "source-document",
+                                0.2f,
+                                0.2f,
+                                0.5f,
+                                0.5f,
+                                "normal",
+                                "normal"
+                            ),
+                            SemanticWindowSnapshot(
+                                "ghost",
+                                "missing-tool",
+                                0.3f,
+                                0.3f,
+                                0.4f,
+                                0.4f,
+                                "normal",
+                                "normal"
+                            )
+                        ),
+                        zOrder = listOf(
+                            "source:Main.prg",
+                            "source:Missing.prg",
+                            "ghost"
+                        ),
+                        activeWindowId =
+                            "source:Missing.prg"
+                    ),
+                projectSelectedNodeId =
+                    "resource:Missing.prg",
+                visualSelectedSourcePath =
+                    "Missing.prg",
+                robotManager =
+                    SemanticRobotManagerSnapshot(
+                        selectedPageId =
+                            "NOT_A_PAGE",
+                        trainingStepDegrees = 1.5
+                    )
+            ),
+            bundle.projectRuntime.state,
+            "epson-c4-a601s"
+        )
+
+        assertEquals(
+            listOf("source:Main.prg"),
+            session.workspaceSession.state
+                .windows.keys.map { it.value }
+        )
+        assertEquals(
+            "source:Main.prg",
+            session.workspaceSession.state
+                .activeWindowId?.value
+        )
+        assertNull(
+            session.projectNavigationSession
+                .selectedNodeId
+        )
+        assertEquals(
+            "Main.prg",
+            session.visualProgrammingSession
+                .state.selectedSourcePath
+        )
+        assertEquals(
+            RcRobotManagerPageId.CONTROL_PANEL,
+            session.robotManagerSession
+                .state.selectedPage
+        )
+        assertEquals(
+            1.5,
+            session.robotManagerSession
+                .state.trainingStepDegrees,
+            0.0
+        )
+    }
+
+    @Test
+    fun restoreNeverResumesTransientSimulationOrHardwareState() {
+        val bridge = SemanticSessionBridge()
+        val bundle = AppRuntimeFactory.createDefault()
+        bundle.projectRuntime.loadProject(
+            "Demo",
+            mapOf(
+                "Main.prg" to
+                    "Function main\nFend\n".toByteArray()
+            )
+        )
+        val session = AppSessionViewModel(
+            initialBundle = bundle,
+            semanticSession = bridge
+        )
+        val taskId = TaskId("old")
+
+        bundle.runtime.dispatch(
+            RuntimeCommand.StartClock
+        )
+        bundle.runtime.dispatch(
+            RuntimeCommand.SetDigitalOutput(
+                DigitalIoAddress(4),
+                true
+            )
+        )
+        bundle.runtime.dispatch(
+            RuntimeCommand.LoadTask(
+                TaskProgram(
+                    taskId,
+                    "Old",
+                    emptyList()
+                )
+            )
+        )
+
+        bridge.restore(
+            SemanticSessionSnapshot(
+                jointValues =
+                    listOf(
+                        5.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    )
+            ),
+            bundle.projectRuntime.state,
+            "epson-c4-a601s"
+        )
+
+        assertTrue(!bundle.runtime.state.clockState.running)
+        assertEquals(
+            0L,
+            bundle.runtime.state.clockState.timeMillis
+        )
+        assertTrue(
+            bundle.runtime.state.ioState.outputs.isEmpty()
+        )
+        assertTrue(
+            bundle.runtime.state.taskState.tasks.isEmpty()
+        )
+        assertEquals(
+            mx.youteachtk.epsonrasimulator.runtime.ConnectionMode.LOCAL_SIMULATION,
+            bundle.runtime.state.connectionMode
+        )
+        assertSame(
+            bundle.runtime,
+            session.bundle.runtime
+        )
+    }
+
+    @Test
+    fun transientRuntimeChangesDoNotPublishSemanticChangeWhenProjectionIsUnchanged() {
+        val bridge = SemanticSessionBridge()
+        val bundle = AppRuntimeFactory.createDefault()
+        val session = AppSessionViewModel(
+            initialBundle = bundle,
+            semanticSession = bridge
+        )
+        var changes = 0
+        val subscription =
+            bridge.subscribe { changes += 1 }
+
+        bundle.runtime.dispatch(
+            RuntimeCommand.StartClock
+        )
+        bundle.runtime.dispatch(
+            RuntimeCommand.SetDigitalOutput(
+                DigitalIoAddress(11),
+                true
+            )
+        )
+
+        assertEquals(0, changes)
+        subscription.cancel()
+        assertSame(
+            bundle.runtime,
+            session.bundle.runtime
+        )
     }
 
 

@@ -36,6 +36,18 @@ class RcRobotManagerSession {
         )
     }
 
+    fun restoreState(
+        restored: RcRobotManagerSessionState
+    ) {
+        require(
+            restored.trainingStepDegrees.isFinite() &&
+                restored.trainingStepDegrees > 0.0
+        ) {
+            "Training step must be finite and greater than zero"
+        }
+        publishIfChanged(restored)
+    }
+
     fun subscribe(
         listener: (RcRobotManagerSessionState) -> Unit
     ): RcRobotManagerSubscription {
