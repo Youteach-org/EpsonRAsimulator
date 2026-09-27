@@ -257,7 +257,8 @@ class ProjectPersistenceCoordinator(
         val snapshot = captureSnapshot(
             projectId = projectId,
             projectName = projectName,
-            revision = currentRevision.coerceAtLeast(1)
+            revision = currentRevision.coerceAtLeast(1),
+            includeSemantic = false
         )
         execution.execute {
             val result = try {
@@ -438,6 +439,34 @@ class ProjectPersistenceCoordinator(
                         projectRuntime.state,
                         result.snapshot.robotId
                     )
+                } catch (
+                    _: IllegalArgumentException
+                ) {
+                    publish(
+                        ProjectPersistenceState(
+                            startup =
+                                PersistenceStartupStatus.ERROR,
+                            saveStatus =
+                                PersistenceSaveStatus.ERROR,
+                            message =
+                                "Saved semantic session is incompatible with the current runtime"
+                        )
+                    )
+                    return
+                } catch (
+                    _: IllegalStateException
+                ) {
+                    publish(
+                        ProjectPersistenceState(
+                            startup =
+                                PersistenceStartupStatus.ERROR,
+                            saveStatus =
+                                PersistenceSaveStatus.ERROR,
+                            message =
+                                "Saved semantic session is incompatible with the current runtime"
+                        )
+                    )
+                    return
                 } finally {
                     applyingOwnedProject = false
                 }
@@ -526,11 +555,26 @@ class ProjectPersistenceCoordinator(
                 importPublicationInvalidatedByEdit = true
             }
         }
-        val snapshot = captureSnapshot(
-            projectId,
-            projectName,
-            currentRevision
-        )
+        val snapshot = try {
+            captureSnapshot(
+                projectId,
+                projectName,
+                currentRevision
+            )
+        } catch (error: PersistenceException) {
+            publish(
+                state.copy(
+                    projectId = projectId,
+                    projectName = projectName,
+                    origin = state.origin,
+                    saveStatus =
+                        PersistenceSaveStatus.ERROR,
+                    message =
+                        "Project session capture failed: ${error.reason}"
+                )
+            )
+            return
+        }
         pendingSnapshot = snapshot
         publish(
             state.copy(
@@ -1048,7 +1092,8 @@ class ProjectPersistenceCoordinator(
     private fun captureSnapshot(
         projectId: String,
         projectName: String,
-        revision: Long
+        revision: Long,
+        includeSemantic: Boolean = true
     ): ProjectSnapshot =
         ProjectSnapshot(
             projectId = projectId,
@@ -1058,9 +1103,13 @@ class ProjectPersistenceCoordinator(
             revision = revision,
             resources = projectRuntime.export(),
             sidecar =
-                semanticSession?.capture()?.let {
-                    semanticCodec.encode(it)
-                } ?: byteArrayOf()
+                if (includeSemantic) {
+                    semanticSession?.capture()?.let {
+                        semanticCodec.encode(it)
+                    } ?: byteArrayOf()
+                } else {
+                    byteArrayOf()
+                }
         )
 
     private fun hasUnsavedWork(): Boolean =
