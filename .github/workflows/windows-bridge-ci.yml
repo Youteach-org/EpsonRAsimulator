@@ -66,6 +66,10 @@ jobs:
             throw "Reference-assembly packages must remain build-only."
           }
 
+      - name: Self-test virtual controller probe safety guards
+        shell: pwsh
+        run: pwsh -NoProfile -File windows-bridge/probes/virtual-controller-probe.ps1 -SelfTest
+
       - name: Upload TRX
         if: always()
         uses: actions/upload-artifact@v4
