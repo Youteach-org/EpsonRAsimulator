@@ -98,6 +98,14 @@ class RcProjectNavigationSession {
         return windowId
     }
 
+    fun restoreSelection(nodeId: String?) {
+        publishIfChanged(
+            RcProjectNavigationState(
+                selectedNodeId = nodeId
+            )
+        )
+    }
+
     fun subscribe(
         listener: (RcProjectNavigationState) -> Unit
     ): RcProjectNavigationSubscription {
