@@ -1,0 +1,75 @@
+name: Windows Bridge CI
+
+on:
+  pull_request:
+    paths:
+      - "windows-bridge/**"
+      - ".github/workflows/windows-bridge-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  readiness-tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Test readiness core
+        shell: pwsh
+        run: dotnet test windows-bridge/tests/EpsonRa.Bridge.Readiness.Tests/EpsonRa.Bridge.Readiness.Tests.csproj -c Release --logger "trx;LogFileName=readiness.trx"
+      - name: Build inspect host
+        shell: pwsh
+        run: dotnet build windows-bridge/src/EpsonRa.Bridge.Inspect/EpsonRa.Bridge.Inspect.csproj -c Release
+
+      - name: Execute inspect against empty root
+        shell: pwsh
+        run: |
+          $emptyRoot = Join-Path $env:RUNNER_TEMP "epson-readiness-empty"
+          New-Item -ItemType Directory -Path $emptyRoot -Force | Out-Null
+          $exe = Resolve-Path "windows-bridge/src/EpsonRa.Bridge.Inspect/bin/Release/net48/EpsonRa.Bridge.Inspect.exe"
+          $jsonFile = Join-Path $env:RUNNER_TEMP "inspect-empty-root.json"
+          $process = Start-Process -FilePath $exe.Path -ArgumentList @("inspect", "--install-root", $emptyRoot) -Wait -PassThru -NoNewWindow -RedirectStandardOutput $jsonFile
+          $exitCode = $process.ExitCode
+          $jsonText = Get-Content $jsonFile -Raw
+          if ($exitCode -ne 2) {
+            throw "Expected inspect exit code 2 for an empty root, got $exitCode."
+          }
+          $json = $jsonText | ConvertFrom-Json
+          if ($json.schemaVersion -ne 1) {
+            throw "Expected schemaVersion 1."
+          }
+          if ($json.ready -ne $false) {
+            throw "Expected ready=false for an empty root."
+          }
+
+      - name: Verify inspect output is proprietary-free
+        shell: pwsh
+        run: |
+          $outputDir = Resolve-Path "windows-bridge/src/EpsonRa.Bridge.Inspect/bin/Release/net48"
+          $rcapi = Get-ChildItem $outputDir -Recurse -File | Where-Object { $_.Name -ieq "RCAPINet.dll" }
+          if ($rcapi) {
+            throw "Proprietary RCAPINet.dll must not be present in inspect output."
+          }
+          $vendorDlls = Get-ChildItem $outputDir -Recurse -File -Filter *.dll | Where-Object {
+            $_.VersionInfo.CompanyName -match "SEIKO EPSON"
+          }
+          if ($vendorDlls) {
+            throw "SEIKO EPSON assemblies must not be present in inspect output."
+          }
+          $referencePackages = Get-ChildItem $outputDir -Recurse -Force | Where-Object {
+            $_.Name -like "Microsoft.NETFramework.ReferenceAssemblies*"
+          }
+          if ($referencePackages) {
+            throw "Reference-assembly packages must remain build-only."
+          }
+
+      - name: Upload TRX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-bridge-readiness-trx
+          path: windows-bridge/tests/EpsonRa.Bridge.Readiness.Tests/TestResults/readiness.trx
+          if-no-files-found: ignore

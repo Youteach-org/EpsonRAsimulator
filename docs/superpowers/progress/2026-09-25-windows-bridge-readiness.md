@@ -1,0 +1,39 @@
+# Phase9B progress
+
+Base323d6f3a43390a4447f69d718b97305e9353e5d8 (Phase9A PR20, Android CI385 successful).
+User approved Windows readiness design on2026-09-25. Executable three-task plan written and self-reviewed; awaiting plan review. Preserve authorized multiagent method. No product code, native SDK activation, install changes or controller contact. Inventory is read-only evidence, not licensing/native acceptance.
+
+
+2026-09-25 execution resume: user explicitly instructed continue from the latest remote point; executable plan gate treated as approved for this already-authored Phase9B plan. No merge/main changes.
+Ruling: no subagent runtime is exposed in this harness, so execute the approved plan with superpowers:executing-plans inline while preserving task-scoped review gates and one whole-branch final review — avoids fabricating agents; cost if wrong is weaker fresh-context isolation.
+Preflight package ruling: pin MSTest.TestFramework/MSTest.TestAdapter 4.4.0 together and Microsoft.NET.Test.Sdk 18.10.1; net48 compatibility verified from current NuGet metadata on 2026-09-25. ReferenceAssemblies.net48 remains 1.0.3 build-only/private.
+Ruling: move the Windows pull_request workflow scaffold from Task3 to Task1 so each remote TDD RED/GREEN is observable in this GitHub-only execution environment. Task3 will extend the same workflow with CLI acceptance/output checks; cost is earlier CI configuration, not product scope.
+Task1 detached readiness/root-selection active. First checkpoint is tests-only RED: net48 project scaffolding + ReadinessInspectorTests + Windows CI, with no readiness production types implemented.
+
+
+Task1 RED 5acd38e69dd0e69bfe2a404f6586cf5a06ddb428 / Windows Bridge CI1 failed on the intended absent readiness types. Test namespace correction 274c75658fcf16f20baaccf8eee0fa36b4d3863d / Windows CI2 remained RED on the same missing production types, confirming the harness.
+Task1 GREEN c76dfeab94f474d9a66421ea5cadd5970942975d / Windows Bridge CI3 SUCCESS; Android CI404 SUCCESS for unit tests, debug APK and artifact upload. Scoped review: explicit-root no-fallback, path normalization/deduplication, detached check collections and UNVERIFIED license/native facts match the design; no native activation path exists.
+Task1 COMPLETE. Task2 metadata-only adapter and inspect CLI active.
+Ruling: official EPSON RC+ 7.5 user guide identifies the GUI executable as C:\EpsonRC70\exe\erc70.exe; readiness checks that path by file metadata only and never launches it. RCAPINet is inspected with AssemblyName.GetAssemblyName only, never Assembly.Load.
+
+Task2 CLI acceptance first run 36186528599: 19/19 tests PASS and Release build PASS with 0 warnings/errors; the workflow step itself failed before assertions because direct PowerShell invocation treated the CLI's expected nonzero exit 2 as a step failure. Root cause is CI harness invocation, not readiness behavior. Fix uses Start-Process/PassThru to capture the expected exit code and stdout JSON explicitly; production code unchanged.
+
+Task2 RED 9ea31ce2a8083a7e885943decaf566a66886be61 / Windows Bridge CI4 failed on the intended absent InspectCommand namespace after core/fixture restore and build setup succeeded. Additional pre-production test bdb4ae3056ae9ca97328fcc28c06ef4bb54f2d18 asserts unavailable registry product version remains informational.
+Task2 GREEN implementation culminated at c14984302e2fd3e485bae939e251cc27eb5b9725: metadata-only WindowsReadinessEnvironment, JSON InspectCommand/Program host, and rcPlusVersion informational semantics. Windows CI8 passed 19/19 net48 tests and Release build.
+Task2 acceptance harness corrected without production changes after run 36186528599 exposed PowerShell treating expected exit2 as a step failure. Exact-head checkpoint 6079122941689149dff5dd983c8b7090f199e0ab / Windows Bridge CI10 run 36186794329 SUCCESS: 19/19 tests, Release build succeeded with 0 warnings/0 errors, and real inspect execution against an empty root accepted exit2 with schemaVersion1/ready=false.
+Task 2: COMPLETE. Task3 virtual-target eligibility/CI hardening/documentation active. First checkpoint is tests-only RED; no selection production type exists yet.
+
+Task3 RED 7887762fa1b9910ecb457b0629cd8b95c101c716 / Windows Bridge CI12 failed on the intended absent Eligibility, VirtualTargetPolicy, TargetDescriptor and TargetKind production types.
+Task3 GREEN c669466aa29aeed41bafe29e66482b4d32e251df / Windows Bridge CI13 SUCCESS: 29/29 net48 tests, Release build, empty-root CLI acceptance. Pure policy uses exact ordinal identity, rejects blank/null/physical/unknown, treats duplicate exact identity as Ambiguous, and returns only eligibility—not connection authority.
+Task3 verification/docs head f4f27861fe2d6cc6257dd96bfb95128471e24de4 / Windows Bridge CI14 SUCCESS: 29/29 tests, Release build 0 warnings/0 errors, empty-root inspect acceptance, and proprietary-output gate passed (no RCAPINet.dll, SEIKO EPSON DLL, or reference-assembly package in CLI output).
+Ruling: actual read-only `inspect --install-root C:\EpsonRC70` acceptance remains UNVERIFIED because this execution harness exposes no local Windows shell. GitHub Windows CI cannot substitute for the Epson-equipped machine. Cost if wrong: installed-machine metadata/registry edge cases remain unknown until that explicit acceptance run.
+Task 3: COMPLETE (except explicitly deferred local-machine acceptance above). All planned product code is implemented; proceed to whole-branch review before final exact-head verification.
+
+
+2026-09-27 final-review resume: synchronized actual remote head 822a96a7c0af57f635f5a20ce738ebb62f7ba5d0; Android CI421/run36187924326 and Windows Bridge CI20/run36187924349 succeeded. All three planned tasks were already implemented; no task was repeated.
+Local-machine acceptance is now VERIFIED for metadata only: compiled those exact production sources with installed Roslyn C#7.3 and ran inspect --install-root C:\EpsonRC70. Exit0, ready=true, RC+7.5.3, executable/API metadata PRESENT; license/nativeRuntime UNVERIFIED. This manual compilation is not a local SDK restore or MSTest run. No Epson assembly activation, connection or installation changes occurred.
+The single independent whole-branch review found 0 Critical, 2 Important: malformed path validation could throw before error handling; Directory.Exists/File.Exists hid access/I/O failures as MISSING. One final correction wave is active, with six deterministic regressions.
+Final-fix RED 1e5afeb52f1327d875d425e6447840f36678db9d / Windows Bridge CI21/run36342426911/job108684983857: intended CS1729 failures for the absent injectable metadata-probe constructor confirmed. CLI malformed-root crash was also reproduced locally before the fix. Await GREEN and exact-head CI before marking 9B complete.
+Final-fix GREEN 2078b7742e8288a9a8fc640f51b2671fdaa14b42 / Windows Bridge CI22/run36342651579/job108685635679 SUCCESS: 36/36 tests, Release build 0 warnings/0 errors, empty-root exit2/schema acceptance, proprietary-free output gate and TRX upload. Both Important findings are resolved by this single correction wave; no second whole-branch review was run.
+Repeated local acceptance from GREEN production sources: installed C:\EpsonRC70 exit0/ready=true/RC+7.5.3; malformed C:\bad|root produces one INVALID_ARGUMENTS JSON document and exit64. Both Roslyn compilations exit0. License/nativeRuntime remain UNVERIFIED. Android CI443/run36342651551 is pending at this documentation checkpoint; final cross-platform status is recorded in PR22. All Phase9B implementation/review/local acceptance work is complete; retain Draft stacked on PR20 and do not merge.
+
