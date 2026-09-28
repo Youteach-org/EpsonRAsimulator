@@ -185,7 +185,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
         private static void AppendQuoted(StringBuilder builder, string value)
         {
             if (builder.Length > 0) builder.Append(' ');
-            builder.Append('"').Append((value ?? string.Empty).Replace(""", "\"")).Append('"');
+            builder.Append((char)34).Append(value ?? string.Empty).Append((char)34);
         }
 
         private sealed class BoundedCollector
