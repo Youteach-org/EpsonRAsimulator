@@ -17,7 +17,12 @@ switch ($Mode) {
             stage = "Synthetic"
             status = "PASS"
             success = $true
-            cleanup = "COMPLETE"
+            cleanup = [ordered]@{
+                disconnectAttempted = $true
+                disconnectSucceeded = $true
+                disposeAttempted = $true
+                disposeSucceeded = $true
+            }
         })
         exit 0
     }
