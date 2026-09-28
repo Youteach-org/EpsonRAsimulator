@@ -49,7 +49,14 @@ namespace EpsonRa.Bridge.Research.Tests
                 var bytes = PeFixture(0x14c, 0x9);
                 Array.Resize(ref bytes, length);
                 using (var stream = new MemoryStream(bytes))
-                    Assert.ThrowsException<InvalidDataException>(() => PeImageInspector.Inspect(stream));
+                    try
+                    {
+                        PeImageInspector.Inspect(stream);
+                        Assert.Fail("Expected InvalidDataException.");
+                    }
+                    catch (InvalidDataException)
+                    {
+                    }
             }
         }
 
@@ -62,7 +69,14 @@ namespace EpsonRa.Bridge.Research.Tests
             Write32(unmapped, 0x168, 0x9000);
             foreach (var bytes in new[] { absent, unmapped })
                 using (var stream = new MemoryStream(bytes))
-                    Assert.ThrowsException<InvalidDataException>(() => PeImageInspector.Inspect(stream));
+                    try
+                    {
+                        PeImageInspector.Inspect(stream);
+                        Assert.Fail("Expected InvalidDataException.");
+                    }
+                    catch (InvalidDataException)
+                    {
+                    }
         }
 
         [TestMethod]
