@@ -11,6 +11,25 @@ function Write-JsonLine {
 }
 
 switch ($Mode) {
+    "SuccessThenError" {
+        Write-JsonLine ([ordered]@{ schemaVersion = 1; success = $true; cleanup = "COMPLETE" })
+        Write-Error "Synthetic nonterminating error" -ErrorAction Continue
+        return
+    }
+    "FailedDispose" {
+        Write-JsonLine ([ordered]@{
+            schemaVersion = 1; success = $true
+            cleanup = [ordered]@{ disposeAttempted = $true; disposeSucceeded = $false }
+        })
+        exit 0
+    }
+    "FailedDisconnect" {
+        Write-JsonLine ([ordered]@{
+            schemaVersion = 1; success = $true
+            cleanup = [ordered]@{ disconnectAttempted = $true; disconnectSucceeded = $false; disposeAttempted = $true; disposeSucceeded = $true }
+        })
+        exit 0
+    }
     "Success" {
         Write-JsonLine ([ordered]@{
             schemaVersion = 1
@@ -74,3 +93,4 @@ switch ($Mode) {
         throw [System.ArgumentException]::new("Unsupported synthetic mode.")
     }
 }
+

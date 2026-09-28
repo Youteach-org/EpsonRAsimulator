@@ -122,3 +122,6 @@ The supervisor has been synthetic-only verified; native Inventory/Connect is NOT
 Resolve the mandatory native gates in the handoff before proposing any native command.
 Never use numeric/default/last-used or physical fallback; C4 Sample must remain exact Virtual by name.
 Keep PR24 Draft/stacked, persist new evidence/decisions to GitHub, and do not merge main.
+
+
+UPDATE2026-09-28: supervisor first independent review completed0Critical/2Important/1Minor; bothImportant fixed in one localRED/GREENwave (worker nonterminating error false success; failed cleanup false success). Supervisor12/12, probe7selftests/6arguments/1errornormalizationPASS. New CI pending. MinorM1null/singletonarrayJSONclassificationdeferred. Do not redo supervisor or prior9B/probereviews. Host effectiveRestricted, PS5.1x64; EpsonRC+/server stillopen; no native/policy changes. Next: verify newCI then resolve mandatorynativegates, not assume screenshot/continue authorizesnative. Currentlocalworktree work/EpsonRAsimulator-phase6d is materializedsnapshot; nevergitpush. Use explicitGitHubfiles commit/ref forcefalse onrealHEAD.

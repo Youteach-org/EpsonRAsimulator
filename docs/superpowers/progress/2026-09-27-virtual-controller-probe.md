@@ -51,3 +51,18 @@ Synthetic supervisor coverage includes valid completion, worker-reported failure
 Self-review against the approved proposal found no remaining Critical/Important issue in the synthetic-only boundary. There is no fresh reviewer subagent available in this harness, so this is author self-review rather than an independent review.
 
 Native Task3 remains NOT RUN. The supervisor does not resolve native host/bitness, PowerShell execution policy, Auto Connect, physical isolation, unused server instance, exact current C4 Sample configuration, or the pre-initialization observation boundary. Those remain mandatory conditions before any native command is proposed or executed.
+
+
+## 2026-09-28 independent supervisor review
+
+Resumed actual remote7cdb8ac (WindowsCI46/AndroidCI471 SUCCESS), materialized locally without pushing snapshot ancestry. Existing synthetic suite passed9cases locally.
+
+First independent review of the supervisor-only change:0Critical,2Important,1Minor. This does not repeat the completed9B/native-probe review. I1: success JSON followed by a nonterminating PowerShell error was incorrectly COMPLETED. I2: explicit failed Disconnect/Dispose cleanup was preserved but still incorrectly COMPLETED.
+
+One fix wave: launcher captures typed PowerShell error records and terminating invocation errors without leaking raw messages; explicit boolean false disconnectSucceeded/disposeSucceeded prevents supervisor success while preserving the cleanup evidence. Local RED SuccessThenError observed before launcher fix; next RED FailedDispose observed before cleanup fix; reviewer independently reproduced both failure classes. GREEN12/12 supervisor cases,6argument regressions,1error-normalization regression,7probe self-tests; git diff check clean. Exact new remote CI pending; consult PR24.
+
+Final minor deferred M1: JSON null root gets generic supervisor failure and singleton-array result can flatten to an object. No second global review/fix pass. This diagnostic/schema limitation is retained explicitly.
+
+Review rulings: native lifecycle/authority and host acceptance remain unverified; cost of inferring them from CI is invalid native acceptance. Keep prior native worker outside repeat review; the new failures belong to supervisor handling. Preserve single-created-worker termination only, never shared/descendant Epson process killing. Reviewer reproduced a1-second timeout returning in1.805seconds, not a universal OS deadline guarantee; post-kill/OS failure timing remains an acceptance limitation. Remote CI is independently checked by controller, not inferred from review. No merge or unrelated change is approved.
+
+Read-only host check: WindowsPowerShell5.1.22000.282 x64, CLR4.0.30319.42000, effectiveRestricted (all policy scopesUndefined). Installed VS2019 Epson sample targets.NET4.5/x86; this is sample evidence, not proof RCAPINet requiresx86. erc70 anderc70PServer still running. No policy change/bypass, native assembly load, Inventory, Connect or automatic process shutdown occurred.

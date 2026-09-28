@@ -66,6 +66,20 @@ function Invoke-SupervisorCase {
 }
 
 try {
+    foreach ($mode in @("SuccessThenError", "FailedDispose", "FailedDisconnect")) {
+        $contradictory = Invoke-SupervisorCase -Mode $mode
+        Assert-True ($contradictory.ExitCode -eq 3) "$mode must fail despite success JSON."
+        Assert-True ($contradictory.Json.success -eq $false) "$mode must not claim success."
+        if ($mode -eq "SuccessThenError") {
+            Assert-True ($contradictory.Json.workerExitCode -ne 0) "Worker invocation error must survive launcher."
+        }
+        elseif ($mode -eq "FailedDispose") {
+            Assert-True ($contradictory.Json.cleanup.disposeSucceeded -eq $false) "Failed dispose evidence must survive."
+        }
+        else {
+            Assert-True ($contradictory.Json.cleanup.disconnectSucceeded -eq $false) "Failed disconnect evidence must survive."
+        }
+    }
     $success = Invoke-SupervisorCase -Mode "Success"
     Assert-True ($success.ExitCode -eq 0) ("Success worker must yield supervisor exit 0; exit={0}; parseFailed={1}; stdout={2}; stderr={3}" -f $success.ExitCode, $success.ParseFailed, $success.Stdout, $success.Stderr)
     Assert-True ($success.Json.status -eq "COMPLETED") "Success worker must yield COMPLETED."
@@ -121,7 +135,7 @@ try {
     Assert-True ($badTimeout.ExitCode -eq 64) "Timeout below range must yield exit 64."
     Assert-True ($badTimeout.Json.status -eq "INVALID_ARGUMENTS") "Invalid timeout must stay structured."
 
-    [Console]::Out.WriteLine('{"schemaVersion":1,"suite":"virtual-controller-supervisor","status":"PASS","cases":9}')
+    [Console]::Out.WriteLine('{"schemaVersion":1,"suite":"virtual-controller-supervisor","status":"PASS","cases":12}')
     exit 0
 }
 finally {
@@ -129,3 +143,4 @@ finally {
         Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
+

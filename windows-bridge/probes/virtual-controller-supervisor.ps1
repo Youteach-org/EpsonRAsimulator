@@ -138,7 +138,25 @@ if ($null -ne $payload.args) {
         $workerArgs[$property.Name] = $property.Value
     }
 }
-& ([string]$payload.script) @workerArgs
+$workerHadError = $false
+try {
+    & ([string]$payload.script) @workerArgs 2>&1 | ForEach-Object {
+        if ($_ -is [System.Management.Automation.ErrorRecord]) {
+            $workerHadError = $true
+            [Console]::Error.WriteLine('Worker error record.')
+        }
+        else {
+            Write-Output $_
+        }
+    }
+}
+catch {
+    [Console]::Error.WriteLine('Worker invocation failed.')
+    exit 1
+}
+if ($workerHadError) {
+    exit 1
+}
 if ($null -ne $LASTEXITCODE) {
     exit $LASTEXITCODE
 }
@@ -321,7 +339,17 @@ try {
                         $result.cleanup = "UNKNOWN"
                     }
 
-                    if ($process.ExitCode -eq 0 -and [bool]$successProperty.Value) {
+                    $cleanupFailed = $false
+                    foreach ($operation in @("disconnectSucceeded", "disposeSucceeded")) {
+                        $operationResult = $result.cleanup.PSObject.Properties[$operation]
+                        if ($null -ne $operationResult -and
+                            $operationResult.Value -is [bool] -and
+                            $operationResult.Value -eq $false) {
+                            $cleanupFailed = $true
+                        }
+                    }
+
+                    if ($process.ExitCode -eq 0 -and [bool]$successProperty.Value -and -not $cleanupFailed) {
                         $result.status = "COMPLETED"
                         $result.success = $true
                         $result.error = $null
@@ -360,3 +388,4 @@ finally {
 }
 
 Write-FinalResult -Value $result -Code $exitCode
+
