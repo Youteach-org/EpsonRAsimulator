@@ -315,7 +315,7 @@ try {
 
                     $cleanupProperty = $workerResult.PSObject.Properties["cleanup"]
                     if ($null -ne $cleanupProperty -and $null -ne $cleanupProperty.Value) {
-                        $result.cleanup = [string]$cleanupProperty.Value
+                        $result.cleanup = $cleanupProperty.Value
                     }
                     else {
                         $result.cleanup = "UNKNOWN"
