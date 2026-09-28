@@ -79,15 +79,13 @@ namespace EpsonRa.Bridge.Research.Supervisor
 
                 if (!process.WaitForExit(request.TimeoutSeconds * 1000))
                 {
-                    var cleanup = "UNKNOWN";
                     try
                     {
                         process.Kill();
-                        if (process.WaitForExit(2000))
-                            cleanup = "CONFIRMED";
+                        process.WaitForExit(2000);
                     }
                     catch { }
-                    return Fail(124, "INCONCLUSIVE_TIMEOUT", cleanup, "Timeout", null);
+                    return Fail(124, "INCONCLUSIVE_TIMEOUT", "UNKNOWN", "Timeout", null);
                 }
 
                 var workerExit = process.ExitCode;
