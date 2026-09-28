@@ -72,8 +72,10 @@ function Resolve-ExistingFile {
 function Read-WorkerArguments {
     param([string]$ArgumentsPath)
 
+    $resultArgs = [ordered]@{}
+
     if ([string]::IsNullOrWhiteSpace($ArgumentsPath)) {
-        return @()
+        return ,$resultArgs
     }
 
     $resolved = Resolve-ExistingFile -PathValue $ArgumentsPath
@@ -83,32 +85,44 @@ function Read-WorkerArguments {
 
     $raw = Get-Content -LiteralPath $resolved -Raw
     if ([string]::IsNullOrWhiteSpace($raw)) {
-        return @()
+        return ,$resultArgs
     }
 
     $decoded = $raw | ConvertFrom-Json
-    $items = @($decoded)
-    $resultArgs = @()
-
-    foreach ($item in $items) {
-        if ($item -isnot [string]) {
-            throw [System.ArgumentException]::new("Worker arguments must be JSON strings.")
-        }
-        $resultArgs += [string]$item
+    if ($decoded -is [System.Array] -or $decoded -isnot [pscustomobject]) {
+        throw [System.ArgumentException]::new("Worker arguments must be one JSON object.")
     }
 
-    return $resultArgs
+    foreach ($property in @($decoded.PSObject.Properties)) {
+        if ([string]::IsNullOrWhiteSpace($property.Name)) {
+            throw [System.ArgumentException]::new("Worker argument names must be nonblank.")
+        }
+
+        $value = $property.Value
+        if ($value -is [System.Array] -or $value -is [pscustomobject]) {
+            throw [System.ArgumentException]::new("Worker argument values must be scalar.")
+        }
+
+        $resultArgs[$property.Name] = $value
+    }
+
+    return ,$resultArgs
 }
 
 function New-EncodedWorkerCommand {
     param(
         [string]$ScriptPath,
-        [string[]]$Arguments
+        [System.Collections.IDictionary]$Arguments
     )
+
+    $payloadArgs = [ordered]@{}
+    foreach ($key in $Arguments.Keys) {
+        $payloadArgs[[string]$key] = $Arguments[$key]
+    }
 
     $payloadJson = ([ordered]@{
         script = $ScriptPath
-        args = @($Arguments)
+        args = $payloadArgs
     } | ConvertTo-Json -Compress -Depth 4)
 
     $payloadBase64 = [Convert]::ToBase64String(
@@ -118,12 +132,20 @@ function New-EncodedWorkerCommand {
     $launcherTemplate = @'
 $payloadJson = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('__PAYLOAD_BASE64__'))
 $payload = $payloadJson | ConvertFrom-Json
-$workerArgs = @()
+$workerArgs = @{}
 if ($null -ne $payload.args) {
-    $workerArgs = @($payload.args | ForEach-Object { [string]$_ })
+    foreach ($property in @($payload.args.PSObject.Properties)) {
+        $workerArgs[$property.Name] = $property.Value
+    }
 }
 & ([string]$payload.script) @workerArgs
-exit $LASTEXITCODE
+if ($null -ne $LASTEXITCODE) {
+    exit $LASTEXITCODE
+}
+if ($?) {
+    exit 0
+}
+exit 1
 '@
 
     $launcher = $launcherTemplate.Replace("__PAYLOAD_BASE64__", $payloadBase64)
@@ -162,9 +184,9 @@ if ($null -eq $resolvedHost -or $null -eq $resolvedWorker) {
     Write-FinalResult -Value $result -Code 64
 }
 
-$workerArguments = @()
+$workerArguments = [ordered]@{}
 try {
-    $workerArguments = @(Read-WorkerArguments -ArgumentsPath $WorkerArgumentsPath)
+    $workerArguments = Read-WorkerArguments -ArgumentsPath $WorkerArgumentsPath
 }
 catch {
     $result.status = "INVALID_ARGUMENTS"
