@@ -1,0 +1,124 @@
+EpsonRAsimulator handoff — 2026-09-27
+
+REPOSITORY
+- Repo: Youteach-org/EpsonRAsimulator
+- PR: #24 (Draft)
+- Branch: research/virtual-controller-probe
+- Base: feature/windows-bridge-readiness @ 122ad2a8a8dc5ffa5ddb07a36145eec2722ca559
+- Completed Phase 9B / PR22 MUST NOT be repeated or merged as part of this work.
+- Always verify the real PR24 HEAD before resuming; this handoff is durable context, not authority over newer remote state.
+
+CURRENT IMPLEMENTATION
+- Final synthetic-supervisor code head before documentation commits:
+  60c73d2312b563552820c9a274eba7695b673e55
+- At that exact code head:
+  - Windows Bridge CI #42 / run 36380335196: SUCCESS
+  - Android CI #467 / run 36380335308: SUCCESS
+- Documentation commits after that code head record the supervisor result; verify current PR24 HEAD and its exact-head runs on resume.
+
+WHAT IS COMPLETE
+1. Phase 9B Windows readiness: complete in PR22. Do not repeat.
+2. PR24 virtual-controller research probe corrections/review: complete.
+3. Exact installed API Rev20 audit: complete and recorded. It does NOT prove a connection-free Initialize/GetConnectionInfo path.
+4. Synthetic supervisor design: approved by user.
+5. Proprietary-free supervisor implementation:
+   windows-bridge/probes/virtual-controller-supervisor.ps1
+6. Synthetic fixtures/tests:
+   windows-bridge/probes/tests/synthetic-supervisor-worker.ps1
+   windows-bridge/probes/tests/test-virtual-controller-supervisor.ps1
+7. Supervisor behavior verified in CI:
+   - default deadline 30 s, allowed 1..120 s;
+   - explicit worker host and worker script, no implicit host choice;
+   - named worker args supplied as one JSON object;
+   - successful completion;
+   - worker-reported failure;
+   - thrown/no-result worker;
+   - malformed JSON;
+   - multiple result documents;
+   - timeout during synthetic operation;
+   - timeout during synthetic cleanup;
+   - unrelated sentinel host process survives timeout;
+   - timeout range validation;
+   - structured probe-shaped cleanup evidence is preserved.
+8. Timeout behavior:
+   - kill only the worker process created by this invocation;
+   - never stop Epson/RC+ application/server processes;
+   - INCONCLUSIVE_TIMEOUT;
+   - cleanup=UNKNOWN;
+   - no automatic retry.
+
+TDD / DEBUGGING EVIDENCE
+- Windows CI34 / run36379056051: explicit RED; supervisor absent.
+- Root-caused launcher bug: PowerShell -f interpreted code braces as format tokens.
+- Root-caused argument bug: flat array splatting bound worker options positionally.
+- Named JSON object argument contract was RED-verified in Windows CI39 / run36379824907 before implementation.
+- Windows CI40 / run36379982043: supervisor suite GREEN.
+- Probe-shaped cleanup preservation was RED-tested in Windows CI41 / run36380235030.
+- Fix preserved structured cleanup; exact code head 60c73d2 passed WindowsCI42 and AndroidCI467.
+
+FILES / DURABLE STATE
+- docs/superpowers/research/2026-09-27-virtual-controller-probe.md
+- docs/superpowers/research/2026-09-27-native-acceptance-proposal.md
+- docs/superpowers/progress/2026-09-27-virtual-controller-probe.md
+- docs/superpowers/plans/2026-09-27-virtual-controller-probe.md
+- windows-bridge/probes/virtual-controller-probe.ps1
+- windows-bridge/probes/virtual-controller-supervisor.ps1
+- windows-bridge/probes/tests/test-virtual-controller-supervisor.ps1
+- windows-bridge/probes/tests/synthetic-supervisor-worker.ps1
+- .github/workflows/windows-bridge-ci.yml
+
+NATIVE ACCEPTANCE STATUS
+- NOT RUN.
+- No Inventory call.
+- No Connect call.
+- No Epson DLL was loaded during supervisor CI.
+- Do not infer native safety from supervisor CI.
+
+KNOWN LOCAL EPSON FACTS
+- EPSON RC+ 7.0 version 7.5.3.
+- Previous inventory found C:\EpsonRC70\exe\RCAPINet.dll.
+- User screenshot identified exact configured target name: C4 Sample.
+- Screenshot showed connection number 2, type Virtual, disconnected.
+- Connection number is evidence only; NEVER use it as Connect argument.
+- Screenshot showed Auto Connect checked at that time. There is no later confirmation that it was turned off.
+- Previous local Preflight found two Epson processes running and returned EPSON_PROCESS_RUNNING/exit2. No process was stopped automatically.
+
+MANDATORY NATIVE GATES — ALL unresolved unless explicitly re-confirmed later
+1. RC+ / Epson processes closed manually; tooling must not kill them automatically.
+2. Auto Connect confirmed OFF.
+3. No physical controller reachable by USB, Ethernet or network.
+4. Exact C4 Sample still present and type Virtual.
+5. Unused ServerInstance selected.
+6. Native worker host / bitness compatibility verified. Do not silently choose pwsh just because CI uses it.
+7. Existing PowerShell execution-policy issue resolved by host design or an explicitly accepted method; do not change policy automatically.
+8. Initialization-observation boundary resolved. Rev20 does not guarantee that Initialize/GetConnectionInfo is connection-free, and GetCurrentConnectionInfo must not be inserted before Connect merely as a guess.
+9. Final native command, host, 30 s (or explicitly selected 1..120 s) deadline and expected side effects reviewed/approved separately.
+10. Inventory must precede Connect; no physical/default/last-used/numeric fallback.
+11. Still forbidden: project load/build/sync, Robot selection, motors, movement, tasks, I/O, arbitrary SPEL, Android/transport integration.
+
+NEXT SAFE ACTION
+- Do NOT run native acceptance yet.
+- First resolve/verify the native gates above, especially:
+  a) host/bitness + execution method;
+  b) Auto Connect / physical isolation / exact Virtual target;
+  c) an acceptable externally isolated initialization-observation procedure.
+- Once those conditions are explicit, present the exact native Inventory command + expected side effects for user approval.
+- Only after Inventory proves exactly one C4 Sample / Virtual candidate may a separate Connect command be proposed.
+- A timeout, crash, unexpected implicit connection, ambiguous target or cleanup uncertainty remains inconclusive and must not auto-retry.
+
+GIT / PROCESS RULES
+- Keep PR24 Draft and stacked.
+- No main merge.
+- GitHub is durable state; record all decisions/results here.
+- Before resuming, inspect PR24, branch HEAD, CI and this handoff to avoid duplicate work.
+- No Epson proprietary binary in Git/CI artifacts.
+- Do not perform native actions merely because pure CI is green.
+
+CONTINUATION PROMPT — USE ONLY IF CHAT QUOTA/CONTEXT IS ACTUALLY EXHAUSTED
+Continue EpsonRAsimulator from outputs/handoff-epsonrasimulator.txt.
+First verify the real HEAD and exact-head CI of Draft PR24 on research/virtual-controller-probe.
+Do not repeat Phase9B, probe corrections, Rev20 audit or synthetic supervisor implementation.
+The supervisor has been synthetic-only verified; native Inventory/Connect is NOT RUN.
+Resolve the mandatory native gates in the handoff before proposing any native command.
+Never use numeric/default/last-used or physical fallback; C4 Sample must remain exact Virtual by name.
+Keep PR24 Draft/stacked, persist new evidence/decisions to GitHub, and do not merge main.
