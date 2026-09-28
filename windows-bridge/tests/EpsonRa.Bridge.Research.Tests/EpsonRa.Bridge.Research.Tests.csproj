@@ -15,4 +15,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\EpsonRa.Bridge.Research\EpsonRa.Bridge.Research.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../EpsonRa.Bridge.Research.Fixture/EpsonRa.Bridge.Research.Fixture.csproj" />
+    <ProjectReference Include="../../src/EpsonRa.Bridge.Research.Supervisor/EpsonRa.Bridge.Research.Supervisor.csproj" />
+  </ItemGroup>
 </Project>
