@@ -29,8 +29,10 @@ function Invoke-SupervisorCase {
     $stdoutFile = Join-Path $tempRoot ($caseId + "-stdout.json")
     $stderrFile = Join-Path $tempRoot ($caseId + "-stderr.txt")
 
-    @("-Mode", $Mode, "-DelaySeconds", [string]$WorkerDelaySeconds) |
-        ConvertTo-Json -Compress |
+    ([ordered]@{
+        Mode = $Mode
+        DelaySeconds = $WorkerDelaySeconds
+    } | ConvertTo-Json -Compress) |
         Set-Content -LiteralPath $argsFile -Encoding UTF8
 
     $process = Start-Process -FilePath $hostPath -ArgumentList @(
