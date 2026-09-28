@@ -20,6 +20,9 @@ jobs:
       - name: Test readiness core
         shell: pwsh
         run: dotnet test windows-bridge/tests/EpsonRa.Bridge.Readiness.Tests/EpsonRa.Bridge.Readiness.Tests.csproj -c Release --logger "trx;LogFileName=readiness.trx"
+      - name: Test research core with synthetic PE images
+        shell: pwsh
+        run: dotnet test windows-bridge/tests/EpsonRa.Bridge.Research.Tests/EpsonRa.Bridge.Research.Tests.csproj -c Release --logger "trx;LogFileName=research.trx"
       - name: Build inspect host
         shell: pwsh
         run: dotnet build windows-bridge/src/EpsonRa.Bridge.Inspect/EpsonRa.Bridge.Inspect.csproj -c Release
@@ -130,4 +133,5 @@ jobs:
           name: windows-bridge-readiness-trx
           path: windows-bridge/tests/EpsonRa.Bridge.Readiness.Tests/TestResults/readiness.trx
           if-no-files-found: ignore
+
 

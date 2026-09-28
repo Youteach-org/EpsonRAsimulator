@@ -92,3 +92,9 @@ Read C:\EpsonRC70\exe\RCAPINet.dll as bytes only: Machine0x14c, PE32, CorFlags0x
 Executable adaptation plan: docs/superpowers/plans/2026-09-28-compiled-native-research-host.md. It covers detached metadata/policy, compiled bounded supervisor, and compiled staged worker plus external observations, all tested without Epson first. User requested continuation; plan now awaits written-plan review before implementation under Superpowers. Native command approval remains separate.
 
 Observation ruling: process/TCP snapshots and markers cannot prove absence of short-lived network/USB activity or identify an implicit Virtual connection. They are partial evidence; missing coverage must remain inconclusive. No speculative pre-Connect API query is proposed.
+
+## Compiled plan execution approved
+
+User explicitly approved the written compiled-native-host plan and multiagent implementation. Start baseline remote500b584c/local a232ee0. Task1 detached PE metadata/stage policy active with fresh implementer; Task2 compiled supervisor and Task3 worker/observations follow after task-scoped review. No native stage execution is included in this approval.
+
+Preflight interfaces: Task1 supplies detached contracts to2/3; Task2 owns subprocess JSON/deadline for3. Ruling: ambiguous test-directory prose means windows-bridge/tests/EpsonRa.Bridge.Research.Tests. No implementation onmain and no local snapshot push. Preserve exact remote parent when publishing.
