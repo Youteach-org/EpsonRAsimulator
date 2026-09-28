@@ -125,3 +125,19 @@ Keep PR24 Draft/stacked, persist new evidence/decisions to GitHub, and do not me
 
 
 UPDATE2026-09-28: supervisor first independent review completed0Critical/2Important/1Minor; bothImportant fixed in one localRED/GREENwave (worker nonterminating error false success; failed cleanup false success). Supervisor12/12, probe7selftests/6arguments/1errornormalizationPASS. New CI pending. MinorM1null/singletonarrayJSONclassificationdeferred. Do not redo supervisor or prior9B/probereviews. Host effectiveRestricted, PS5.1x64; EpsonRC+/server stillopen; no native/policy changes. Next: verify newCI then resolve mandatorynativegates, not assume screenshot/continue authorizesnative. Currentlocalworktree work/EpsonRAsimulator-phase6d is materializedsnapshot; nevergitpush. Use explicitGitHubfiles commit/ref forcefalse onrealHEAD.
+
+
+UPDATE 2026-09-28 — current environment + host/init research
+- User now explicitly confirms: no Epson physical controller connected/reachable, Auto Connect OFF, RC+ closed.
+- Subsequent local Preflight reported exit0 with zero Epson processes.
+- Do NOT ask for those same preparation steps again unless the environment changes.
+- Starting PR24 head for this research: 076bac4e4ad921eb19798fbc8cd08e15a3af7696; WindowsCI47/run36386662292 SUCCESS; AndroidCI472/run36386662287 SUCCESS.
+- Research-only commit a19b07827bf1c3ddfb9fdd0a42fbaee4d78661c9 adds docs/superpowers/research/2026-09-28-native-host-init-observation.md. No Epson API load/native call was performed by this work.
+- Restricted finding: effective Windows PowerShell Restricted permits commands but blocks .ps1 script files. Project rule remains no execution-policy change/bypass. Therefore the reviewed PowerShell probe/supervisor cannot be the final local native host as-is.
+- Recommended native adaptation: compiled .NET Framework supervisor + compiled x86/x64 worker, preserving the existing one-worker/deadline/JSON/Virtual-only contracts rather than redoing Phase9B or the completed supervisor design.
+- Host compatibility must be staged: raw PE/CLR MetadataOnly first (no assembly load), then separately approved LoadOnly in matching-bitness disposable process, then separately approved InitializeObserve.
+- Epson documentation supports .NET Framework 4.5+ for RC+7.5-era .NET apps and says RCAPINet may be 32- or 64-bit. Installed Epson VS2019 C# sample targets x86, which is evidence but not proof of installed DLL bitness. Do not hardcode x86/x64 before reading raw PE metadata.
+- Initialization observation conclusion: no RCAPINet method can prove pre-first-access state without crossing the boundary. Solve observation externally with parent process/network baseline + worker stage markers. InitializeObserve must not call Inventory/GetCurrentConnectionInfo/Connect/project/robot/motion/task/I-O/SPEL.
+- Exact target remains C4 Sample by ordinal name only; connection number 2 remains evidence only, never an argument/fallback.
+- Native acceptance remains NOT RUN. No API load, Inventory or Connect until the exact command is presented and the user approves it.
+- Next design gate: user approval of the compiled-host adaptation (compiled supervisor + dual-bitness worker + MetadataOnly/LoadOnly/InitializeObserve gates). Only after that implement with TDD/synthetic CI. PR24 stays Draft; no merge.
