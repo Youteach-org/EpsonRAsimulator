@@ -24,7 +24,7 @@ $result = [ordered]@{
 
 function Set-Failure {
     param(
-        [hashtable]$Target,
+        [System.Collections.IDictionary]$Target,
         [string]$Status,
         [string]$Category,
         [string]$ExceptionType = $null
