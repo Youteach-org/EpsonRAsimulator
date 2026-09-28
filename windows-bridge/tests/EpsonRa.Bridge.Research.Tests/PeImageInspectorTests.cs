@@ -44,7 +44,7 @@ namespace EpsonRa.Bridge.Research.Tests
         [TestMethod]
         public void TruncatedDosPeAndClrHeadersAreRejected()
         {
-            foreach (var length in new[] { 32, 0x84, 0x218 })
+            foreach (var length in new[] { 32, 0x84, 0x213 })
             {
                 var bytes = PeFixture(0x14c, 0x9);
                 Array.Resize(ref bytes, length);
