@@ -71,6 +71,7 @@ try {
     Assert-True ($success.Json.status -eq "COMPLETED") "Success worker must yield COMPLETED."
     Assert-True ($success.Json.success -eq $true) "Success worker must yield success=true."
     Assert-True ($success.Json.workerResult.status -eq "PASS") "Nested worker result must be preserved."
+    Assert-True ($success.Json.cleanup.disposeSucceeded -eq $true) "Supervisor must preserve structured cleanup evidence."
 
     $failure = Invoke-SupervisorCase -Mode "FailureJson"
     Assert-True ($failure.ExitCode -eq 3) "Worker failure JSON must yield supervisor exit 3."
