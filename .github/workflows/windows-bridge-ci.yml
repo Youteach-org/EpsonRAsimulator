@@ -119,6 +119,10 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File windows-bridge/probes/test-probe-errors.ps1
 
+      - name: Verify virtual controller supervisor synthetic lifecycle
+        shell: pwsh
+        run: pwsh -NoProfile -File windows-bridge/probes/tests/test-virtual-controller-supervisor.ps1
+
       - name: Upload TRX
         if: always()
         uses: actions/upload-artifact@v4
