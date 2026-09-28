@@ -115,6 +115,10 @@ jobs:
         shell: pwsh
         run: pwsh -NoProfile -File windows-bridge/probes/test-probe-arguments.ps1
 
+      - name: Verify probe native error normalization without Epson
+        shell: pwsh
+        run: pwsh -NoProfile -File windows-bridge/probes/test-probe-errors.ps1
+
       - name: Upload TRX
         if: always()
         uses: actions/upload-artifact@v4

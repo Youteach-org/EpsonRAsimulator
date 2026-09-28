@@ -58,8 +58,12 @@ function Get-NormalizedException {
     param([System.Exception]$Exception)
 
     $effective = $Exception
-    if ($Exception -is [System.Reflection.TargetInvocationException] -and $null -ne $Exception.InnerException) {
-        $effective = $Exception.InnerException
+    for ($depth = 0; $depth -lt 16 -and $null -ne $effective.InnerException; $depth++) {
+        if ($effective -isnot [System.Reflection.TargetInvocationException] -and
+            $effective -isnot [System.Management.Automation.MethodInvocationException]) {
+            break
+        }
+        $effective = $effective.InnerException
     }
 
     $errorNumber = $null
