@@ -28,3 +28,7 @@ Review rulings/declined-to-judge dispositions:
 - Latest CI is controller-verified separately; reviewer did not claim remote/native results.
 
 Task1 complete remotely. Task2 pure-code implementation and review fix complete, pending final CI. Task3 NOT COMPLETE: local Preflight refused two existing Epson processes, no native calls attempted. User was asked for exact Virtual connection name and environment facts and asked which name; explained Name column of Virtual row in Setup > PC to Controller Communications. Do not fabricate these confirmations or close user processes.
+
+Final code head d4003f43cce4633cbb3c415fcc1ee8c752d7e5c3 verified: WindowsCI30/run36366164735 SUCCESS; AndroidCI455/run36366164725 SUCCESS. Task2 pure-code verification COMPLETE. Task3 native acceptance remains NOT RUN.
+
+User screenshot supplied exact Virtual name C4 Sample (number2), disconnected, Auto Connect checked. Explained the distinction between user's local Epson Virtual controller and proprietary-free GitHub CI. User then said continue; no statement confirms environmental changes, physical isolation or native execution approval. Do not infer those facts. Prepared proposed synthetic supervisor/deadline experiment in research/2026-09-27-native-acceptance-proposal.md, awaiting design review; native execution remains separate.
