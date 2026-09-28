@@ -83,3 +83,12 @@ Initialization observation is also narrowed: Rev20 gives no pre-initialization t
 Research details: `docs/superpowers/research/2026-09-28-native-host-init-observation.md`.
 
 Next implementation design gate: compiled .NET Framework supervisor preserving the existing reviewed deadline/worker/result contract, plus same-source x86/x64 workers with separately gated MetadataOnly, LoadOnly, InitializeObserve, Inventory and Connect stages. No native command is authorized yet; exact command approval remains required before any Epson assembly load and before Inventory/Connect.
+
+
+## Raw PE evidence and executable plan (2026-09-28)
+
+Read C:\EpsonRC70\exe\RCAPINet.dll as bytes only: Machine0x14c, PE32, CorFlags0x9, ILONLYtrue,32BITREQUIREDfalse,32BITPREFERREDfalse. SHA2562fbabbb87d1d1473ef5bc268bdf81f17a25c91862a4d2b00f097a8ad2d18e924. No assembly was loaded. This is AnyCPU managed metadata, not proof of native dependency bitness. Proposed initial workerx86 follows installed sample; actual compatibility awaits separately approved LoadOnly.
+
+Executable adaptation plan: docs/superpowers/plans/2026-09-28-compiled-native-research-host.md. It covers detached metadata/policy, compiled bounded supervisor, and compiled staged worker plus external observations, all tested without Epson first. User requested continuation; plan now awaits written-plan review before implementation under Superpowers. Native command approval remains separate.
+
+Observation ruling: process/TCP snapshots and markers cannot prove absence of short-lived network/USB activity or identify an implicit Virtual connection. They are partial evidence; missing coverage must remain inconclusive. No speculative pre-Connect API query is proposed.

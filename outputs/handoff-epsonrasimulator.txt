@@ -141,3 +141,6 @@ UPDATE 2026-09-28 — current environment + host/init research
 - Exact target remains C4 Sample by ordinal name only; connection number 2 remains evidence only, never an argument/fallback.
 - Native acceptance remains NOT RUN. No API load, Inventory or Connect until the exact command is presented and the user approves it.
 - Next design gate: user approval of the compiled-host adaptation (compiled supervisor + dual-bitness worker + MetadataOnly/LoadOnly/InitializeObserve gates). Only after that implement with TDD/synthetic CI. PR24 stays Draft; no merge.
+
+
+LATEST2026-09-28: actual remote baseline8b5349cbdf4bd283b378a65020555cdc481438fb contains compiledhost/initresearch. LocalrawPEread completed(noDLLload):RCAPINetMachine0x14c/CorFlags0x9/ILONLY/32BITREQUIREDfalse/32BITPREFERREDfalse =>AnyCPUmetadata. SHA2562fbabbb87d1d1473ef5bc268bdf81f17a25c91862a4d2b00f097a8ad2d18e924. Prepared docs/superpowers/plans/2026-09-28-compiled-native-research-host.md,3tasks metadata/policy,compiledsupervisor,stagedworker+externalobservation. Plan awaits userreview; preserve multiagentpreference. Noimplementation/nativeexecutionyet. Do not repeat userprep or priorreviews. Restricted solution usescompilednet48,notpolicybypass. NextreviewplanthenimplementwithTDD; exactLoadOnlycommand approvalONLYafterartifactsexist. Network/processsamplingispartial,nosafetyproof.
