@@ -44,13 +44,20 @@ function Invoke-SupervisorCase {
 
     $stdout = if (Test-Path -LiteralPath $stdoutFile) { Get-Content -LiteralPath $stdoutFile -Raw } else { "" }
     $parsed = $null
+    $parseFailed = $false
     if (-not [string]::IsNullOrWhiteSpace($stdout)) {
-        $parsed = $stdout | ConvertFrom-Json
+        try {
+            $parsed = $stdout | ConvertFrom-Json
+        }
+        catch {
+            $parseFailed = $true
+        }
     }
 
     return [pscustomobject]@{
         ExitCode = $process.ExitCode
         Json = $parsed
+        ParseFailed = $parseFailed
         Stdout = $stdout
         Stderr = if (Test-Path -LiteralPath $stderrFile) { Get-Content -LiteralPath $stderrFile -Raw } else { "" }
     }
