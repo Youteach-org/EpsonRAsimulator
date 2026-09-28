@@ -66,3 +66,20 @@ Final minor deferred M1: JSON null root gets generic supervisor failure and sing
 Review rulings: native lifecycle/authority and host acceptance remain unverified; cost of inferring them from CI is invalid native acceptance. Keep prior native worker outside repeat review; the new failures belong to supervisor handling. Preserve single-created-worker termination only, never shared/descendant Epson process killing. Reviewer reproduced a1-second timeout returning in1.805seconds, not a universal OS deadline guarantee; post-kill/OS failure timing remains an acceptance limitation. Remote CI is independently checked by controller, not inferred from review. No merge or unrelated change is approved.
 
 Read-only host check: WindowsPowerShell5.1.22000.282 x64, CLR4.0.30319.42000, effectiveRestricted (all policy scopesUndefined). Installed VS2019 Epson sample targets.NET4.5/x86; this is sample evidence, not proof RCAPINet requiresx86. erc70 anderc70PServer still running. No policy change/bypass, native assembly load, Inventory, Connect or automatic process shutdown occurred.
+
+
+## 2026-09-28 native host / initialization-observation spike
+
+User supplied the previously missing current environment confirmations: no physical Epson controller is connected/reachable, Auto Connect is OFF, RC+ is closed, and a subsequent Preflight returned exit0 with zero Epson processes. These are now current user-confirmed facts and should not be requested again unless the environment changes.
+
+Actual PR24 starting head for this spike was `076bac4e4ad921eb19798fbc8cd08e15a3af7696`; WindowsCI47/run36386662292 and AndroidCI472/run36386662287 both SUCCESS.
+
+Read-only research resolved the PowerShell-host question: the recorded Windows PowerShell5.1 effective policy is Restricted, which blocks script files. The project explicitly rejects changing/bypassing that policy. Therefore the existing reviewed PowerShell worker/supervisor cannot be the final local native execution path as-is. Do not "fix" this with `-ExecutionPolicy Bypass` or script-content injection.
+
+Compatibility evidence: .NET Framework4.8 Full and both 32/64-bit framework tools are installed; Epson's installed VS2019 C# sample targets .NET4.5/x86. Official 7.5-era API documentation says .NET Framework4.5+ and describes RCAPINet as a 32- or 64-bit class library. Therefore sample x86 is evidence, not proof of the installed DLL architecture. Future compiled tooling should inspect raw PE/CLR metadata without loading RCAPINet, then select a matching x86/x64 disposable worker.
+
+Initialization observation is also narrowed: Rev20 gives no pre-initialization target selector/observer, and any RCAPINet query crosses the boundary being observed. The recommended observation boundary is external: parent baseline of Epson processes/network state plus private worker stage markers around Spel construction, ServerInstance set, Initialize and Dispose. The initialization-only experiment must issue no GetConnectionInfo/GetCurrentConnectionInfo/Connect/project/robot/motion/task/I-O/SPEL operations. Auto Connect OFF + no physical controller bound the safety risk; an undetectable implicit local Virtual connection remains an explicit limitation, not target authority.
+
+Research details: `docs/superpowers/research/2026-09-28-native-host-init-observation.md`.
+
+Next implementation design gate: compiled .NET Framework supervisor preserving the existing reviewed deadline/worker/result contract, plus same-source x86/x64 workers with separately gated MetadataOnly, LoadOnly, InitializeObserve, Inventory and Connect stages. No native command is authorized yet; exact command approval remains required before any Epson assembly load and before Inventory/Connect.
