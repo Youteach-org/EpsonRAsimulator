@@ -32,3 +32,22 @@ Task1 complete remotely. Task2 pure-code implementation and review fix complete,
 Final code head d4003f43cce4633cbb3c415fcc1ee8c752d7e5c3 verified: WindowsCI30/run36366164735 SUCCESS; AndroidCI455/run36366164725 SUCCESS. Task2 pure-code verification COMPLETE. Task3 native acceptance remains NOT RUN.
 
 User screenshot supplied exact Virtual name C4 Sample (number2), disconnected, Auto Connect checked. Explained the distinction between user's local Epson Virtual controller and proprietary-free GitHub CI. User then said continue; no statement confirms environmental changes, physical isolation or native execution approval. Do not infer those facts. Prepared proposed synthetic supervisor/deadline experiment in research/2026-09-27-native-acceptance-proposal.md, awaiting design review; native execution remains separate.
+
+
+## Synthetic supervisor implementation
+
+User approved the supervisor-only step on 2026-09-27. Native Inventory/Connect remained explicitly out of scope.
+
+TDD / CI evidence:
+- Windows CI 34 / run 36379056051: explicit RED; supervisor contract test failed at "Success worker must yield supervisor exit 0" because the supervisor did not yet exist.
+- Initial implementation exposed two synthetic-only defects before any native work: PowerShell `-f` parsed launcher braces as format tokens, and flat-array splatting bound named worker options positionally. Both were root-caused from CI evidence and corrected without touching Epson.
+- Named worker arguments are now a JSON object and are splatted by property name in the child host.
+- Windows CI 40 / run 36379982043: GREEN for the supervisor lifecycle suite and all existing Windows bridge/probe checks.
+- A probe-shaped cleanup regression then intentionally RED-tested structured cleanup preservation in Windows CI 41 / run 36380235030. The supervisor previously cast cleanup to text; the fix preserves the cleanup object.
+- Final supervisor code head `60c73d2312b563552820c9a274eba7695b673e55`: Windows CI 42 / run 36380335196 SUCCESS.
+
+Synthetic supervisor coverage includes valid completion, worker-reported failure, thrown/no-result worker failure, malformed JSON, multiple result documents, operation timeout, cleanup timeout, unrelated sentinel-process survival, timeout range validation, and structured cleanup preservation. Deadline default is30s, configurable1..120s. Timeout kills only the created worker process, reports `INCONCLUSIVE_TIMEOUT`, `cleanup=UNKNOWN`, and never retries.
+
+Self-review against the approved proposal found no remaining Critical/Important issue in the synthetic-only boundary. There is no fresh reviewer subagent available in this harness, so this is author self-review rather than an independent review.
+
+Native Task3 remains NOT RUN. The supervisor does not resolve native host/bitness, PowerShell execution policy, Auto Connect, physical isolation, unused server instance, exact current C4 Sample configuration, or the pre-initialization observation boundary. Those remain mandatory conditions before any native command is proposed or executed.
