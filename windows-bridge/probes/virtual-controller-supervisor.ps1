@@ -116,7 +116,7 @@ function New-EncodedWorkerCommand {
     )
 
     $launcherTemplate = @'
-$payloadJson = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{0}'))
+$payloadJson = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('__PAYLOAD_BASE64__'))
 $payload = $payloadJson | ConvertFrom-Json
 $workerArgs = @()
 if ($null -ne $payload.args) {
@@ -126,7 +126,7 @@ if ($null -ne $payload.args) {
 exit $LASTEXITCODE
 '@
 
-    $launcher = $launcherTemplate -f $payloadBase64
+    $launcher = $launcherTemplate.Replace("__PAYLOAD_BASE64__", $payloadBase64)
     return [Convert]::ToBase64String(
         [Text.Encoding]::Unicode.GetBytes($launcher)
     )
