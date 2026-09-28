@@ -65,7 +65,7 @@ function Invoke-SupervisorCase {
 
 try {
     $success = Invoke-SupervisorCase -Mode "Success"
-    Assert-True ($success.ExitCode -eq 0) "Success worker must yield supervisor exit 0."
+    Assert-True ($success.ExitCode -eq 0) ("Success worker must yield supervisor exit 0; exit={0}; parseFailed={1}; stdout={2}; stderr={3}" -f $success.ExitCode, $success.ParseFailed, $success.Stdout, $success.Stderr)
     Assert-True ($success.Json.status -eq "COMPLETED") "Success worker must yield COMPLETED."
     Assert-True ($success.Json.success -eq $true) "Success worker must yield success=true."
     Assert-True ($success.Json.workerResult.status -eq "PASS") "Nested worker result must be preserved."
