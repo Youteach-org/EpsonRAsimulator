@@ -111,6 +111,10 @@ jobs:
             throw "Invalid arguments did not return the expected JSON schema."
           }
 
+      - name: Verify probe argument regressions
+        shell: pwsh
+        run: pwsh -NoProfile -File windows-bridge/probes/test-probe-arguments.ps1
+
       - name: Upload TRX
         if: always()
         uses: actions/upload-artifact@v4
@@ -118,3 +122,4 @@ jobs:
           name: windows-bridge-readiness-trx
           path: windows-bridge/tests/EpsonRa.Bridge.Readiness.Tests/TestResults/readiness.trx
           if-no-files-found: ignore
+

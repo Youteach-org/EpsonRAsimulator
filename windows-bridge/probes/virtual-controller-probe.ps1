@@ -1,11 +1,9 @@
 [CmdletBinding()]
 param(
-    [ValidateSet("Preflight", "Inventory", "Connect")]
     [string]$Stage = "Preflight",
     [string]$InstallRoot = "C:\EpsonRC70",
     [string]$VirtualName,
-    [ValidateRange(1, 10)]
-    [int]$ServerInstance = 10,
+    [string]$ServerInstance = "10",
     [switch]$ConfirmedAutoConnectOff,
     [switch]$ConfirmedNoPhysicalController,
     [switch]$ConfirmedInventoryEligible,
@@ -434,6 +432,17 @@ function Invoke-SelfTests {
     return $count
 }
 
+# Validate here, not in parameter attributes: binding errors bypass JSON output.
+$parsedServerInstance = 0
+if ($Stage -notin @("Preflight", "Inventory", "Connect") -or
+    -not [int]::TryParse($ServerInstance, [ref]$parsedServerInstance) -or
+    $parsedServerInstance -lt 1 -or $parsedServerInstance -gt 10) {
+    $result = New-ProbeResult -StageName $Stage -Status "INVALID_ARGUMENTS" -Success $false
+    $result.serverInstance = $null
+    $result.error = [ordered]@{ category = "INVALID_STAGE_OR_SERVER_INSTANCE" }
+    Write-ProbeResultAndExit -Result $result -ExitCode 64
+}
+
 if ($SelfTest) {
     try {
         $passed = Invoke-SelfTests
@@ -464,6 +473,7 @@ if ($SelfTest) {
 }
 
 $result = New-ProbeResult -StageName $Stage -Status "STARTING" -Success $false
+$result.serverInstance = $parsedServerInstance
 
 $requirements = @(Get-NativeRequirementErrors -StageName $Stage -RequestedName $VirtualName -AutoConnectOff ([bool]$ConfirmedAutoConnectOff) -NoPhysicalController ([bool]$ConfirmedNoPhysicalController) -InventoryEligible ([bool]$ConfirmedInventoryEligible))
 
@@ -525,7 +535,7 @@ try {
     $spelType = $assembly.GetType("RCAPINet.Spel", $true)
     $spel = [System.Activator]::CreateInstance($spelType)
 
-    Set-NativeProperty -Target $spel -StageName $Stage -PropertyName "ServerInstance" -Value $ServerInstance
+    Set-NativeProperty -Target $spel -StageName $Stage -PropertyName "ServerInstance" -Value $parsedServerInstance
     [void](Invoke-NativeMethod -Target $spel -StageName $Stage -MethodName "Initialize")
 
     if ($Stage -eq "Inventory") {
@@ -635,3 +645,4 @@ finally {
 }
 
 Write-ProbeResultAndExit -Result $result -ExitCode $stageExitCode
+
