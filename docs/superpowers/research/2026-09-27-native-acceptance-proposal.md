@@ -1,6 +1,14 @@
 # Proposed next experiment: supervised Virtual-only acceptance
 
-Status: proposal for user review, not execution approval. No implementation or native call is authorized by this document. Builds on PR24's reviewed research probe and exact Rev20 audit.
+Status: supervisor design approved by the user on 2026-09-27 and implemented as proprietary-free research tooling. This approval does NOT authorize native Inventory/Connect execution. Builds on PR24's reviewed research probe and exact Rev20 audit.
+
+## Implementation result
+
+The synthetic supervisor is implemented at `windows-bridge/probes/virtual-controller-supervisor.ps1`. It requires an explicit worker host and worker script, accepts named worker arguments from a JSON object, uses a 30-second default deadline configurable from 1 to 120 seconds, emits one supervisor JSON result, and never chooses a PowerShell/native host implicitly.
+
+Synthetic CI covers completed success, reported worker failure, thrown/no-result worker failure, malformed JSON, multiple result documents, operation timeout, cleanup timeout, survival of an unrelated sentinel process during timeout, timeout-range validation, and preservation of the probe-shaped structured cleanup object. On timeout it kills only the worker process it created and reports `INCONCLUSIVE_TIMEOUT` with `cleanup=UNKNOWN`. It does not kill Epson/RC+ processes and does not retry.
+
+The first explicit TDD RED was Windows CI 34 (run 36379056051): the contract test failed because the supervisor did not exist. Subsequent RED/GREEN debugging fixed launcher formatting, named PowerShell argument binding, and structured cleanup preservation. Final code head before this documentation update is `60c73d2312b563552820c9a274eba7695b673e55`; Windows CI 42 (run 36380335196) passed the complete Windows bridge/probe/supervisor suite. No Epson assembly was loaded by these tests.
 
 ## Intended outcome
 
@@ -14,7 +22,7 @@ The user's screenshot identifies `C4 Sample`, connection number2, typeVirtual, d
 2. Direct local native execution now is not ready: there is no deadline, host compatibility is unverified and the pre-initialization observation gap remains unresolved.
 3. Continue solely on Android while deferring the native bridge. This is viable but does not answer the RCAPINet lifecycle question.
 
-## Proposed supervisor contract
+## Implemented supervisor contract
 
 - A separate parent process owns a single worker invocation, a configurable bounded deadline, and one final JSON result.
 - The worker uses the installed .NET Framework-compatible host, subject to explicit host/bitness verification. Do not silently substitute pwsh because its pure CI checks pass. Existing execution policy stays unchanged; if it prevents the chosen host, resolve host design rather than automatically bypassing policy.
