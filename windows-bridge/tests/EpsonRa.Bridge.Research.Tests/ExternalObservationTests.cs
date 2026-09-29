@@ -130,6 +130,7 @@ namespace EpsonRa.Bridge.Research.Tests
                 UnrelatedTcpCount = unrelatedTcp,
                 ProcessSampleAvailable = processAvailable,
                 TcpSampleAvailable = tcpAvailable,
+                TcpIpv6SampleAvailable = tcpAvailable,
                 OwnershipUnambiguous = ownershipUnambiguous
             };
         }
