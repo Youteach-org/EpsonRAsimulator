@@ -135,3 +135,14 @@ Account check at handoff:94% of five-hour window used,72% weekly; not an exhaust
 Next concrete work: verify latest CI; inspect approved compiled plan against current code; implement strict worker CLI, installed stage-restricted reflection adapter and real external process/TCP/event observation; resolve observation gaps and rename misleading type Ordinal fields; build x86/x64 outputs with proprietary-free gate; fresh compiled-adaptation review. Do not repeat completed PowerShell/9B reviews. Native adapter and CLI remain intentionally disabled until implementation/tests complete. No Epson native execution has occurred or is authorized by this checkpoint.
 
 Resume prompt: Continue EpsonRAsimulator in Youteach-org/EpsonRAsimulator, PR24 Draft, research/virtual-controller-probe stacked on PR22. Verify actual remote HEAD and CI first. Read newest sections of docs/superpowers/progress/2026-09-27-virtual-controller-probe.md and outputs/handoff-epsonrasimulator.txt, then execute the remaining approved compiled-native-host plan inline. Publish explicit files with real remote parent, never push materialized local ancestry. Preserve exact C4 Sample name, no numeric/default fallback. User already confirmed Auto Connect OFF, RC+ closed and no physical controller; do not ask again without changed evidence. Exact native LoadOnly command needs separate approval after synthetic completion. Document changes, tests, rulings and handoff in GitHub. Monitor actual quota; a subagent error alone does not mean global quota exhaustion.
+
+
+## Connection identity contract correction — 2026-09-28
+
+- RED `d6bd5e5582e009343ab99b49e56ec73fd3f6ee37` proved the staged worker still conflated connection number with controller type through the misleading `Ordinal=3` field.
+- Rev20 distinguishes `ConnectionNumber` from `ConnectionType`; Virtual eligibility is type number 3. Connection number is diagnostic evidence only and is never a selection/Connect argument.
+- GREEN changed the contract to `ConnectionNumber`, `TypeNumber`, `TypeName`, `EligibleConnectionNumber`, `EligibleTypeNumber`, and `PriorEligibleTypeNumber`. Connect eligibility now requires exact name `C4 Sample` plus type number 3, never a numeric connection selector.
+- Existing cleanup regressions were migrated without relaxing their assertions.
+- Verified at `0e33dd76371343d24e1334ae9b7d9997591cd3c3`: Windows Bridge CI 78 SUCCESS; Android CI 503 SUCCESS.
+- Ruling: connection number is evidence only; Virtual type number 3 is the eligibility discriminator. Cost if wrong: descriptor mapping would fail closed rather than permit a numeric/default fallback.
+- Native acceptance remains NOT RUN. No Epson assembly load, Initialize, Inventory or Connect occurred in this checkpoint.
