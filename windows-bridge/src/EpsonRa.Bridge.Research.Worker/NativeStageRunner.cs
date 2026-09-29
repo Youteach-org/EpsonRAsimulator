@@ -55,7 +55,7 @@ namespace EpsonRa.Bridge.Research.Worker
                 return Failed("InvalidArguments");
 
             var validation = StagePolicy.Validate(request.Stage, request.Target, request.ServerInstance, request.Approved);
-            if (!validation.IsValid)
+            if (validation != StageValidation.Valid)
                 return Failed("StagePolicyRejected");
 
             if (request.Stage == Stage.MetadataOnly)
