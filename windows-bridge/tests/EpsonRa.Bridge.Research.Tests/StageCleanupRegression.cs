@@ -28,7 +28,7 @@ namespace EpsonRa.Bridge.Research.Tests
             if (scenario == "InvalidPrior") request.PriorEligibleName = null;
             if (scenario == "DuplicateName") request.Stage = Stage.Inventory;
             var result = NativeStageRunner.Run(request, api, marker => {
-                if (scenario == "EventFailure" && marker == "before:Disconnect") throw new InvalidOperationException();
+                if (scenario == "EventFailure" && marker.Name == "before:Disconnect") throw new InvalidOperationException();
             });
             Require(!result.Success, "uncertainty must fail closed");
             if (scenario == "InvalidPrior") Require(api.Calls.Count == 0, "invalid prior evidence must reject before native activation");

@@ -109,3 +109,18 @@ Preflight interfaces: Task1 supplies detached contracts to2/3; Task2 owns subpro
 - Current verified checkpoint `1dbc7efd984d8784848621e48e37f642b39e7530`: Windows Bridge CI 69 SUCCESS and Android CI 494 SUCCESS.
 - Remaining Task 3 synthetic work: failure injection/cleanup guarantees, monotonic stage events, external process/TCP observation with INCONCLUSIVE gaps/ambiguous ownership, x86/x64 builds, proprietary-output gate, README/workflow updates, and final compiled-adaptation review.
 - Native execution remains unchanged: RCAPINet has not been loaded; LoadOnly, InitializeObserve, Inventory and Connect have not been executed. PR #24 remains Draft and must not be merged during this research sequence.
+
+
+## Compiled supervisor protocol and event reconciliation (2026-09-28)
+
+Remote baseline7bbede773f8cac87fb50e172252f8144b5abfa02 had WindowsCI73/run36508211455 failing CS1503: StageEvent callbacks were passed to the old string marker helper. Updated the helper and cleanup regression to the typed monotonic event contract. Local cleanup regressions5/5 PASS.
+
+Supervisor request path was never forwarded; it instead passed an undocumented result-file argument. RED normal subprocess test reproduced this; corrected to --request/--events and final JSON on stdout. Read raw chunks with1MiB limit per stream (including newline-free output), bounded asynchronous pipe draining, timeout encompassing inherited pipes, owned-worker-only termination, strict JSON field types, status/cleanup consistency and stderr failure. Arbitrary worker error strings are not echoed.
+
+Local Roslyn C#7.3 standalone protocol regression14/14 PASS (normal, flood, contradiction, absent, nonzero, malformed, null, array, multiple, failed cleanup, stderr, wrong schema, timeout, inherited stdout). Updated MSTest fixture to the real protocol. Old-supervisor replay reproduced4 failures; previously accepted rejection paths alone were not proof of correct execution. Full CI pending this publication.
+
+Ruling: a flood fails immediately with OutputLimit/exit3 instead of waiting for exit124 — cap violations are known protocol failures, not elapsed deadlines — cost: callers distinguish these categories.
+
+Incident: an earlier local experimental test recursively launched itself on unknown arguments and temporarily exhausted Windows process/memory resources. No Epson code ran. Confirmed zero remaining test processes before resuming. Fixed harness rejects unknown arguments; inherited-pipe fixture is a finite leaf with no spawn path. The unsafe experimental version is not published.
+
+Remaining: synthetic sentinel-ownership regression, worker strict CLI/reflection adapter, real external process/TCP sampling and event correlation, observation-gap semantics, dual-bitness builds/output gates and independent compiled-adaptation review. Native acceptance NOT RUN; do not infer completion from synthetic success. No need to repeat user environmental confirmations; exact native command approval remains separate.

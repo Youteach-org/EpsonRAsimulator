@@ -29,6 +29,10 @@ namespace EpsonRa.Bridge.Research.Tests
         [DataRow("null")]
         [DataRow("array")]
         [DataRow("multiple")]
+        [DataRow("absent")]
+        [DataRow("contradiction")]
+        [DataRow("stderr")]
+        [DataRow("wrong-schema")]
         public void InvalidWorkerResultIsFailure(string mode)
         {
             Assert.AreEqual(3, Run(mode, 5).ExitCode);
@@ -60,8 +64,19 @@ namespace EpsonRa.Bridge.Research.Tests
             var sw = Stopwatch.StartNew();
             var result = Run("flood", 1);
             sw.Stop();
-            Assert.AreEqual(124, result.ExitCode);
+            Assert.AreEqual(3, result.ExitCode);
+            Assert.AreEqual("OutputLimit", result.Error);
             Assert.IsTrue(sw.Elapsed < TimeSpan.FromSeconds(4));
+        }
+
+        [TestMethod]
+        public void InheritedPipeCannotExtendDeadline()
+        {
+            var watch = Stopwatch.StartNew();
+            var result = Run("inherited", 1);
+            Assert.AreEqual(124, result.ExitCode);
+            Assert.IsFalse(result.Success);
+            Assert.IsTrue(watch.Elapsed < TimeSpan.FromSeconds(4));
         }
 
         [TestMethod]

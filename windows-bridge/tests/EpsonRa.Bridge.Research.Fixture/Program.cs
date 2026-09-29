@@ -9,45 +9,60 @@ namespace EpsonRa.Bridge.Research.Fixture
     {
         private static int Main(string[] args)
         {
+            // Finite leaf process: never enters the fixture dispatcher or spawns children.
+            if (args.Length == 1 && args[0] == "--hold-stdout") { Thread.Sleep(5000); return 0; }
             var mode = args.Length > 0 ? args[0] : "normal";
-            var resultFile = args.Length > 1 ? args[1] : null;
+            if (args.Length != 5 || args[1] != "--request" || !File.Exists(args[2]) || args[3] != "--events") return 64;
 
             if (mode == "normal")
             {
-                File.WriteAllText(resultFile, "{\"schemaVersion\":1,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"CONFIRMED\"}");
+                Console.Write("{\"schemaVersion\":1,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"CONFIRMED\"}");
                 return 0;
             }
 
             if (mode == "nonzero")
                 return 7;
 
+            if (mode == "absent") return 0;
+            if (mode == "inherited")
+            {
+                using (var child = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo {
+                    FileName = typeof(Program).Assembly.Location, Arguments = "--hold-stdout",
+                    UseShellExecute = false, CreateNoWindow = true })) { }
+                Console.Write("{\"schemaVersion\":1,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"CONFIRMED\"}");
+                return 0;
+            }
+            if (mode == "contradiction") { Console.Write("{\"schemaVersion\":1,\"status\":\"FAILED\",\"success\":true,\"cleanup\":\"CONFIRMED\"}"); return 0; }
+            if (mode == "wrong-schema") { Console.Write("{\"schemaVersion\":true,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"CONFIRMED\"}"); return 0; }
+            if (mode == "stderr") { Console.Error.Write("synthetic error"); Console.Write("{\"schemaVersion\":1,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"CONFIRMED\"}"); return 0; }
+
             if (mode == "malformed")
             {
-                File.WriteAllText(resultFile, "{not-json");
+                Console.Write("{not-json");
                 return 0;
             }
 
             if (mode == "null")
             {
-                File.WriteAllText(resultFile, "null");
+                Console.Write("null");
                 return 0;
             }
 
             if (mode == "array")
             {
-                File.WriteAllText(resultFile, "[]");
+                Console.Write("[]");
                 return 0;
             }
 
             if (mode == "multiple")
             {
-                File.WriteAllText(resultFile, "{\"schemaVersion\":1} {\"schemaVersion\":1}");
+                Console.Write("{\"schemaVersion\":1} {\"schemaVersion\":1}");
                 return 0;
             }
 
             if (mode == "failed-cleanup")
             {
-                File.WriteAllText(resultFile, "{\"schemaVersion\":1,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"FAILED\"}");
+                Console.Write("{\"schemaVersion\":1,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"FAILED\"}");
                 return 0;
             }
 

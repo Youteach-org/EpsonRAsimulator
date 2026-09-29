@@ -143,9 +143,9 @@ namespace EpsonRa.Bridge.Research.Worker
             return ok;
         }
 
-        private static void Mark(Action<string> sink, string value)
+        private static void Mark(Action<StageEvent> sink, string value)
         {
-            if (sink != null) sink(value);
+            if (sink != null) sink(new StageEvent { Name = value, MonotonicTicks = System.Diagnostics.Stopwatch.GetTimestamp() });
         }
 
         private static NativeStageResult Completed()

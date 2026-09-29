@@ -147,3 +147,20 @@ LATEST2026-09-28: actual remote baseline8b5349cbdf4bd283b378a65020555cdc481438fb
 
 
 AUTHORITATIVE RESUME UPDATE: User approved compiled plan and multiagent execution; do NOT ask plan approval again. Controller started Task1 RED85b2b1e CI52 confirmed missingtypes, localproductioncompile reported. Agent hit quota before officialGREEN/review. Before publication remote had concurrently advanced to b1ded812 (fix staged result contract), so localWIP was NOT published over remoteimplementation. Report preserved at docs/superpowers/reports/2026-09-28-compiled-host-task1.md in12ad6596. FIRST inspect actualremoteHEAD, latestcompiledprogress/code/CI, reconcile rather than replay Task1. Local isolatedsnapshot2a71110 contains historicalWIP; NEVERpush ancestry or blindly overwrite remote. Userenvironmentconfirmations persist; nativeNOTRUN and exactnativecommand approval separate. All new decisions/results must be documented inGitHub. Supervisor/9Bcompleted reviews not repeated.
+
+
+## Compiled supervisor protocol and event reconciliation (2026-09-28)
+
+Remote baseline7bbede773f8cac87fb50e172252f8144b5abfa02 had WindowsCI73/run36508211455 failing CS1503: StageEvent callbacks were passed to the old string marker helper. Updated the helper and cleanup regression to the typed monotonic event contract. Local cleanup regressions5/5 PASS.
+
+Supervisor request path was never forwarded; it instead passed an undocumented result-file argument. RED normal subprocess test reproduced this; corrected to --request/--events and final JSON on stdout. Read raw chunks with1MiB limit per stream (including newline-free output), bounded asynchronous pipe draining, timeout encompassing inherited pipes, owned-worker-only termination, strict JSON field types, status/cleanup consistency and stderr failure. Arbitrary worker error strings are not echoed.
+
+Local Roslyn C#7.3 standalone protocol regression14/14 PASS (normal, flood, contradiction, absent, nonzero, malformed, null, array, multiple, failed cleanup, stderr, wrong schema, timeout, inherited stdout). Updated MSTest fixture to the real protocol. Old-supervisor replay reproduced4 failures; previously accepted rejection paths alone were not proof of correct execution. Full CI pending this publication.
+
+Ruling: a flood fails immediately with OutputLimit/exit3 instead of waiting for exit124 — cap violations are known protocol failures, not elapsed deadlines — cost: callers distinguish these categories.
+
+Incident: an earlier local experimental test recursively launched itself on unknown arguments and temporarily exhausted Windows process/memory resources. No Epson code ran. Confirmed zero remaining test processes before resuming. Fixed harness rejects unknown arguments; inherited-pipe fixture is a finite leaf with no spawn path. The unsafe experimental version is not published.
+
+Remaining: synthetic sentinel-ownership regression, worker strict CLI/reflection adapter, real external process/TCP sampling and event correlation, observation-gap semantics, dual-bitness builds/output gates and independent compiled-adaptation review. Native acceptance NOT RUN; do not infer completion from synthetic success. No need to repeat user environmental confirmations; exact native command approval remains separate.
+
+Handoff prompt: Continue PR24 on research/virtual-controller-probe from verified actual remote HEAD. Read the newest ledger section first. Preserve materialized local ancestry; publish only intended files with real remote parent. Check exact-head CI before claiming GREEN. Finish remaining compiled-host tasks without native activation. Keep Draft and document every result in GitHub.
