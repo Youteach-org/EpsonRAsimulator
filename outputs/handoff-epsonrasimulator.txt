@@ -1,5 +1,31 @@
 EpsonRAsimulator handoff — 2026-09-27
 
+
+UPDATE 2026-09-29 — SEALED DURABLE SUPERVISOR
+- PR24 remains Draft; no merge/main action.
+- Workflow-only code checkpoint c571aa96b0edf91587a5f43c14ca2cfbf06d7880 adds a dedicated exact-PR-head sealing job.
+- Windows Bridge CI116 / run36633600657 SUCCESS.
+  - readiness 36/36 PASS
+  - research 78/78 PASS in main job
+  - virtual-controller synthetic supervisor 12/12 PASS
+  - exact-head sealing job reran research 78/78 PASS
+- Published artifact id 11063812312:
+  epson-ra-research-supervisor-x64-c571aa96b0edf91587a5f43c14ca2cfbf06d7880
+- Artifact ZIP SHA256: C2D723A9D19742F4B81C6520696692955B4FC5DFAC52AAA45768AD76C6CF1AD1
+- Contained x64 net48 supervisor SHA256: 4A43FCBB4A3591E16929E3325756DEE2B8E7A8C6B4F3601EBFD23F3452171AF0
+- Supervisor length: 27136 bytes.
+- Downloaded artifact was independently unpacked read-only; manifest sourceCommit, SHA256 and length all matched.
+- The artifact contains only the supervisor executable, generated config and manifest. It does NOT replace/package the previously approved x86 worker or approved Research DLL.
+- The previously missing local work/capture-diagnosis supervisor hash is no longer a blocker; the sealed CI artifact supersedes it for retry preparation.
+- InitializeObserve has NOT been retried. First attempt remains INCONCLUSIVE / cleanup UNKNOWN.
+- Inventory NOT run. Connect NOT run. No Epson/RC+ process termination.
+- Before any new native approval: place the sealed supervisor at a new absolute Windows path; rehash it; rehash preserved worker/Research/request; choose a fresh nonexistent --result-file; read-only Epson-process precheck; then present the exact command + hashes for separate approval.
+- Preserved approved hashes remain:
+  x86 worker 0B17E31934684641E49D428051B250D8011D9503A6A010E4C177D6BCB8F61FF4
+  Research DLL ACED9B8F2AAD28EDB8BD78F1D8FA134FF922A71AD0BF49BBAD794CC71364EDCF
+  initialize-observe request 410644255667212114058C4C20B8F9917058190E5073620388A56821BBC5712B
+- Native retry semantics remain exactly: x86 worker; installed C:\EpsonRC70\exe\RCAPINet.dll; construct Spel; ServerInstance=10; Initialize; Dispose; no Inventory/GetCurrentConnectionInfo/Connect; exact C4 Sample policy; 30 s deadline; no fallback/retry; never terminate shared Epson/RC+ processes.
+
 REPOSITORY
 - Repo: Youteach-org/EpsonRAsimulator
 - PR: #24 (Draft)
