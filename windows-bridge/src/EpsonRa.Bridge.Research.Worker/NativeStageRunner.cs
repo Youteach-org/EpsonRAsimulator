@@ -9,8 +9,9 @@ namespace EpsonRa.Bridge.Research.Worker
     public sealed class NativeConnection
     {
         public string Name { get; set; }
-        public string Type { get; set; }
-        public int Ordinal { get; set; }
+        public int ConnectionNumber { get; set; }
+        public int TypeNumber { get; set; }
+        public string TypeName { get; set; }
     }
 
     public sealed class NativeStageRequest
@@ -21,8 +22,7 @@ namespace EpsonRa.Bridge.Research.Worker
         public int? ServerInstance { get; set; }
         public bool Approved { get; set; }
         public string PriorEligibleName { get; set; }
-        public string PriorEligibleType { get; set; }
-        public int? PriorEligibleOrdinal { get; set; }
+        public int? PriorEligibleTypeNumber { get; set; }
     }
 
     public sealed class NativeStageResult
@@ -32,7 +32,8 @@ namespace EpsonRa.Bridge.Research.Worker
         public bool Success { get; set; }
         public string Cleanup { get; set; }
         public string Error { get; set; }
-        public int? EligibleOrdinal { get; set; }
+        public int? EligibleConnectionNumber { get; set; }
+        public int? EligibleTypeNumber { get; set; }
         public string EligibleName { get; set; }
     }
 
@@ -50,6 +51,8 @@ namespace EpsonRa.Bridge.Research.Worker
 
     public static class NativeStageRunner
     {
+        private const int VirtualTypeNumber = 3;
+
         public static NativeStageResult Run(NativeStageRequest request, INativeApi api, Action<StageEvent> eventSink)
         {
             if (request == null || api == null)
@@ -61,7 +64,7 @@ namespace EpsonRa.Bridge.Research.Worker
 
             if (request.Stage == Stage.Connect &&
                 (request.PriorEligibleName != "C4 Sample" ||
-                 request.PriorEligibleType != "Virtual" || request.PriorEligibleOrdinal != 3))
+                 request.PriorEligibleTypeNumber != VirtualTypeNumber))
                 return Failed("PriorEligibilityRequired");
 
             if (request.Stage == Stage.MetadataOnly)
@@ -75,52 +78,66 @@ namespace EpsonRa.Bridge.Research.Worker
                 Mark(eventSink, "before:Load");
                 api.Load(request.InstallRoot);
                 Mark(eventSink, "after:Load");
+
                 if (request.Stage != Stage.LoadOnly)
                 {
                     Mark(eventSink, "before:Construct");
                     constructionAttempted = true;
                     api.Construct();
                     Mark(eventSink, "after:Construct");
+
                     Mark(eventSink, "before:SetServerInstance");
                     api.SetServerInstance(request.ServerInstance.Value);
                     Mark(eventSink, "after:SetServerInstance");
+
                     Mark(eventSink, "before:Initialize");
                     api.Initialize();
                     Mark(eventSink, "after:Initialize");
 
                     if (request.Stage == Stage.Inventory)
                     {
-                        // Reject all duplicate exact names, including mixed physical/Virtual entries.
                         var matches = api.GetConnections()
-                            .Where(x => x != null && x.Name == "C4 Sample").ToList();
-                        if (matches.Count != 1 || matches[0].Type != "Virtual" || matches[0].Ordinal != 3)
+                            .Where(x => x != null && x.Name == "C4 Sample")
+                            .ToList();
+
+                        if (matches.Count != 1 || matches[0].TypeNumber != VirtualTypeNumber)
+                        {
                             result = Failed("InventoryEligibility");
+                        }
                         else
                         {
                             result.EligibleName = matches[0].Name;
-                            result.EligibleOrdinal = matches[0].Ordinal;
+                            result.EligibleConnectionNumber = matches[0].ConnectionNumber;
+                            result.EligibleTypeNumber = matches[0].TypeNumber;
                         }
                     }
                     else if (request.Stage == Stage.Connect)
                     {
                         api.ConnectByName("C4 Sample");
                         connected = true;
+
                         var current = api.GetCurrentConnection();
-                        if (current == null || current.Name != "C4 Sample" ||
-                            current.Type != "Virtual" || current.Ordinal != 3)
+                        if (current == null ||
+                            current.Name != "C4 Sample" ||
+                            current.TypeNumber != VirtualTypeNumber)
                             result = Failed("ConnectedIdentityMismatch");
                     }
                 }
             }
-            catch { result = Failed("NativeStageException"); }
+            catch
+            {
+                result = Failed("NativeStageException");
+            }
             finally
             {
-                // Event persistence must never prevent cleanup, and cleanup is never retried.
                 var cleanupOk = true;
+
                 if (connected)
                     cleanupOk = Cleanup(api.Disconnect, "Disconnect", eventSink) && cleanupOk;
+
                 if (constructionAttempted)
                     cleanupOk = Cleanup(api.Dispose, "Dispose", eventSink) && cleanupOk;
+
                 if (!cleanupOk)
                 {
                     result.Success = false;
@@ -129,8 +146,11 @@ namespace EpsonRa.Bridge.Research.Worker
                     result.Error = result.Error ?? "CleanupFailure";
                 }
                 else if (constructionAttempted)
+                {
                     result.Cleanup = "CONFIRMED";
+                }
             }
+
             return result;
         }
 
@@ -145,17 +165,37 @@ namespace EpsonRa.Bridge.Research.Worker
 
         private static void Mark(Action<StageEvent> sink, string value)
         {
-            if (sink != null) sink(new StageEvent { Name = value, MonotonicTicks = System.Diagnostics.Stopwatch.GetTimestamp() });
+            if (sink != null)
+            {
+                sink(new StageEvent
+                {
+                    Name = value,
+                    MonotonicTicks = Stopwatch.GetTimestamp()
+                });
+            }
         }
 
         private static NativeStageResult Completed()
         {
-            return new NativeStageResult { SchemaVersion = 1, Status = "COMPLETED", Success = true, Cleanup = "CONFIRMED" };
+            return new NativeStageResult
+            {
+                SchemaVersion = 1,
+                Status = "COMPLETED",
+                Success = true,
+                Cleanup = "CONFIRMED"
+            };
         }
 
         private static NativeStageResult Failed(string error)
         {
-            return new NativeStageResult { SchemaVersion = 1, Status = "FAILED", Success = false, Cleanup = "UNKNOWN", Error = error };
+            return new NativeStageResult
+            {
+                SchemaVersion = 1,
+                Status = "FAILED",
+                Success = false,
+                Cleanup = "UNKNOWN",
+                Error = error
+            };
         }
     }
 }
