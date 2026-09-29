@@ -157,3 +157,14 @@ Resume prompt: Continue EpsonRAsimulator in Youteach-org/EpsonRAsimulator, PR24 
 - Exact-head verification: Windows Bridge CI 83 SUCCESS; Android CI 508 SUCCESS.
 - All native-path tests use the repository's synthetic RCAPINet fixture. No Epson binary was loaded or copied into Git/CI output and no Epson native stage was executed.
 - Next: external process/TCP/event observation integration, then dual-bitness builds/output gates and final compiled-adaptation review.
+
+
+## Authoritative reconciliation before quota handoff
+
+Latest inspected remote449853479d7357676fc80584d95f06f1821cc68a is14commits beyond52e09cfc. WindowsCI88/run36521631745 and AndroidCI513/run36521631750 SUCCESS. It now contains strict worker CLI/reflection adapter, connection-number/type separation, ExternalObservation.cs and supervisor integration. Earlier statements that adapter/CLI are disabled are superseded. Do not repeat that implementation.
+
+Local observation follow-up was NOT published over these changes. Standalone tests reproduced4 failures against the older ObservationEvaluator (null sample fabricates delta; negative counts/reversed ticks accepted; Conclusive ambiguously suggests polling proves absence). Local candidate produced4/4PASS by nullable deltas and always-false Conclusive. But the new external observer ANDs Conclusive with event completeness and the supervisor consumes that contract; integrating the candidate without reviewing these consumers would change all native observation outcomes. Preserve as local WIP, not as completed remote correction.
+
+Review focus for next continuation: define separate usable sampled evidence versus proof of continuous absence; reject missing/negative/reversed samples without fabricated counts; examine event timestamps against baseline/sample range; process-path access failures and IPv6 coverage; observer sampling must not invalidate the supervisor deadline. Inspect actual new code/tests before choosing the contract and write integration RED/GREEN tests. Then dual-bitness builds/output gates and one independent compiled-adaptation review remain. Native execution still NOT RUN and separate exact-command approval required.
+
+Resume prompt: Continue Youteach-org/EpsonRAsimulator PR24 Draft on research/virtual-controller-probe. Verify actual HEAD/CI; read latest ledger and this handoff first. Latest inspected4498534 has WindowsCI88/AndroidCI513 GREEN and already implements worker/adapter/external observation. Reconcile local observation WIP against those new consumers before publishing it. Preserve real remote ancestry; never push local materialized history. Finish observation semantics/integration tests, x86/x64 build and proprietary-free output gates, then compiled-adaptation review. Do not redo9B/PowerShell reviews. No native Epson stage is authorized yet; no repeated environment questions without changed evidence. Document everything in GitHub and check real quota before stopping.
