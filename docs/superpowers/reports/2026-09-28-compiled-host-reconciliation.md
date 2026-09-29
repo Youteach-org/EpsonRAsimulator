@@ -19,3 +19,11 @@ The remote branch already contains the metadata parser, compiled supervisor, fix
 Ruling: preserve the existing enum contract and correct its consumer rather than introduce an IsValid wrapper — all policy tests use the enum — cost if wrong: dependent consumers would require migration.
 
 Native acceptance remains NOT RUN. Existing user preparation confirmations persist. Exact LoadOnly command approval is a later gate, after synthetic validation and review.
+
+## Cleanup regression checkpoint
+
+Windows CI68/run36502962872 confirms the production compiler error is removed; compilation next exposed an unused test helper calling ToArray on string[] without LINQ. Removed the unused helper. Android CI493 passed for0c48eb86.
+
+Standalone Roslyn C#7.3 regression runner (no Epson load, no substitute MSTest framework): initial4FAIL/1PASS, then5PASS. Regressions cover verification exceptions after successful Connect, Disconnect failure, rejecting missing prior evidence before any native call, duplicate exact names with mixed Virtual/physical types, and event-sink failures during cleanup. Cleanup now runs from finally, never retries, and attempts Disconnect/Dispose despite event-write failures. Official MSTest runs the same cases through StageCleanupTests. Full CI is pending the new commit.
+
+Ruling: reject duplicate exact names before filtering Virtual type — ambiguity must not select a target — cost if wrong: a deliberately duplicated configuration needs renaming. PriorEligibleOrdinal currently denotes the Virtual connection-type enum value3, not the connection row number; naming cleanup and adapter mapping remain pending. Never use UI connection number2 as a Connect argument.

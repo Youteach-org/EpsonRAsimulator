@@ -58,106 +58,88 @@ namespace EpsonRa.Bridge.Research.Worker
             if (validation != StageValidation.Valid)
                 return Failed("StagePolicyRejected");
 
+            if (request.Stage == Stage.Connect &&
+                (request.PriorEligibleName != "C4 Sample" ||
+                 request.PriorEligibleType != "Virtual" || request.PriorEligibleOrdinal != 3))
+                return Failed("PriorEligibilityRequired");
+
             if (request.Stage == Stage.MetadataOnly)
                 return Completed();
 
+            var result = Completed();
+            var constructionAttempted = false;
+            var connected = false;
             try
             {
                 Mark(eventSink, "before:Load");
                 api.Load(request.InstallRoot);
                 Mark(eventSink, "after:Load");
-
-                if (request.Stage == Stage.LoadOnly)
-                    return Completed();
-
-                Mark(eventSink, "before:Construct");
-                api.Construct();
-                Mark(eventSink, "after:Construct");
-
-                Mark(eventSink, "before:SetServerInstance");
-                api.SetServerInstance(request.ServerInstance.Value);
-                Mark(eventSink, "after:SetServerInstance");
-
-                Mark(eventSink, "before:Initialize");
-                api.Initialize();
-                Mark(eventSink, "after:Initialize");
-
-                if (request.Stage == Stage.InitializeObserve)
-                    return CompletedWithDispose(api, eventSink);
-
-                if (request.Stage == Stage.Inventory)
+                if (request.Stage != Stage.LoadOnly)
                 {
-                    var eligible = api.GetConnections()
-                        .Where(x => x != null && x.Name == "C4 Sample" && x.Type == "Virtual" && x.Ordinal == 3)
-                        .ToList();
-                    if (eligible.Count != 1)
-                        return FailedWithDispose(api, eventSink, "InventoryEligibility");
-                    var result = CompletedWithDispose(api, eventSink);
-                    result.EligibleName = eligible[0].Name;
-                    result.EligibleOrdinal = eligible[0].Ordinal;
-                    return result;
-                }
+                    Mark(eventSink, "before:Construct");
+                    constructionAttempted = true;
+                    api.Construct();
+                    Mark(eventSink, "after:Construct");
+                    Mark(eventSink, "before:SetServerInstance");
+                    api.SetServerInstance(request.ServerInstance.Value);
+                    Mark(eventSink, "after:SetServerInstance");
+                    Mark(eventSink, "before:Initialize");
+                    api.Initialize();
+                    Mark(eventSink, "after:Initialize");
 
-                if (request.Stage == Stage.Connect)
+                    if (request.Stage == Stage.Inventory)
+                    {
+                        // Reject all duplicate exact names, including mixed physical/Virtual entries.
+                        var matches = api.GetConnections()
+                            .Where(x => x != null && x.Name == "C4 Sample").ToList();
+                        if (matches.Count != 1 || matches[0].Type != "Virtual" || matches[0].Ordinal != 3)
+                            result = Failed("InventoryEligibility");
+                        else
+                        {
+                            result.EligibleName = matches[0].Name;
+                            result.EligibleOrdinal = matches[0].Ordinal;
+                        }
+                    }
+                    else if (request.Stage == Stage.Connect)
+                    {
+                        api.ConnectByName("C4 Sample");
+                        connected = true;
+                        var current = api.GetCurrentConnection();
+                        if (current == null || current.Name != "C4 Sample" ||
+                            current.Type != "Virtual" || current.Ordinal != 3)
+                            result = Failed("ConnectedIdentityMismatch");
+                    }
+                }
+            }
+            catch { result = Failed("NativeStageException"); }
+            finally
+            {
+                // Event persistence must never prevent cleanup, and cleanup is never retried.
+                var cleanupOk = true;
+                if (connected)
+                    cleanupOk = Cleanup(api.Disconnect, "Disconnect", eventSink) && cleanupOk;
+                if (constructionAttempted)
+                    cleanupOk = Cleanup(api.Dispose, "Dispose", eventSink) && cleanupOk;
+                if (!cleanupOk)
                 {
-                    if (request.PriorEligibleName != "C4 Sample" ||
-                        request.PriorEligibleType != "Virtual" ||
-                        request.PriorEligibleOrdinal != 3)
-                        return FailedWithDispose(api, eventSink, "PriorEligibilityRequired");
-
-                    api.ConnectByName("C4 Sample");
-                    var current = api.GetCurrentConnection();
-                    if (current == null || current.Name != "C4 Sample" || current.Type != "Virtual" || current.Ordinal != 3)
-                        return FailedWithCleanup(api, eventSink, "ConnectedIdentityMismatch");
-
-                    Mark(eventSink, "before:Disconnect");
-                    api.Disconnect();
-                    Mark(eventSink, "after:Disconnect");
-                    return CompletedWithDispose(api, eventSink);
+                    result.Success = false;
+                    result.Status = "FAILED";
+                    result.Cleanup = "UNKNOWN";
+                    result.Error = result.Error ?? "CleanupFailure";
                 }
-
-                return FailedWithDispose(api, eventSink, "UnsupportedStage");
+                else if (constructionAttempted)
+                    result.Cleanup = "CONFIRMED";
             }
-            catch
-            {
-                return FailedWithDispose(api, eventSink, "NativeStageException");
-            }
+            return result;
         }
 
-        private static NativeStageResult CompletedWithDispose(INativeApi api, Action<string> sink)
+        private static bool Cleanup(Action action, string name, Action<string> sink)
         {
-            try
-            {
-                Mark(sink, "before:Dispose");
-                api.Dispose();
-                Mark(sink, "after:Dispose");
-                return Completed();
-            }
-            catch { return Failed("DisposeFailure"); }
-        }
-
-        private static NativeStageResult FailedWithDispose(INativeApi api, Action<string> sink, string error)
-        {
-            try
-            {
-                Mark(sink, "before:Dispose");
-                api.Dispose();
-                Mark(sink, "after:Dispose");
-            }
-            catch { return Failed("DisposeFailure"); }
-            return Failed(error);
-        }
-
-        private static NativeStageResult FailedWithCleanup(INativeApi api, Action<string> sink, string error)
-        {
-            try
-            {
-                Mark(sink, "before:Disconnect");
-                api.Disconnect();
-                Mark(sink, "after:Disconnect");
-            }
-            catch { }
-            return FailedWithDispose(api, sink, error);
+            var ok = true;
+            try { Mark(sink, "before:" + name); } catch { ok = false; }
+            try { action(); } catch { ok = false; }
+            try { Mark(sink, "after:" + name); } catch { ok = false; }
+            return ok;
         }
 
         private static void Mark(Action<string> sink, string value)

@@ -110,7 +110,6 @@ namespace EpsonRa.Bridge.Research.Tests
         private sealed class FakeApi : INativeApi
         {
             public readonly List<NativeConnection> Connections = new List<NativeConnection>();
-            public string[] CallsArray { get { return Calls.ToArray(); } }
             public List<string> CallList = new List<string>();
             public string[] Calls { get { return CallList.ToArray(); } }
             public string ThrowOn { get; set; }
