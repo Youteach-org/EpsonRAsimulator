@@ -39,6 +39,22 @@ namespace EpsonRa.Bridge.Research.Tests
         }
 
         [TestMethod]
+        public void ProcessAccessGapOrMissingIpv6CoverageIsInconclusive()
+        {
+            var processGap = Snapshot(1, 1, 0, 0, true, true, true);
+            processGap.ProcessAccessGapCount = 1;
+            Assert.AreEqual("INCONCLUSIVE", ObservationEvaluator.Compare(
+                processGap,
+                Snapshot(1, 1, 0, 0, true, true, true)).Status);
+
+            var ipv6Gap = Snapshot(1, 1, 0, 0, true, true, true);
+            ipv6Gap.TcpIpv6SampleAvailable = false;
+            Assert.AreEqual("INCONCLUSIVE", ObservationEvaluator.Compare(
+                ipv6Gap,
+                Snapshot(1, 1, 0, 0, true, true, true)).Status);
+        }
+
+        [TestMethod]
         public void AmbiguousPidOwnershipIsInconclusive()
         {
             var result = ObservationEvaluator.Compare(
@@ -87,6 +103,7 @@ namespace EpsonRa.Bridge.Research.Tests
                 MonotonicTicks = 100,
                 ProcessSampleAvailable = processSampleAvailable,
                 TcpSampleAvailable = tcpSampleAvailable,
+                TcpIpv6SampleAvailable = tcpSampleAvailable,
                 OwnershipUnambiguous = ownershipUnambiguous,
                 OwnedProcessCount = ownedProcesses,
                 OwnedTcpCount = ownedTcp,
