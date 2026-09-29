@@ -200,6 +200,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 MonotonicTicks = Stopwatch.GetTimestamp(),
                 ProcessSampleAvailable = true,
                 TcpSampleAvailable = true,
+                TcpIpv6SampleAvailable = true,
                 OwnershipUnambiguous = _workerPid == 0 || _workerObserved
             };
 
@@ -223,7 +224,12 @@ namespace EpsonRa.Bridge.Research.Supervisor
 
                         string path;
                         if (!TryProcessPath(process, out path))
+                        {
+                            // PID 4 is the Windows System process and cannot be an Epson user process.
+                            if (pid != 4)
+                                snapshot.ProcessAccessGapCount++;
                             continue;
+                        }
 
                         if (!string.IsNullOrEmpty(path) &&
                             path.StartsWith(_installPrefix, StringComparison.OrdinalIgnoreCase))
@@ -241,19 +247,17 @@ namespace EpsonRa.Bridge.Research.Supervisor
             }
 
             Dictionary<int, int> tcpByPid;
-            if (!TcpOwnerSnapshot.TryCapture(out tcpByPid))
-            {
+            bool ipv6Available;
+            if (!TcpOwnerSnapshot.TryCapture(out tcpByPid, out ipv6Available))
                 snapshot.TcpSampleAvailable = false;
-            }
-            else
+            snapshot.TcpIpv6SampleAvailable = ipv6Available;
+
+            foreach (var pair in tcpByPid)
             {
-                foreach (var pair in tcpByPid)
-                {
-                    if (pair.Key == _workerPid)
-                        snapshot.OwnedTcpCount += pair.Value;
-                    else if (observedPids.Contains(pair.Key))
-                        snapshot.UnrelatedTcpCount += pair.Value;
-                }
+                if (pair.Key == _workerPid)
+                    snapshot.OwnedTcpCount += pair.Value;
+                else if (observedPids.Contains(pair.Key))
+                    snapshot.UnrelatedTcpCount += pair.Value;
             }
 
             return snapshot;
@@ -271,7 +275,9 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 MonotonicTicks = Math.Max(current.MonotonicTicks, next.MonotonicTicks),
                 ProcessSampleAvailable = current.ProcessSampleAvailable && next.ProcessSampleAvailable,
                 TcpSampleAvailable = current.TcpSampleAvailable && next.TcpSampleAvailable,
+                TcpIpv6SampleAvailable = current.TcpIpv6SampleAvailable && next.TcpIpv6SampleAvailable,
                 OwnershipUnambiguous = current.OwnershipUnambiguous && next.OwnershipUnambiguous,
+                ProcessAccessGapCount = Math.Max(current.ProcessAccessGapCount, next.ProcessAccessGapCount),
                 OwnedProcessCount = Math.Max(current.OwnedProcessCount, next.OwnedProcessCount),
                 OwnedTcpCount = Math.Max(current.OwnedTcpCount, next.OwnedTcpCount),
                 UnrelatedProcessCount = Math.Max(current.UnrelatedProcessCount, next.UnrelatedProcessCount),
@@ -315,6 +321,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
         private static class TcpOwnerSnapshot
         {
             private const int AfInet = 2;
+            private const int AfInet6 = 23;
             private const int ErrorInsufficientBuffer = 122;
             private const int TcpTableOwnerPidAll = 5;
 
@@ -338,7 +345,43 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 public uint OwningPid;
             }
 
-            public static bool TryCapture(out Dictionary<int, int> counts)
+            [StructLayout(LayoutKind.Sequential)]
+            private struct MibTcp6RowOwnerPid
+            {
+                public uint LocalAddr0;
+                public uint LocalAddr1;
+                public uint LocalAddr2;
+                public uint LocalAddr3;
+                public uint LocalScopeId;
+                public uint LocalPort;
+                public uint RemoteAddr0;
+                public uint RemoteAddr1;
+                public uint RemoteAddr2;
+                public uint RemoteAddr3;
+                public uint RemoteScopeId;
+                public uint RemotePort;
+                public uint State;
+                public uint OwningPid;
+            }
+
+            public static bool TryCapture(
+                out Dictionary<int, int> counts,
+                out bool ipv6Available)
+            {
+                counts = new Dictionary<int, int>();
+
+                Dictionary<int, int> ipv4;
+                Dictionary<int, int> ipv6;
+                var ipv4Available = TryCaptureIpv4(out ipv4);
+                ipv6Available = TryCaptureIpv6(out ipv6);
+
+                Merge(counts, ipv4);
+                Merge(counts, ipv6);
+
+                return ipv4Available && ipv6Available;
+            }
+
+            private static bool TryCaptureIpv4(out Dictionary<int, int> counts)
             {
                 counts = new Dictionary<int, int>();
                 IntPtr buffer = IntPtr.Zero;
@@ -357,15 +400,13 @@ namespace EpsonRa.Bridge.Research.Supervisor
                         return false;
 
                     buffer = Marshal.AllocHGlobal(size);
-                    var second = GetExtendedTcpTable(
+                    if (GetExtendedTcpTable(
                         buffer,
                         ref size,
                         false,
                         AfInet,
                         TcpTableOwnerPidAll,
-                        0);
-
-                    if (second != 0)
+                        0) != 0)
                         return false;
 
                     var rows = Marshal.ReadInt32(buffer);
@@ -377,11 +418,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
                         var row = (MibTcpRowOwnerPid)Marshal.PtrToStructure(
                             IntPtr.Add(rowPtr, i * rowSize),
                             typeof(MibTcpRowOwnerPid));
-
-                        var pid = unchecked((int)row.OwningPid);
-                        int count;
-                        counts.TryGetValue(pid, out count);
-                        counts[pid] = count + 1;
+                        Increment(counts, unchecked((int)row.OwningPid));
                     }
 
                     return true;
@@ -396,6 +433,79 @@ namespace EpsonRa.Bridge.Research.Supervisor
                     if (buffer != IntPtr.Zero)
                         Marshal.FreeHGlobal(buffer);
                 }
+            }
+
+            private static bool TryCaptureIpv6(out Dictionary<int, int> counts)
+            {
+                counts = new Dictionary<int, int>();
+                IntPtr buffer = IntPtr.Zero;
+                try
+                {
+                    var size = 0;
+                    var first = GetExtendedTcpTable(
+                        IntPtr.Zero,
+                        ref size,
+                        false,
+                        AfInet6,
+                        TcpTableOwnerPidAll,
+                        0);
+
+                    if (first != ErrorInsufficientBuffer || size <= 0)
+                        return false;
+
+                    buffer = Marshal.AllocHGlobal(size);
+                    if (GetExtendedTcpTable(
+                        buffer,
+                        ref size,
+                        false,
+                        AfInet6,
+                        TcpTableOwnerPidAll,
+                        0) != 0)
+                        return false;
+
+                    var rows = Marshal.ReadInt32(buffer);
+                    var rowPtr = IntPtr.Add(buffer, sizeof(int));
+                    var rowSize = Marshal.SizeOf(typeof(MibTcp6RowOwnerPid));
+
+                    for (var i = 0; i < rows; i++)
+                    {
+                        var row = (MibTcp6RowOwnerPid)Marshal.PtrToStructure(
+                            IntPtr.Add(rowPtr, i * rowSize),
+                            typeof(MibTcp6RowOwnerPid));
+                        Increment(counts, unchecked((int)row.OwningPid));
+                    }
+
+                    return true;
+                }
+                catch
+                {
+                    counts.Clear();
+                    return false;
+                }
+                finally
+                {
+                    if (buffer != IntPtr.Zero)
+                        Marshal.FreeHGlobal(buffer);
+                }
+            }
+
+            private static void Merge(
+                Dictionary<int, int> destination,
+                Dictionary<int, int> source)
+            {
+                foreach (var pair in source)
+                {
+                    int count;
+                    destination.TryGetValue(pair.Key, out count);
+                    destination[pair.Key] = count + pair.Value;
+                }
+            }
+
+            private static void Increment(Dictionary<int, int> counts, int pid)
+            {
+                int count;
+                counts.TryGetValue(pid, out count);
+                counts[pid] = count + 1;
             }
         }
     }
