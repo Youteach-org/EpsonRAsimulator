@@ -146,3 +146,14 @@ Resume prompt: Continue EpsonRAsimulator in Youteach-org/EpsonRAsimulator, PR24 
 - Verified at `0e33dd76371343d24e1334ae9b7d9997591cd3c3`: Windows Bridge CI 78 SUCCESS; Android CI 503 SUCCESS.
 - Ruling: connection number is evidence only; Virtual type number 3 is the eligibility discriminator. Cost if wrong: descriptor mapping would fail closed rather than permit a numeric/default fallback.
 - Native acceptance remains NOT RUN. No Epson assembly load, Initialize, Inventory or Connect occurred in this checkpoint.
+
+
+## Strict compiled worker + reflection adapter GREEN — 2026-09-28
+
+- RED behavior was verified in Windows Bridge CI 81 at `eb0e43dd5eb07f3f6df869f493dd1f9250300379`: 53 existing research tests passed and exactly 5 new worker/adapter tests failed because the compiled worker CLI still returned exit64 and `InstalledApiAdapter` was intentionally closed.
+- GREEN `9addd6944c4003e38fa900093756ee8eb3a95cf1` enables only the planned compiled interface: exact `--request <absolute-json> --events <absolute-private-file>`, strict request schema/types, one structured stdout result, private monotonic event JSONL, and a reflection adapter with no RCAPINet build reference.
+- Adapter reflection is restricted to installed `exe\\RCAPINet.dll`, exact type `RCAPINet.Spel`, writable int `ServerInstance`, and exact overloads `Initialize()`, `GetConnectionInfo()`, `Connect(string)`, `GetCurrentConnectionInfo()`, `Disconnect()`, `Dispose()`. `Connect(int)` and arbitrary methods/properties are not exposed.
+- CI 82 showed 57/58 passing; the sole failure occurred after successful adapter assertions because `Assembly.LoadFrom` keeps the synthetic fixture DLL locked in the MSTest AppDomain. Test cleanup was changed to best-effort only at `55ea9088208b05be82cb3977d2273b110bc8ce9b`; production behavior and assertions were unchanged.
+- Exact-head verification: Windows Bridge CI 83 SUCCESS; Android CI 508 SUCCESS.
+- All native-path tests use the repository's synthetic RCAPINet fixture. No Epson binary was loaded or copied into Git/CI output and no Epson native stage was executed.
+- Next: external process/TCP/event observation integration, then dual-bitness builds/output gates and final compiled-adaptation review.
