@@ -70,14 +70,21 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
                     return null;
 
+                var info = new FileInfo(path);
+                if (info.Length <= 0 || info.Length > 64 * 1024)
+                    return null;
+
                 var serializer = new JavaScriptSerializer();
                 var result = new List<StageEvent>();
-                foreach (var line in File.ReadAllLines(path))
+                using (var reader = new StreamReader(path))
                 {
-                    if (string.IsNullOrWhiteSpace(line))
-                        return null;
+                    string line;
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if (result.Count >= 64 || string.IsNullOrWhiteSpace(line))
+                            return null;
 
-                    var dict = serializer.DeserializeObject(line) as Dictionary<string, object>;
+                        var dict = serializer.DeserializeObject(line) as Dictionary<string, object>;
                     object name;
                     object ticks;
                     if (dict == null ||
@@ -87,11 +94,12 @@ namespace EpsonRa.Bridge.Research.Supervisor
                         !(ticks is int) && !(ticks is long))
                         return null;
 
-                    result.Add(new StageEvent
-                    {
-                        Name = (string)name,
-                        MonotonicTicks = Convert.ToInt64(ticks)
-                    });
+                        result.Add(new StageEvent
+                        {
+                            Name = (string)name,
+                            MonotonicTicks = Convert.ToInt64(ticks)
+                        });
+                    }
                 }
                 return result;
             }
@@ -141,6 +149,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
     {
         private readonly string _installPrefix;
         private int _workerPid;
+        private bool _workerObserved;
         private bool _disposed;
         private ObservationSnapshot _after;
 
@@ -163,6 +172,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
         public void WorkerStarted(int processId)
         {
             _workerPid = processId;
+            _workerObserved = ProcessExists(processId);
             Poll();
         }
 
@@ -190,7 +200,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 MonotonicTicks = Stopwatch.GetTimestamp(),
                 ProcessSampleAvailable = true,
                 TcpSampleAvailable = true,
-                OwnershipUnambiguous = _workerPid == 0 || ProcessExists(_workerPid)
+                OwnershipUnambiguous = _workerPid == 0 || _workerObserved
             };
 
             var observedPids = new HashSet<int>();
