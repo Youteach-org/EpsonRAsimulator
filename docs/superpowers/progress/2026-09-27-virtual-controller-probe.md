@@ -98,3 +98,14 @@ Observation ruling: process/TCP snapshots and markers cannot prove absence of sh
 User explicitly approved the written compiled-native-host plan and multiagent implementation. Start baseline remote500b584c/local a232ee0. Task1 detached PE metadata/stage policy active with fresh implementer; Task2 compiled supervisor and Task3 worker/observations follow after task-scoped review. No native stage execution is included in this approval.
 
 Preflight interfaces: Task1 supplies detached contracts to2/3; Task2 owns subprocess JSON/deadline for3. Ruling: ambiguous test-directory prose means windows-bridge/tests/EpsonRa.Bridge.Research.Tests. No implementation onmain and no local snapshot push. Preserve exact remote parent when publishing.
+
+
+## 2026-09-28 — Compiled worker GREEN checkpoint
+
+- Task 2 supervisor GREEN was verified by Windows Bridge CI 61 and Android CI 486 at `bf7e0ef08235be2676d4acd2a769dbaa0b3a3f8f`.
+- Task 3 RED at `51d0dd7d9d510bdec10b6afdf8cfb50b7f894ef3` failed as intended because the Worker project/contracts did not yet exist; Android CI 487 remained green.
+- The staged Worker implementation now exists behind `INativeApi`; `InstalledApiAdapter` remains closed and the worker CLI remains disabled. Synthetic tests do not reference or load Epson binaries.
+- CI 64 exposed a contract error because `ResearchResult` is sealed; the staged result was corrected to an explicit contract rather than inheritance.
+- Current verified checkpoint `1dbc7efd984d8784848621e48e37f642b39e7530`: Windows Bridge CI 69 SUCCESS and Android CI 494 SUCCESS.
+- Remaining Task 3 synthetic work: failure injection/cleanup guarantees, monotonic stage events, external process/TCP observation with INCONCLUSIVE gaps/ambiguous ownership, x86/x64 builds, proprietary-output gate, README/workflow updates, and final compiled-adaptation review.
+- Native execution remains unchanged: RCAPINet has not been loaded; LoadOnly, InitializeObserve, Inventory and Connect have not been executed. PR #24 remains Draft and must not be merged during this research sequence.
