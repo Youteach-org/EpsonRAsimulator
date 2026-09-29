@@ -11,6 +11,12 @@ namespace EpsonRa.Bridge.Research.Fixture
         {
             // Finite leaf process: never enters the fixture dispatcher or spawns children.
             if (args.Length == 1 && args[0] == "--hold-stdout") { Thread.Sleep(5000); return 0; }
+            // Supervisor CLI integration uses a plain synthetic mode request, never vendor input.
+            if (args.Length == 4 && args[0] == "--request" && File.Exists(args[1]) && args[2] == "--events")
+            {
+                File.WriteAllText(args[1] + ".started", "synthetic worker started");
+                args = new[] { File.ReadAllText(args[1]).Trim(), args[0], args[1], args[2], args[3] };
+            }
             var mode = args.Length > 0 ? args[0] : "normal";
             if (args.Length != 5 || args[1] != "--request" || !File.Exists(args[2]) || args[3] != "--events") return 64;
 
@@ -123,4 +129,3 @@ namespace EpsonRa.Bridge.Research.Fixture
         }
     }
 }
-

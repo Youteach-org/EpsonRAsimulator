@@ -10,12 +10,14 @@ namespace EpsonRa.Bridge.Research.Supervisor
         {
             string worker = null;
             string request = null;
+            string resultFile = null;
             int timeout = 30;
 
             for (var i = 0; i < args.Length; i++)
             {
                 if (args[i] == "--worker" && i + 1 < args.Length) worker = args[++i];
                 else if (args[i] == "--request" && i + 1 < args.Length) request = args[++i];
+                else if (args[i] == "--result-file" && i + 1 < args.Length && resultFile == null) resultFile = args[++i];
                 else if (args[i] == "--timeout-seconds" && i + 1 < args.Length)
                 {
                     int parsed;
@@ -35,15 +37,42 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 }
             }
 
-            var result = WorkerSupervisor.Run(new WorkerRequest
+            // Reserve evidence before starting a worker. CreateNew prevents a replay from
+            // overwriting an earlier attempt, including an empty/crashed capture.
+            FileStream durable = null;
+            if (resultFile != null)
             {
-                WorkerPath = worker,
-                RequestPath = request,
-                TimeoutSeconds = timeout
-            });
+                try
+                {
+                    if (!Path.IsPathRooted(resultFile)) return 64;
+                    durable = new FileStream(resultFile, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+                }
+                catch { return 64; }
+            }
 
-            Console.WriteLine(new JavaScriptSerializer().Serialize(result));
-            return result.ExitCode;
+            using (durable)
+            {
+                var result = WorkerSupervisor.Run(new WorkerRequest
+                {
+                    WorkerPath = worker,
+                    RequestPath = request,
+                    TimeoutSeconds = timeout
+                });
+
+                var json = new JavaScriptSerializer().Serialize(result);
+                if (durable == null) Console.WriteLine(json);
+                else
+                {
+                    try
+                    {
+                        var bytes = new System.Text.UTF8Encoding(false).GetBytes(json + Environment.NewLine);
+                        durable.Write(bytes, 0, bytes.Length);
+                        durable.Flush(true);
+                    }
+                    catch { return 74; } // Capture failure is not native success.
+                }
+                return result.ExitCode;
+            }
         }
 
         private static SupervisorResult Invalid()
