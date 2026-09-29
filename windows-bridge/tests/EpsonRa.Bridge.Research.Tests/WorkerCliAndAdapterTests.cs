@@ -33,7 +33,7 @@ namespace EpsonRa.Bridge.Research.Tests
                 Assert.IsTrue(File.Exists(events));
                 Assert.AreEqual(0, File.ReadAllLines(events).Length);
             }
-            finally { Directory.Delete(root, true); }
+            finally { TryDelete(root); }
         }
 
         [TestMethod]
@@ -57,7 +57,7 @@ namespace EpsonRa.Bridge.Research.Tests
                 Assert.AreEqual("before:Load", ParseObject(lines[0])["name"]);
                 Assert.AreEqual("after:Load", ParseObject(lines[1])["name"]);
             }
-            finally { Directory.Delete(root, true); }
+            finally { TryDelete(root); }
         }
 
         [TestMethod]
@@ -100,7 +100,7 @@ namespace EpsonRa.Bridge.Research.Tests
                     api.Disconnect();
                 }
             }
-            finally { Directory.Delete(root, true); }
+            finally { TryDelete(root); }
         }
 
         [TestMethod]
@@ -112,7 +112,7 @@ namespace EpsonRa.Bridge.Research.Tests
                 using (var api = new InstalledApiAdapter())
                     ExpectException<FileNotFoundException>(() => api.Load(missing));
             }
-            finally { Directory.Delete(missing, true); }
+            finally { TryDelete(missing); }
 
             var root = CreateSyntheticInstallRoot();
             try
@@ -124,7 +124,7 @@ namespace EpsonRa.Bridge.Research.Tests
                     ExpectException<InvalidOperationException>(() => api.ConnectByName("Other"));
                 }
             }
-            finally { Directory.Delete(root, true); }
+            finally { TryDelete(root); }
         }
 
         private static void ExpectException<T>(Action action) where T : Exception
@@ -208,6 +208,23 @@ namespace EpsonRa.Bridge.Research.Tests
             for (var i = 0; i < args.Length; i++)
                 quoted[i] = "\"" + (args[i] ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
             return string.Join(" ", quoted);
+        }
+
+        private static void TryDelete(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path))
+                    Directory.Delete(path, true);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Assembly.LoadFrom keeps the synthetic DLL locked until the test AppDomain exits.
+            }
+            catch (IOException)
+            {
+                // Same lifetime constraint; CI workspace cleanup owns the remaining synthetic temp file.
+            }
         }
 
         private static string NewTempRoot()
