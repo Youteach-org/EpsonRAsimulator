@@ -23,6 +23,14 @@ jobs:
       - name: Test research core with synthetic PE images
         shell: pwsh
         run: dotnet test windows-bridge/tests/EpsonRa.Bridge.Research.Tests/EpsonRa.Bridge.Research.Tests.csproj -c Release --logger "trx;LogFileName=research.trx"
+      - name: Build compiled worker x86
+        shell: pwsh
+        run: dotnet build windows-bridge/src/EpsonRa.Bridge.Research.Worker/EpsonRa.Bridge.Research.Worker.csproj -c Release -p:PlatformTarget=x86 -p:Prefer32Bit=false -o windows-bridge/artifacts/compiled-worker/x86
+
+      - name: Build compiled worker x64
+        shell: pwsh
+        run: dotnet build windows-bridge/src/EpsonRa.Bridge.Research.Worker/EpsonRa.Bridge.Research.Worker.csproj -c Release -p:PlatformTarget=x64 -p:Prefer32Bit=false -o windows-bridge/artifacts/compiled-worker/x64
+
       - name: Verify compiled worker output gate
         shell: pwsh
         run: pwsh -NoProfile -File windows-bridge/probes/tests/test-compiled-worker-outputs.ps1
