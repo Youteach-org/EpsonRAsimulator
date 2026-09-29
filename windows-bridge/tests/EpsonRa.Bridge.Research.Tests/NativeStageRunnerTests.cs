@@ -95,6 +95,96 @@ namespace EpsonRa.Bridge.Research.Tests
             CollectionAssert.Contains(api.Calls, "Dispose");
         }
 
+
+        [TestMethod]
+        public void InitializeObserveEmitsMonotonicBoundaryEvents()
+        {
+            var api = new FakeApi();
+            var events = new List<StageEvent>();
+
+            NativeStageRunner.Run(Request(Stage.InitializeObserve, true), api, events.Add);
+
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    "before:Load", "after:Load",
+                    "before:Construct", "after:Construct",
+                    "before:SetServerInstance", "after:SetServerInstance",
+                    "before:Initialize", "after:Initialize",
+                    "before:Dispose", "after:Dispose"
+                },
+                events.ConvertAll(x => x.Name).ToArray());
+
+            for (var i = 1; i < events.Count; i++)
+                Assert.IsTrue(events[i].MonotonicTicks >= events[i - 1].MonotonicTicks);
+        }
+
+        [TestMethod]
+        public void FailuresAfterInstanceExistsAttemptDisposeWithoutRetry()
+        {
+            foreach (var failure in new[] { "SetServerInstance:1", "Initialize", "GetConnections" })
+            {
+                var api = new FakeApi { ThrowOn = failure };
+                var stage = failure == "GetConnections" ? Stage.Inventory : Stage.InitializeObserve;
+
+                var result = NativeStageRunner.Run(Request(stage, true), api, _ => { });
+
+                Assert.IsFalse(result.Success, failure);
+                CollectionAssert.Contains(api.Calls, "Dispose", failure);
+                Assert.AreEqual(1, Array.FindAll(api.Calls, x => x == failure).Length, failure);
+            }
+        }
+
+        [TestMethod]
+        public void ConnectVerificationExceptionStillAttemptsDisconnectAndDispose()
+        {
+            var api = new FakeApi { ThrowOn = "GetCurrentConnection" };
+            var request = EligibleConnectRequest();
+
+            var result = NativeStageRunner.Run(request, api, _ => { });
+
+            Assert.IsFalse(result.Success);
+            CollectionAssert.Contains(api.Calls, "ConnectByName:C4 Sample");
+            CollectionAssert.Contains(api.Calls, "Disconnect");
+            CollectionAssert.Contains(api.Calls, "Dispose");
+        }
+
+        [TestMethod]
+        public void ConnectedIdentityMismatchAttemptsDisconnectAndDispose()
+        {
+            var api = new FakeApi
+            {
+                CurrentConnection = new NativeConnection { Name = "Other", Type = "Virtual", Ordinal = 3 }
+            };
+            var result = NativeStageRunner.Run(EligibleConnectRequest(), api, _ => { });
+
+            Assert.IsFalse(result.Success);
+            CollectionAssert.Contains(api.Calls, "Disconnect");
+            CollectionAssert.Contains(api.Calls, "Dispose");
+        }
+
+        [TestMethod]
+        public void DisconnectOrDisposeFailureNeverBecomesSuccess()
+        {
+            foreach (var failure in new[] { "Disconnect", "Dispose" })
+            {
+                var api = new FakeApi { ThrowOn = failure };
+                var result = NativeStageRunner.Run(EligibleConnectRequest(), api, _ => { });
+
+                Assert.IsFalse(result.Success, failure);
+                Assert.AreNotEqual("CONFIRMED", result.Cleanup, failure);
+            }
+        }
+
+        private static NativeStageRequest EligibleConnectRequest()
+        {
+            var request = Request(Stage.Connect, true);
+            request.PriorEligibleName = "C4 Sample";
+            request.PriorEligibleType = "Virtual";
+            request.PriorEligibleOrdinal = 3;
+            return request;
+        }
+
         private static NativeStageRequest Request(Stage stage, bool approved)
         {
             return new NativeStageRequest
@@ -113,6 +203,7 @@ namespace EpsonRa.Bridge.Research.Tests
             public List<string> CallList = new List<string>();
             public string[] Calls { get { return CallList.ToArray(); } }
             public string ThrowOn { get; set; }
+            public NativeConnection CurrentConnection { get; set; }
 
             private void Hit(string value)
             {
@@ -126,7 +217,11 @@ namespace EpsonRa.Bridge.Research.Tests
             public void Initialize() { Hit("Initialize"); }
             public IReadOnlyList<NativeConnection> GetConnections() { Hit("GetConnections"); return Connections; }
             public void ConnectByName(string name) { Hit("ConnectByName:" + name); }
-            public NativeConnection GetCurrentConnection() { Hit("GetCurrentConnection"); return new NativeConnection { Name="C4 Sample", Type="Virtual", Ordinal=3 }; }
+            public NativeConnection GetCurrentConnection()
+            {
+                Hit("GetCurrentConnection");
+                return CurrentConnection ?? new NativeConnection { Name="C4 Sample", Type="Virtual", Ordinal=3 };
+            }
             public void Disconnect() { Hit("Disconnect"); }
             public void Dispose() { Hit("Dispose"); }
         }
