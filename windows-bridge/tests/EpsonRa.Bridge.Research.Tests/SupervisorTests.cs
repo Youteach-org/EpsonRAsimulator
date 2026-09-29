@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using EpsonRa.Bridge.Research;
 using EpsonRa.Bridge.Research.Supervisor;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -16,6 +17,21 @@ namespace EpsonRa.Bridge.Research.Tests
             Assert.AreEqual(0, result.ExitCode);
             Assert.AreEqual("COMPLETED", result.Status);
             Assert.IsTrue(result.Success);
+        }
+
+        [TestMethod]
+        public void StructuredMetadataAndInventoryEvidenceSurvivesParentNormalization()
+        {
+            var result = Run("evidence", 5);
+            Assert.AreEqual(0, result.ExitCode);
+            var worker = result.WorkerResult as ResearchResult;
+            Assert.IsNotNull(worker);
+            Assert.AreEqual(332, worker.Machine);
+            Assert.AreEqual(9L, worker.CorFlags);
+            Assert.AreEqual("AnyCpu", worker.Architecture);
+            Assert.AreEqual("C4 Sample", worker.EligibleName);
+            Assert.AreEqual(2, worker.EligibleConnectionNumber);
+            Assert.AreEqual(3, worker.EligibleTypeNumber);
         }
 
         [TestMethod]
