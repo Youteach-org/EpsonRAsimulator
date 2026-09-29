@@ -324,3 +324,16 @@ Implementation commit3571ed6e3555c0d8b4be59fe96f40b3e7ec3aa72: Windows Bridge CI
 Read-only check at2026-09-29T20:16:22.8671738Z found zero erc70/erc70PServer/EpsonRa processes. Original native result and stderr still0bytes, execution file absent. No claim about how the prior erc70 process exited; no agent termination occurred. Application error events1000/1001/1026 in19:28:30–19:32:30Z contained no matching EpsonRa/erc70/RCAPINet entry. Absence of matching events is not proof of absence of a crash. The original native result remains unrecoverable/inconclusive, cleanupUNKNOWN. Follow-up evidence: docs/superpowers/research/evidence/2026-09-29-initialize-observe-followup.json.
 
 Next: capture correction complete and exact-code CI green. No authorized native execution remains: user prohibits retry/Inventory/Connect. Do not ask to close RC+ again; no processes detected at last check. Any further native attempt requires a newly authorized boundary and separately reviewed command/hashes; existing original binaries remain untouched. Never treat the synthetic capture correction as native acceptance or claim2/4 native stages complete.
+
+
+## 2026-09-29 — Durable InitializeObserve retry preparation, NOT EXECUTED
+
+Prepared docs/superpowers/research/2026-09-29-initialize-observe-retry-preparation.md at commit cee171daea7e87d829b6be696fa09196877fd475.
+
+Direct compare 986d7804d3a4472513068bab811bb17240501aec..3571ed6e3555c0d8b4be59fe96f40b3e7ec3aa72 confirms the native worker and EpsonRa.Bridge.Research library source did not change during the durable-capture correction. Preserve the originally approved local x86 worker SHA256 0B17E31934684641E49D428051B250D8011D9503A6A010E4C177D6BCB8F61FF4, Research DLL SHA256 ACED9B8F2AAD28EDB8BD78F1D8FA134FF922A71AD0BF49BBAD794CC71364EDCF, and InitializeObserve request SHA256 410644255667212114058C4C20B8F9917058190E5073620388A56821BBC5712B. The old supervisor SHA256 FAE1DDEBB4725FEBDCB940A3DC40A9F95DB6A29646B251B79F1018D4C650337A must NOT be reused for another attempt because it predates --result-file.
+
+Current exact-head verification before this docs checkpoint: Windows Bridge CI112/run36625487642 SUCCESS (readiness36/36, research78/78) and Android CI537/run36625487500 SUCCESS. CI artifact hashes are reference evidence only. CI105 produced hashes that did not match the locally approved binaries, so never substitute CI hashes for local native-approval hashes.
+
+Remaining blocker before proposing another exact native command: recover the locally rebuilt durable supervisor from the continuation workspace's work/capture-diagnosis area and record its absolute path, SHA256, file length, and last-write timestamp. If that file cannot be recovered, build a fresh supervisor from reviewed source and treat it as a new artifact with a new hash/review. This chat runtime cannot access that Windows workspace and must not fabricate the hash.
+
+No native retry, Inventory, Connect, Epson-process termination, or merge was executed or authorized by this preparation. The first InitializeObserve result remains INCONCLUSIVE with cleanup UNKNOWN. Original evidence stays immutable. Any future retry must use a new result path, the same InitializeObserve native semantics, and the durable ShellExecute/finite-wait capture path; separate exact-command user approval is still required.
