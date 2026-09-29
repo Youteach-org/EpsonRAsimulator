@@ -21,26 +21,43 @@ Preserved local hashes from the first InitializeObserve boundary:
 - request `initialize-observe.proposed.json`: `410644255667212114058C4C20B8F9917058190E5073620388A56821BBC5712B`
 - old supervisor `FAE1DDEBB4725FEBDCB940A3DC40A9F95DB6A29646B251B79F1018D4C650337A` MUST NOT be reused for a retry because it lacks the durable `--result-file` correction.
 
-## Current CI evidence
+## Current CI evidence and sealed durable supervisor
 
-PR24 head CI:
-- Windows Bridge CI112 / run36625487642: SUCCESS, readiness36/36, research78/78.
-- Android CI537 / run36625487500: SUCCESS.
-- Current CI build reported x86 worker `ee8d67374d6370ac0d917d9ee70554f271b22a0209d045b2f6d8302f9e1b0f30`, x64 worker `dbcbc2811fe3d72d9b074d79b0f548f621f33d2b943794dde28f2694760c0910`, supervisor `445353d77e32dca7f100ddfeddcdeddfcce3e3a7b86d8220e81a0dc1a4a681d4`.
+A dedicated artifact job was added to Windows Bridge CI so the durable supervisor is rebuilt from the exact PR head rather than from the temporary pull-request merge checkout.
 
-These CI hashes are reference evidence only, not substitutes for local artifact hashes. The earlier CI105 build hashes (`c3f87f...` worker, `9ebf1c...` supervisor) did not match the locally approved binaries (`0B17E3...`, `FAE1D...`), so no CI hash may be silently treated as a local approval hash.
+Sealed source checkpoint:
+- exact PR head: `c571aa96b0edf91587a5f43c14ca2cfbf06d7880`
+- Windows Bridge CI116 / run36633600657: SUCCESS
+- readiness tests: 36/36 PASS
+- research tests in the main job: 78/78 PASS
+- synthetic virtual-controller supervisor lifecycle: 12/12 PASS
+- research tests repeated after exact-head checkout in the sealing job: 78/78 PASS
+- only the existing MSTEST0044 warnings remain.
 
-## Only remaining preparation blocker
+Published Actions artifact:
+- artifact name: `epson-ra-research-supervisor-x64-c571aa96b0edf91587a5f43c14ca2cfbf06d7880`
+- artifact id: `11063812312`
+- artifact ZIP SHA256 reported by Actions and independently rechecked after download: `C2D723A9D19742F4B81C6520696692955B4FC5DFAC52AAA45768AD76C6CF1AD1`
+- contained supervisor: `EpsonRa.Bridge.Research.Supervisor.exe`
+- supervisor SHA256 from CI manifest and independent recheck: `4A43FCBB4A3591E16929E3325756DEE2B8E7A8C6B4F3601EBFD23F3452171AF0`
+- supervisor length: `27136` bytes
+- target: `net48`, x64
+- manifest sourceCommit: `c571aa96b0edf91587a5f43c14ca2cfbf06d7880`
 
-The durable supervisor binary built locally after `3571ed6e` was recorded as living under the continuation workspace's `work/capture-diagnosis` area, but its exact absolute path and SHA256 were not persisted in GitHub.
+The artifact intentionally contains only the supervisor executable, its generated config when present, and `supervisor-manifest.json`; it does not package or replace the previously approved x86 worker or approved Research DLL.
 
-Before any new native approval, recover that file read-only and record:
-1. absolute supervisor path,
-2. SHA256,
-3. file length and last-write timestamp,
-4. confirmation that the preserved worker, Research DLL and request still match the three hashes above.
+The prior locally rebuilt `work/capture-diagnosis` supervisor no longer needs to be recovered. It is superseded for retry preparation by this newly sealed, explicitly hashed artifact. This does NOT transfer approval to any native operation.
 
-Do not rebuild or replace the preserved worker/request merely to make hashes line up. If the durable supervisor file cannot be recovered, build a fresh supervisor from the reviewed source and treat it as a new artifact requiring a new hash/review.
+## Remaining preparation before a native approval request
+
+Before presenting the exact retry command for approval:
+1. place the sealed supervisor artifact at a new absolute Windows path without overwriting first-attempt evidence,
+2. recheck the downloaded supervisor SHA256 is exactly `4A43FCBB4A3591E16929E3325756DEE2B8E7A8C6B4F3601EBFD23F3452171AF0`,
+3. recheck the preserved x86 worker, Research DLL and request still match the three approved hashes above,
+4. use a fresh, nonexistent result path such as `initialize-observe.retry-1.result.json`,
+5. perform only a read-only Epson-process precheck immediately before any separately approved native execution.
+
+Do not rebuild or replace the preserved worker/request merely to make hashes line up. No Inventory, Connect, process termination, fallback or automatic retry is authorized.
 
 ## Proposed retry semantics once the supervisor hash is known
 
@@ -75,4 +92,4 @@ Do not re-ask unchanged environmental questions. The user already confirmed RC+ 
 
 ## Approval gate
 
-No native command is approved by this document. After the local durable supervisor hash is recovered, prepare one exact absolute-path command plus all artifact hashes and present that exact boundary for separate user approval. Prior approval for the first InitializeObserve attempt does not carry over.
+No native command is approved by this document. The durable supervisor hash blocker is resolved by the sealed CI artifact above, but the exact Windows execution path and the preserved local worker/Research/request hash recheck still must be fixed before the approval boundary is complete. Once those are known, prepare one exact absolute-path command plus all artifact hashes and present that exact boundary for separate user approval. Prior approval for the first InitializeObserve attempt does not carry over.
