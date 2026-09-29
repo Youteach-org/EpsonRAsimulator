@@ -1,0 +1,16 @@
+{
+  "checkedUtc": "2026-09-29T19:31:02.8849535Z",
+  "status": "INCONCLUSIVE_CAPTURE_PENDING",
+  "supervisorResultBytes": 0,
+  "stderrBytes": 0,
+  "processes": [
+    {
+      "Id": 19444,
+      "ProcessName": "erc70"
+    }
+  ],
+  "nativeExitCode": null,
+  "cleanup": "UNKNOWN",
+  "retryAttempted": false
+}
+
