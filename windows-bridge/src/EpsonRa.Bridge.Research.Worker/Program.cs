@@ -42,8 +42,17 @@ namespace EpsonRa.Bridge.Research.Worker
                         writer.WriteLine(serializer.Serialize(wire));
                     };
 
-                    var adapter = new InstalledApiAdapter();
-                    var result = NativeStageRunner.Run(request, adapter, sink);
+                    NativeStageResult result;
+                    if (request.Stage == Stage.MetadataOnly)
+                    {
+                        result = RunMetadataOnly(request);
+                    }
+                    else
+                    {
+                        var adapter = new InstalledApiAdapter();
+                        result = NativeStageRunner.Run(request, adapter, sink);
+                    }
+
                     WriteResult(result);
                     return result.Success ? 0 : 3;
                 }
@@ -52,6 +61,39 @@ namespace EpsonRa.Bridge.Research.Worker
             {
                 WriteFailure("WorkerFailure");
                 return 3;
+            }
+        }
+
+        private static NativeStageResult RunMetadataOnly(NativeStageRequest request)
+        {
+            try
+            {
+                var dllPath = Path.Combine(request.InstallRoot, "exe", "RCAPINet.dll");
+                using (var stream = new FileStream(dllPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                {
+                    var info = PeImageInspector.Inspect(stream);
+                    return new NativeStageResult
+                    {
+                        SchemaVersion = 1,
+                        Status = "COMPLETED",
+                        Success = true,
+                        Cleanup = "CONFIRMED",
+                        Machine = info.Machine,
+                        CorFlags = info.CorFlags,
+                        Architecture = info.Architecture.ToString()
+                    };
+                }
+            }
+            catch
+            {
+                return new NativeStageResult
+                {
+                    SchemaVersion = 1,
+                    Status = "FAILED",
+                    Success = false,
+                    Cleanup = "UNKNOWN",
+                    Error = "MetadataInspectionFailure"
+                };
             }
         }
 
@@ -236,6 +278,9 @@ namespace EpsonRa.Bridge.Research.Worker
 
             if (result != null)
             {
+                wire["machine"] = result.Machine;
+                wire["corFlags"] = result.CorFlags;
+                wire["architecture"] = result.Architecture;
                 wire["eligibleName"] = result.EligibleName;
                 wire["eligibleConnectionNumber"] = result.EligibleConnectionNumber;
                 wire["eligibleTypeNumber"] = result.EligibleTypeNumber;
