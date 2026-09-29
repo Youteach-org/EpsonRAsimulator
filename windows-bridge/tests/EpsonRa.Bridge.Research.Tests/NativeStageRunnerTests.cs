@@ -41,20 +41,40 @@ namespace EpsonRa.Bridge.Research.Tests
         public void InventorySelectsOnlyUniqueVirtual3Ordinal()
         {
             var api = new FakeApi();
-            api.Connections.Add(new NativeConnection { Name = "Other", Type = "Virtual", Ordinal = 2 });
-            api.Connections.Add(new NativeConnection { Name = "C4 Sample", Type = "Virtual", Ordinal = 3 });
+            api.Connections.Add(new NativeConnection { Name = "Other", ConnectionNumber = 3, TypeNumber = 2, TypeName = "Ethernet" });
+            api.Connections.Add(new NativeConnection { Name = "C4 Sample", ConnectionNumber = 2, TypeNumber = 3, TypeName = "Virtual" });
             var result = NativeStageRunner.Run(Request(Stage.Inventory, true), api, _ => { });
             Assert.IsTrue(result.Success);
-            Assert.AreEqual(3, result.EligibleOrdinal);
+            Assert.AreEqual(2, result.EligibleConnectionNumber);
+            Assert.AreEqual(3, result.EligibleTypeNumber);
             Assert.AreEqual("C4 Sample", result.EligibleName);
+        }
+
+        [TestMethod]
+        public void ConnectionNumberIsEvidenceNotVirtualEligibility()
+        {
+            var api = new FakeApi();
+            api.Connections.Add(new NativeConnection
+            {
+                Name = "C4 Sample",
+                ConnectionNumber = 99,
+                TypeNumber = 3,
+                TypeName = "Virtual"
+            });
+
+            var result = NativeStageRunner.Run(Request(Stage.Inventory, true), api, _ => { });
+
+            Assert.IsTrue(result.Success);
+            Assert.AreEqual(99, result.EligibleConnectionNumber);
+            Assert.AreEqual(3, result.EligibleTypeNumber);
         }
 
         [TestMethod]
         public void InventoryRejectsDuplicateEligibleConnection()
         {
             var api = new FakeApi();
-            api.Connections.Add(new NativeConnection { Name = "C4 Sample", Type = "Virtual", Ordinal = 3 });
-            api.Connections.Add(new NativeConnection { Name = "C4 Sample", Type = "Virtual", Ordinal = 3 });
+            api.Connections.Add(new NativeConnection { Name = "C4 Sample", ConnectionNumber = 2, TypeNumber = 3, TypeName = "Virtual" });
+            api.Connections.Add(new NativeConnection { Name = "C4 Sample", ConnectionNumber = 2, TypeNumber = 3, TypeName = "Virtual" });
             Assert.IsFalse(NativeStageRunner.Run(Request(Stage.Inventory, true), api, _ => { }).Success);
         }
 
@@ -64,8 +84,7 @@ namespace EpsonRa.Bridge.Research.Tests
             var api = new FakeApi();
             var request = Request(Stage.Connect, true);
             request.PriorEligibleName = "C4 Sample";
-            request.PriorEligibleType = "Virtual";
-            request.PriorEligibleOrdinal = 3;
+            request.PriorEligibleTypeNumber = 3;
             NativeStageRunner.Run(request, api, _ => { });
             CollectionAssert.Contains(api.Calls, "ConnectByName:C4 Sample");
             Assert.IsFalse(Array.Exists(api.Calls, x => x == "ConnectByOrdinal:3"));
@@ -154,7 +173,7 @@ namespace EpsonRa.Bridge.Research.Tests
         {
             var api = new FakeApi
             {
-                CurrentConnection = new NativeConnection { Name = "Other", Type = "Virtual", Ordinal = 3 }
+                CurrentConnection = new NativeConnection { Name = "Other", ConnectionNumber = 2, TypeNumber = 3, TypeName = "Virtual" }
             };
             var result = NativeStageRunner.Run(EligibleConnectRequest(), api, _ => { });
 
@@ -180,8 +199,7 @@ namespace EpsonRa.Bridge.Research.Tests
         {
             var request = Request(Stage.Connect, true);
             request.PriorEligibleName = "C4 Sample";
-            request.PriorEligibleType = "Virtual";
-            request.PriorEligibleOrdinal = 3;
+            request.PriorEligibleTypeNumber = 3;
             return request;
         }
 
@@ -220,7 +238,7 @@ namespace EpsonRa.Bridge.Research.Tests
             public NativeConnection GetCurrentConnection()
             {
                 Hit("GetCurrentConnection");
-                return CurrentConnection ?? new NativeConnection { Name="C4 Sample", Type="Virtual", Ordinal=3 };
+                return CurrentConnection ?? new NativeConnection { Name="C4 Sample", ConnectionNumber=2, TypeNumber=3, TypeName="Virtual" };
             }
             public void Disconnect() { Hit("Disconnect"); }
             public void Dispose() { Hit("Dispose"); }
