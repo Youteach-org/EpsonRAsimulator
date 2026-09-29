@@ -5,7 +5,9 @@ namespace EpsonRa.Bridge.Research
         public long MonotonicTicks { get; set; }
         public bool ProcessSampleAvailable { get; set; }
         public bool TcpSampleAvailable { get; set; }
+        public bool TcpIpv6SampleAvailable { get; set; }
         public bool OwnershipUnambiguous { get; set; }
+        public int ProcessAccessGapCount { get; set; }
         public int OwnedProcessCount { get; set; }
         public int OwnedTcpCount { get; set; }
         public int UnrelatedProcessCount { get; set; }
@@ -46,6 +48,10 @@ namespace EpsonRa.Bridge.Research
                 after.ProcessSampleAvailable &&
                 before.TcpSampleAvailable &&
                 after.TcpSampleAvailable &&
+                before.TcpIpv6SampleAvailable &&
+                after.TcpIpv6SampleAvailable &&
+                before.ProcessAccessGapCount == 0 &&
+                after.ProcessAccessGapCount == 0 &&
                 before.OwnershipUnambiguous &&
                 after.OwnershipUnambiguous;
 
