@@ -301,3 +301,12 @@ Quota checked: five-hour56% used, weekly98% used; ordinaryUsageAllowed=true. No 
 
 HANDOFF PROMPT:
 Continue EpsonRAsimulator, Youteach-org/EpsonRAsimulator Draft PR24 on research/virtual-controller-probe, stacked on PR22. Verify actual remote HEAD and read newest ledger/handoff first. Compiled host implementation/review is complete at986d7804; LoadOnly passed once. User approved InitializeObserve with instance10; it was attempted ONCE and is currently INCONCLUSIVE, not permission to retry. Shell session92996 is awaiting capture; at19:31Z erc70 PID19444 remained, supervisor/worker not visible, output empty. User was asked to close RC+ manually. First check that response, then poll the existing session/read existing evidence; never automatically kill Epson processes. Do not run Inventory/Connect. Diagnose any remaining capture failure using synthetic tests. Preserve user environmental confirmations and all evidence, document in GitHub using fresh remote parent/forcefalse, never push local materialized history or merge main. Weekly quota98% used at last check; preserve handoff before exhaustion.
+
+
+## 2026-09-29 19:40Z — User correction and read-only follow-up
+
+User states: "nunca estuvo abierto. cerrado." Preserve this confirmation: the earlier assertion that an RC+ window was open was unsupported; process presence alone does not prove an open UI. At 19:40:13Z Get-Process observed erc70 PID19444, started 19:29:20Z, Responding=true, MainWindowHandle=0 and MainWindowTitle empty. No EpsonRa supervisor/worker matched. This distinguishes a remaining process from a visible application window; it does not establish its role or ownership.
+
+Existing result JSON and stderr remain zero bytes, unchanged since 19:29:16Z; execution JSON is absent. Polling original session92996 from the continuation chat returned Unknown process id92996, so its completion/exit cannot be recovered through that session handle here. Do not claim it is still waiting based on an inaccessible handle. Native result remains INCONCLUSIVE; cleanup UNKNOWN. No native retry, Inventory, Connect or process termination occurred.
+
+Manual UI closure is no longer an outstanding user confirmation. Do not repeatedly ask the user to close a window they report was never open. Next investigation concerns existing evidence and synthetic supervisor/outer-capture behavior only. Inherited handles remain a hypothesis, not a diagnosed root cause. Preserve original empty evidence; do not manufacture a worker result or native exit code. PR24 remains Draft/stacked; no merge.
