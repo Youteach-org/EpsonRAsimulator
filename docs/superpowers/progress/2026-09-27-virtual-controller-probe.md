@@ -168,3 +168,38 @@ Local observation follow-up was NOT published over these changes. Standalone tes
 Review focus for next continuation: define separate usable sampled evidence versus proof of continuous absence; reject missing/negative/reversed samples without fabricated counts; examine event timestamps against baseline/sample range; process-path access failures and IPv6 coverage; observer sampling must not invalidate the supervisor deadline. Inspect actual new code/tests before choosing the contract and write integration RED/GREEN tests. Then dual-bitness builds/output gates and one independent compiled-adaptation review remain. Native execution still NOT RUN and separate exact-command approval required.
 
 Resume prompt: Continue Youteach-org/EpsonRAsimulator PR24 Draft on research/virtual-controller-probe. Verify actual HEAD/CI; read latest ledger and this handoff first. Latest inspected4498534 has WindowsCI88/AndroidCI513 GREEN and already implements worker/adapter/external observation. Reconcile local observation WIP against those new consumers before publishing it. Preserve real remote ancestry; never push local materialized history. Finish observation semantics/integration tests, x86/x64 build and proprietary-free output gates, then compiled-adaptation review. Do not redo9B/PowerShell reviews. No native Epson stage is authorized yet; no repeated environment questions without changed evidence. Document everything in GitHub and check real quota before stopping.
+
+
+## 2026-09-29 — Compiled host synthetic/build completion and final review
+
+- External observation integration checkpoint `449853479d7357676fc80584d95f06f1821cc68a` verified GREEN: Windows Bridge CI 88 SUCCESS and Android CI 513 SUCCESS.
+- Dual-bitness output gate followed TDD. RED `fe3ad9a6d3982d6ca821c78f9e748839ea001f4f` / Windows CI 91 passed the 62 research tests and then failed exactly with `Missing compiled worker output: x86`. GREEN added separate `PlatformTarget=x86` and `PlatformTarget=x64` builds into separate output folders. Windows CI 92 and Android CI 517 succeeded; the output gate rejected any RCAPINet.dll, SEIKO EPSON assembly or reference-assembly package.
+- Final compiled-adaptation review was a self-review because no general-purpose/subagent reviewer tool is available in this session. Review scope was only the compiled adaptation from baseline `500b584c`; earlier Phase9B and PowerShell reviews were not repeated.
+- Final review found three Important gaps:
+  1. `MetadataOnly` returned success without actually inspecting the installed PE/CLR image.
+  2. The parent normalized away the worker's detached metadata and Inventory eligibility fields.
+  3. Process-path access failures and missing IPv6 TCP coverage could be represented as complete observation.
+- One fix wave only, under TDD: RED `65557fefa54e461f18f2b06702959a833ed87ed7` / Windows CI 95 failed on the new evidence/coverage contracts. GREEN through `3977fb3e4f59d3b75e589035d15588c30ecaedcc` implements detached `PeImageInspector` execution in MetadataOnly with no assembly load; preserves normalized machine/corFlags/architecture and eligible name/connection-number/type-number through the supervisor; records process access gaps; samples both IPv4 and IPv6 owner tables; and makes those gaps non-conclusive.
+- Fresh verification at `3977fb3e4f59d3b75e589035d15588c30ecaedcc`: Windows Bridge CI 102 SUCCESS, Android CI 527 SUCCESS, readiness 36/36 PASS, research 65/65 PASS, x86 build PASS, x64 build PASS, proprietary-free output gate PASS, legacy probe/supervisor regression steps PASS.
+- CI 102 executable evidence for that exact code checkpoint:
+  - x86 worker SHA-256: `c9619842bd4ab4d028097b2ca1544a5e967832e5da280e753cd3ce7cc098395a`
+  - x64 worker SHA-256: `816df08b91699aa7aa13654051443a4a47c137533c68f912d876868f6101c31e`
+  - compiled supervisor SHA-256: `033c91d3bd7b8834081c567c529c4dfa620f4dfcd6a2f849a28e16585f56c677`
+  These hashes identify the CI 102 binaries from code checkpoint `3977fb3e`; a later docs-only commit may change SourceRevisionId/informational-version bytes, so the exact local binaries must be re-hashed immediately before a native run.
+- Ruling retained: connection number is diagnostic evidence only. Virtual eligibility is exact name `C4 Sample` plus connection type number 3. Never use connection number/default/last-used/physical fallback.
+- Ruling retained: process/TCP observation is partial evidence. It cannot prove absence of short-lived traffic or USB communication; any access/sampling/ownership/event gap remains `INCONCLUSIVE`.
+- Minor deferred: MSTest emits MSTEST0044 deprecation warnings for existing `DataTestMethod` usage in two synthetic test classes. No native or runtime behavior depends on this test-framework warning.
+
+### Proposed first native boundary — NOT EXECUTED
+
+Selected first compatibility experiment: x86 worker, because raw installed RCAPINet metadata is AnyCPU and Epson's installed C# sample targets x86. This is evidence, not proof; there is no automatic x64 retry.
+
+Proposed request body (not committed as an executable approval file):
+`{"stage":"LoadOnly","installRoot":"C:\\EpsonRC70","target":null,"serverInstance":null,"approved":true}`
+
+Proposed parent command after building the current reviewed sources locally:
+`windows-bridge\src\EpsonRa.Bridge.Research.Supervisor\bin\Release\net48\EpsonRa.Bridge.Research.Supervisor.exe --worker "windows-bridge\artifacts\compiled-worker\x86\EpsonRa.Bridge.Research.Worker.exe" --request "<absolute-path-to-reviewed-loadonly-request.json>" --timeout-seconds 30`
+
+Expected side effects of LoadOnly: create one disposable x86 worker, load the installed `C:\EpsonRC70\exe\RCAPINet.dll` (and resolve the exact RCAPINet.Spel type contract), emit normalized result, and exit. It must not construct Spel, set ServerInstance, Initialize, Inventory, Connect, select a project/robot, run motion/task/I-O/SPEL, or terminate shared Epson/RC+ processes. Timeout kills only the created worker and remains inconclusive with no automatic retry.
+
+Native status remains NOT RUN. No real Epson DLL load, InitializeObserve, Inventory or Connect was executed by this plan. The next action is an explicit user approval/rejection of this exact LoadOnly boundary; later InitializeObserve, Inventory and Connect each require separate approval.
