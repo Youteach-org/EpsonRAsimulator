@@ -12,9 +12,9 @@ namespace EpsonRa.Bridge.Research.Tests
     public class WorkerCliAndAdapterTests
     {
         [TestMethod]
-        public void MetadataOnlyCliProducesOneCompletedJson()
+        public void MetadataOnlyCliProducesDetachedPeEvidence()
         {
-            var root = NewTempRoot();
+            var root = CreateSyntheticInstallRoot();
             try
             {
                 var request = Path.Combine(root, "request.json");
@@ -30,8 +30,35 @@ namespace EpsonRa.Bridge.Research.Tests
                 Assert.AreEqual("COMPLETED", json["status"]);
                 Assert.AreEqual(true, json["success"]);
                 Assert.AreEqual("CONFIRMED", json["cleanup"]);
+                Assert.IsTrue(json.ContainsKey("machine"));
+                Assert.IsTrue(json.ContainsKey("corFlags"));
+                Assert.IsTrue(json.ContainsKey("architecture"));
+                Assert.IsTrue((int)json["machine"] > 0);
+                Assert.IsFalse(string.IsNullOrWhiteSpace((string)json["architecture"]));
                 Assert.IsTrue(File.Exists(events));
                 Assert.AreEqual(0, File.ReadAllLines(events).Length);
+            }
+            finally { TryDelete(root); }
+        }
+
+        [TestMethod]
+        public void MetadataOnlyRejectsCorruptPeInsteadOfClaimingSuccess()
+        {
+            var root = NewTempRoot();
+            try
+            {
+                var exe = Path.Combine(root, "exe");
+                Directory.CreateDirectory(exe);
+                File.WriteAllBytes(Path.Combine(exe, "RCAPINet.dll"), new byte[] { 1, 2, 3, 4 });
+
+                var request = Path.Combine(root, "request.json");
+                var events = Path.Combine(root, "events.jsonl");
+                WriteRequest(request, "MetadataOnly", root, false);
+
+                var run = RunWorker("--request", request, "--events", events);
+
+                Assert.AreEqual(3, run.ExitCode);
+                Assert.AreEqual("FAILED", ParseObject(run.Stdout)["status"]);
             }
             finally { TryDelete(root); }
         }
