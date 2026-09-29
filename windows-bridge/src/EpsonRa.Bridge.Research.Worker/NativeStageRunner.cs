@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using EpsonRa.Bridge.Research;
 
@@ -49,7 +50,7 @@ namespace EpsonRa.Bridge.Research.Worker
 
     public static class NativeStageRunner
     {
-        public static NativeStageResult Run(NativeStageRequest request, INativeApi api, Action<string> eventSink)
+        public static NativeStageResult Run(NativeStageRequest request, INativeApi api, Action<StageEvent> eventSink)
         {
             if (request == null || api == null)
                 return Failed("InvalidArguments");
@@ -133,7 +134,7 @@ namespace EpsonRa.Bridge.Research.Worker
             return result;
         }
 
-        private static bool Cleanup(Action action, string name, Action<string> sink)
+        private static bool Cleanup(Action action, string name, Action<StageEvent> sink)
         {
             var ok = true;
             try { Mark(sink, "before:" + name); } catch { ok = false; }
