@@ -38,4 +38,11 @@ foreach ($variant in $variants) {
     Write-Host ("WORKER_{0}_SHA256={1}" -f $variant.Name.ToUpperInvariant(), $hash)
 }
 
+$supervisor = Join-Path $root "windows-bridge\src\EpsonRa.Bridge.Research.Supervisor\bin\Release\net48\EpsonRa.Bridge.Research.Supervisor.exe"
+if (-not (Test-Path -LiteralPath $supervisor -PathType Leaf)) {
+    throw "Missing compiled supervisor executable."
+}
+$supervisorHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $supervisor).Hash.ToLowerInvariant()
+Write-Host ("SUPERVISOR_SHA256={0}" -f $supervisorHash)
+
 Write-Host "PASS compiled worker outputs are present and proprietary-free"
