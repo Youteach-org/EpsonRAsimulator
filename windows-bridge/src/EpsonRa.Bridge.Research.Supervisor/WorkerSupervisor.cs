@@ -402,6 +402,21 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 if (error != null && !(error is string))
                     return false;
 
+                int? machine;
+                long? corFlags;
+                string architecture;
+                string eligibleName;
+                int? eligibleConnectionNumber;
+                int? eligibleTypeNumber;
+
+                if (!TryOptionalInt(dict, "machine", out machine) ||
+                    !TryOptionalLong(dict, "corFlags", out corFlags) ||
+                    !TryOptionalString(dict, "architecture", out architecture) ||
+                    !TryOptionalString(dict, "eligibleName", out eligibleName) ||
+                    !TryOptionalInt(dict, "eligibleConnectionNumber", out eligibleConnectionNumber) ||
+                    !TryOptionalInt(dict, "eligibleTypeNumber", out eligibleTypeNumber))
+                    return false;
+
                 result = new ResearchResult
                 {
                     SchemaVersion = 1,
@@ -412,7 +427,13 @@ namespace EpsonRa.Bridge.Research.Supervisor
                     Cleanup = (string)cleanup == "CONFIRMED"
                         ? "CONFIRMED"
                         : "UNKNOWN",
-                    Error = error == null ? null : "WorkerError"
+                    Error = error == null ? null : "WorkerError",
+                    Machine = machine,
+                    CorFlags = corFlags,
+                    Architecture = architecture,
+                    EligibleName = eligibleName,
+                    EligibleConnectionNumber = eligibleConnectionNumber,
+                    EligibleTypeNumber = eligibleTypeNumber
                 };
 
                 return true;
@@ -421,6 +442,74 @@ namespace EpsonRa.Bridge.Research.Supervisor
             {
                 return false;
             }
+        }
+
+        private static bool TryOptionalString(
+            Dictionary<string, object> dict,
+            string key,
+            out string value)
+        {
+            value = null;
+            object raw;
+            if (!dict.TryGetValue(key, out raw) || raw == null)
+                return true;
+            if (!(raw is string))
+                return false;
+            value = (string)raw;
+            return true;
+        }
+
+        private static bool TryOptionalInt(
+            Dictionary<string, object> dict,
+            string key,
+            out int? value)
+        {
+            value = null;
+            object raw;
+            if (!dict.TryGetValue(key, out raw) || raw == null)
+                return true;
+
+            if (raw is int)
+            {
+                value = (int)raw;
+                return true;
+            }
+
+            if (raw is long)
+            {
+                var number = (long)raw;
+                if (number < int.MinValue || number > int.MaxValue)
+                    return false;
+                value = (int)number;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryOptionalLong(
+            Dictionary<string, object> dict,
+            string key,
+            out long? value)
+        {
+            value = null;
+            object raw;
+            if (!dict.TryGetValue(key, out raw) || raw == null)
+                return true;
+
+            if (raw is int)
+            {
+                value = (int)raw;
+                return true;
+            }
+
+            if (raw is long)
+            {
+                value = (long)raw;
+                return true;
+            }
+
+            return false;
         }
 
         private static SupervisorResult Fail(
