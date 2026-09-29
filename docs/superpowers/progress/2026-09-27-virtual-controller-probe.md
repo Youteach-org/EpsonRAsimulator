@@ -209,3 +209,16 @@ Native status remains NOT RUN. No real Epson DLL load, InitializeObserve, Invent
 ## Independent compiled review correction
 
 Fresh-context review of40508c81 found6Important issues beyond earlier self-review. One fix wave,16 local regression cases PASS after RED. Detailed findings/rulings: docs/superpowers/reports/2026-09-29-compiled-host-independent-review.md. Exact-head full CI pending; no native execution.
+
+
+## Final independent-review verification and native-command gate
+
+Code986d7804d3a4472513068bab811bb17240501aec verified: WindowsCI105/run36532571730 SUCCESS, AndroidCI530/run36532571640 SUCCESS. Readiness36/36 and research77/77 PASS; both worker architectures build; proprietary/reference output gate PASS; legacy7self-tests,6argument regressions, native-error normalization and12PowerShell supervisor cases PASS.
+
+Fresh independent compiled review:0Critical,6Important,0newMinor; all6fixed in one observed RED/GREEN wave. Report: docs/superpowers/reports/2026-09-29-compiled-host-independent-review.md. No second review. Earlier self-review remains historical. Prior local always-false Conclusive candidate is superseded by the integrated compatibility contract and nullable invalid deltas.
+
+Local deterministic Roslyn builds also succeeded, with separate local hashes recorded in docs/superpowers/research/2026-09-29-loadonly-command.md. MetadataOnly ran through local compiled supervisor/x86 worker against installed bytes: exit0, machine332, corFlags9,AnyCpu; no assembly load. Output gate PASS; zero erc70/erc70PServer observed. The shell's first combined command ended1 only because its final Get-Process found no matches; the explicit MetadataOnly exit check passed, and a subsequent zero-process check exited0.
+
+Next action requires separate exact LoadOnly approval, not more implementation or repeated environment confirmations. Prepared local request outputs/compiled-reviewed/load-only.proposed.json and exact absolute-path command/hashes are in the command proposal. Do not execute until user approves that command/boundary. No real Epson DLL has been loaded. Keep PR24 Draft, stacked on PR22; no merge.
+
+Resume prompt: Read latest PR24 HEAD/CI, this handoff and docs/superpowers/research/2026-09-29-loadonly-command.md. Synthetic compiled host implementation/review/fixes are complete at986d7804 (Windows105/Android530GREEN). LoadOnly command is prepared but NOT executed; obtain or honor explicit approval for that exact boundary, recheck binary/request hashes before execution, no automatic retry. InitializeObserve/Inventory/Connect remain later separate approvals. Preserve all user environment confirmations and document results in GitHub. Never push materialized local ancestry.

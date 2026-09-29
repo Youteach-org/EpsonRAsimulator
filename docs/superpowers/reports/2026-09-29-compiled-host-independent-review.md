@@ -20,3 +20,6 @@ Ruling: a stalled read-only OS observation cannot safely be aborted in managed c
 Declined-to-judge dispositions: real dependency/bitness compatibility, initialization/implicit connections, physical isolation and absence of brief network/USB activity remain native acceptance limitations, not inferred from CI. Prior9B/PowerShell review excluded. Cost of inferring these would be invalid native acceptance. Exact native-command approval remains required.
 
 Prior minor retained: MSTEST0044 DataTestMethod warnings. No new minors and no second whole-branch review after this regression-verified fix wave.
+
+
+Final verification: code986d7804 WindowsCI105 SUCCESS / AndroidCI530 SUCCESS; readiness36/36, research77/77, x86/x64 builds and output gate PASS. Local MetadataOnly also passed with no native load. Native acceptance remains separate.
