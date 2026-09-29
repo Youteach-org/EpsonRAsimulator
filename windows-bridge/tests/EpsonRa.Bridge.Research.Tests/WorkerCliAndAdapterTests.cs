@@ -110,7 +110,7 @@ namespace EpsonRa.Bridge.Research.Tests
             try
             {
                 using (var api = new InstalledApiAdapter())
-                    Assert.ThrowsException<FileNotFoundException>(() => api.Load(missing));
+                    ExpectException<FileNotFoundException>(() => api.Load(missing));
             }
             finally { Directory.Delete(missing, true); }
 
@@ -121,10 +121,22 @@ namespace EpsonRa.Bridge.Research.Tests
                 {
                     api.Load(root);
                     api.Construct();
-                    Assert.ThrowsException<InvalidOperationException>(() => api.ConnectByName("Other"));
+                    ExpectException<InvalidOperationException>(() => api.ConnectByName("Other"));
                 }
             }
             finally { Directory.Delete(root, true); }
+        }
+
+        private static void ExpectException<T>(Action action) where T : Exception
+        {
+            try
+            {
+                action();
+                Assert.Fail("Expected exception " + typeof(T).FullName + ".");
+            }
+            catch (T)
+            {
+            }
         }
 
         private static void WriteRequest(string path, string stage, string root, bool approved)
