@@ -22,6 +22,8 @@ namespace EpsonRa.Bridge.Research
         public int UnrelatedTcpDelta { get; set; }
         public string EndpointDetails { get; set; }
         public string Limitation { get; set; }
+        public bool EventTraceComplete { get; set; }
+        public int EventCount { get; set; }
     }
 
     public sealed class StageEvent
