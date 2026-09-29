@@ -1,0 +1,12 @@
+{
+  "checkedUtc": "2026-09-29T20:16:22.8671738Z",
+  "processes": [],
+  "status": "INCONCLUSIVE_NO_NATIVE_RESULT",
+  "cleanup": "UNKNOWN",
+  "manualUiClosedConfirmed": true,
+  "nativeRetryAttempted": false,
+  "inventoryExecuted": false,
+  "connectExecuted": false,
+  "originalResultBytes": 0,
+  "originalStderrBytes": 0
+}

@@ -315,3 +315,12 @@ Manual UI closure is no longer an outstanding user confirmation. Do not repeated
 ## 2026-09-29 — Durable capture correction, synthetic-only
 
 Confirmed an outer PowerShell capture weakness using finite synthetic descendants: inherited case took5268ms despite timeout2; normal287ms, simple timeout2124ms. Native cause remains unproven. Added optional CreateNew --result-file plus tested hidden ShellExecute/finite WaitForExit launch; local durable4/4, protocol16/16, observer deadline4/4 PASS. Focused independent review0Critical/0Important. Full CI pending. See docs/superpowers/reports/2026-09-29-durable-capture.md. Original Epson binaries/evidence remain unchanged; no retry/Inventory/Connect or process termination. Manual UI closure is already confirmed. Do not stop at asking to close RC+ again, and do not treat synthetic success as native acceptance. User currently prohibits another native run. Keep Draft/stacked, no merge.
+
+
+## Verified checkpoint
+
+Implementation commit3571ed6e3555c0d8b4be59fe96f40b3e7ec3aa72: Windows Bridge CI111/run36625112194 SUCCESS and Android CI536/run36625112183 SUCCESS. Windows logs confirm readiness36/36, research78/78 (including durable capture), both worker architectures and output gates. Existing MSTEST0044 warnings remain; no new native stage was run.
+
+Read-only check at2026-09-29T20:16:22.8671738Z found zero erc70/erc70PServer/EpsonRa processes. Original native result and stderr still0bytes, execution file absent. No claim about how the prior erc70 process exited; no agent termination occurred. Application error events1000/1001/1026 in19:28:30–19:32:30Z contained no matching EpsonRa/erc70/RCAPINet entry. Absence of matching events is not proof of absence of a crash. The original native result remains unrecoverable/inconclusive, cleanupUNKNOWN. Follow-up evidence: docs/superpowers/research/evidence/2026-09-29-initialize-observe-followup.json.
+
+Next: capture correction complete and exact-code CI green. No authorized native execution remains: user prohibits retry/Inventory/Connect. Do not ask to close RC+ again; no processes detected at last check. Any further native attempt requires a newly authorized boundary and separately reviewed command/hashes; existing original binaries remain untouched. Never treat the synthetic capture correction as native acceptance or claim2/4 native stages complete.
