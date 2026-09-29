@@ -42,3 +42,32 @@ The synthetic worker and tests never load or reference Epson binaries.
 Before any real Inventory/Connect attempt, resolve the mandatory gates in `outputs/handoff-epsonrasimulator.txt`: RC+/Epson process state, Auto Connect OFF, physical isolation, exact `C4 Sample` Virtual identity, unused ServerInstance, native host/bitness and execution method, and the pre-initialization observation boundary.
 
 No numeric/default/last-used target fallback is permitted. Native execution remains a separate user approval.
+
+
+## Compiled research host
+
+Draft PR #24 now also contains a compiled net48 research path for Windows environments where PowerShell script execution is restricted.
+
+The compiled path keeps the same safety boundary:
+
+- the supervisor launches one explicitly selected worker and enforces a 1..120 second deadline;
+- the worker accepts only `--request <absolute-json> --events <absolute-private-file>`;
+- `MetadataOnly` performs no native API calls;
+- `LoadOnly` may load only the installed `exe\\RCAPINet.dll` and does not construct `Spel`;
+- `InitializeObserve` is limited to Load / Construct / ServerInstance / Initialize / Dispose;
+- Inventory requires exactly one ordinal name match `C4 Sample` whose connection type number is 3 (Virtual);
+- connection number is diagnostic evidence only and is never a Connect selector or fallback;
+- Connect uses only the exact string overload `Connect("C4 Sample")`, verifies exact current name/type, then disconnects and disposes;
+- no numeric/default/last-used/physical fallback is implemented.
+
+The worker is built from the same source twice, once with `PlatformTarget=x86` and once with `PlatformTarget=x64`, into separate CI output directories. CI rejects `RCAPINet.dll`, SEIKO EPSON assemblies, and reference-assembly packages from those distributable outputs.
+
+For activating stages, the parent also evaluates external process/TCP samples plus private monotonic worker events. Missing sampling, ambiguous ownership, malformed/incomplete event traces, timeout, or cleanup uncertainty is non-success. Process/TCP polling is only partial evidence and cannot prove the absence of short-lived traffic or USB activity.
+
+The compiled worker resolves RCAPINet dynamically from the installed Epson directory at runtime. There is no Epson build reference and no Epson proprietary binary is committed or packaged.
+
+### Native execution boundary
+
+Synthetic/build success does **not** authorize native execution. The first native experiment remains `LoadOnly`, using the x86 worker first because the installed RCAPINet raw metadata is AnyCPU and Epson's installed C# sample targets x86. That is compatibility evidence, not proof.
+
+Before running `LoadOnly`, use the exact command/request recorded in `outputs/handoff-epsonrasimulator.txt` and obtain separate approval. `InitializeObserve`, Inventory, and Connect each require later separate approval.
