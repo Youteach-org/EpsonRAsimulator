@@ -274,3 +274,14 @@ Implementation remains 986d7804; Windows CI105 / Android CI530 results apply to 
 Next: prepare the exact InitializeObserve request/command and explicit unused ServerInstance selection under the approved plan; obtain its separate approval before execution. Do not repeat LoadOnly or existing environmental questions without changed evidence.
 
 Resume prompt: Continue Youteach-org/EpsonRAsimulator Draft PR24, research/virtual-controller-probe, stacked on PR22. Verify actual remote HEAD first and read the newest handoff entry. Compiled implementation/review is complete; approved native LoadOnly executed once successfully on 2026-09-29 (893 ms, exit 0), with INCONCLUSIVE external observation. Do not rerun it. Prepare the next InitializeObserve boundary and explicit unused ServerInstance; no later stage is approved. Preserve user confirmations and real remote ancestry, publish explicit files only, document results in GitHub, no main merge or proprietary binaries.
+
+
+## 2026-09-29 — Next native boundary prepared; progress accounting
+
+InitializeObserve request/command prepared, NOT EXECUTED: docs/superpowers/research/2026-09-29-initialize-observe-command.md. Proposes ServerInstance10, requiring confirmation it is unused/reserved by no other application and separate exact-command approval. Zero Epson processes observed at19:26:01Z; binary hashes unchanged. No repeat LoadOnly.
+
+Progress: compiled host implementation/review tasks3/3 complete (100% of that bounded implementation plan). Native acceptance1/4 stages complete (25% by equal stage count only); InitializeObserve, Inventory and Connect remain. These stages have unequal effort and unknown native compatibility outcomes; neither percentage measures total simulator completion or remaining time.
+
+Overall release percentage/ETA is not defensible from current documentation: ROADMAP mixes legacy product phases with shared-runtime phases and still names Phase8 as next while phase8 and9 ledgers record later implementation. Existing foundations cover runtime, source-preserving editor, simulated tasks/I-O/workcell, RC+ windows, shared VisualLab, persistence and bridge contracts/readiness. Remaining release work includes source-to-task execution mapping, native bridge/telemetry/product integration, Android device/provider acceptance, integration/regression validation and any chosen advanced tools/learning scope. No estimate in hours/days promised before that release scope is reconciled.
+
+Resume: verify actual PR24 HEAD, read latest handoff and InitializeObserve proposal. Honor explicit user approval only for its exact boundary and unused instance10; otherwise keep execution pending. Preserve current evidence and do not rerun completed implementation/reviews/LoadOnly.
