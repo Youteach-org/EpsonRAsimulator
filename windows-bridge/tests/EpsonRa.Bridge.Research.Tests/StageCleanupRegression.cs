@@ -24,7 +24,7 @@ namespace EpsonRa.Bridge.Research.Tests
             var api = new FaultApi { Fault = scenario };
             var request = new NativeStageRequest { Stage = Stage.Connect, Approved = true,
                 Target = "C4 Sample", ServerInstance = 1, PriorEligibleName = "C4 Sample",
-                PriorEligibleType = "Virtual", PriorEligibleOrdinal = 3 };
+                PriorEligibleTypeNumber = 3 };
             if (scenario == "InvalidPrior") request.PriorEligibleName = null;
             if (scenario == "DuplicateName") request.Stage = Stage.Inventory;
             var result = NativeStageRunner.Run(request, api, marker => {
@@ -48,12 +48,12 @@ namespace EpsonRa.Bridge.Research.Tests
             public void SetServerInstance(int value) { Calls.Add("SetServerInstance"); }
             public void Initialize() { Calls.Add("Initialize"); }
             public IReadOnlyList<NativeConnection> GetConnections() { return new[] {
-                new NativeConnection { Name = "C4 Sample", Type = "Virtual", Ordinal = 3 },
-                new NativeConnection { Name = "C4 Sample", Type = "USB", Ordinal = 1 } }; }
+                new NativeConnection { Name = "C4 Sample", ConnectionNumber = 2, TypeNumber = 3, TypeName = "Virtual" },
+                new NativeConnection { Name = "C4 Sample", ConnectionNumber = 1, TypeNumber = 1, TypeName = "USB" } }; }
             public void ConnectByName(string name) { Calls.Add("Connect"); }
             public NativeConnection GetCurrentConnection() {
                 if (Fault == "Verify") throw new InvalidOperationException();
-                return new NativeConnection { Name = "C4 Sample", Type = "Virtual", Ordinal = 3 };
+                return new NativeConnection { Name = "C4 Sample", ConnectionNumber = 2, TypeNumber = 3, TypeName = "Virtual" };
             }
             public void Disconnect() { Calls.Add("Disconnect"); if (Fault == "Disconnect") throw new InvalidOperationException(); }
             public void Dispose() { Calls.Add("Dispose"); }

@@ -98,8 +98,7 @@ namespace EpsonRa.Bridge.Research.Tests
                 var api = new FakeApi();
                 var request = Request(Stage.Connect, true);
                 request.PriorEligibleName = name;
-                request.PriorEligibleType = "Virtual";
-                request.PriorEligibleOrdinal = 3;
+                request.PriorEligibleTypeNumber = 3;
                 Assert.IsFalse(NativeStageRunner.Run(request, api, _ => { }).Success);
                 Assert.IsFalse(Array.Exists(api.Calls, x => x.StartsWith("Connect")));
             }
