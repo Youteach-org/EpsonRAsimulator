@@ -24,8 +24,13 @@ namespace EpsonRa.Bridge.Research.Worker
         public int? PriorEligibleOrdinal { get; set; }
     }
 
-    public sealed class NativeStageResult : ResearchResult
+    public sealed class NativeStageResult
     {
+        public int SchemaVersion { get; set; }
+        public string Status { get; set; }
+        public bool Success { get; set; }
+        public string Cleanup { get; set; }
+        public string Error { get; set; }
         public int? EligibleOrdinal { get; set; }
         public string EligibleName { get; set; }
     }
