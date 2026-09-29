@@ -39,6 +39,13 @@ namespace EpsonRa.Bridge.Research.Fixture
                 return 0;
             }
 
+            if (mode == "structured-failure")
+            {
+                File.WriteAllText(args[4], "{\"name\":\"before:Load\",\"monotonicTicks\":2}\n");
+                Console.Write("{\"schemaVersion\":1,\"status\":\"FAILED\",\"success\":false,\"cleanup\":\"CONFIRMED\",\"error\":\"NativeStageException\"}");
+                return 3;
+            }
+
             if (mode == "evidence")
             {
                 Console.Write("{\"schemaVersion\":1,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"CONFIRMED\",\"machine\":332,\"corFlags\":9,\"architecture\":\"AnyCpu\",\"eligibleName\":\"C4 Sample\",\"eligibleConnectionNumber\":2,\"eligibleTypeNumber\":3}");
@@ -116,3 +123,4 @@ namespace EpsonRa.Bridge.Research.Fixture
         }
     }
 }
+

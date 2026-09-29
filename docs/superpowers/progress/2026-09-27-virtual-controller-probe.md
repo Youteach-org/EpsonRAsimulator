@@ -203,3 +203,9 @@ Proposed parent command after building the current reviewed sources locally:
 Expected side effects of LoadOnly: create one disposable x86 worker, load the installed `C:\EpsonRC70\exe\RCAPINet.dll` (and resolve the exact RCAPINet.Spel type contract), emit normalized result, and exit. It must not construct Spel, set ServerInstance, Initialize, Inventory, Connect, select a project/robot, run motion/task/I-O/SPEL, or terminate shared Epson/RC+ processes. Timeout kills only the created worker and remains inconclusive with no automatic retry.
 
 Native status remains NOT RUN. No real Epson DLL load, InitializeObserve, Inventory or Connect was executed by this plan. The next action is an explicit user approval/rejection of this exact LoadOnly boundary; later InitializeObserve, Inventory and Connect each require separate approval.
+
+
+
+## Independent compiled review correction
+
+Fresh-context review of40508c81 found6Important issues beyond earlier self-review. One fix wave,16 local regression cases PASS after RED. Detailed findings/rulings: docs/superpowers/reports/2026-09-29-compiled-host-independent-review.md. Exact-head full CI pending; no native execution.

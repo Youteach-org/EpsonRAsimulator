@@ -47,7 +47,9 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 long previous = long.MinValue;
                 for (var i = 0; i < expected.Length; i++)
                 {
-                    if (events[i].Name != expected[i] || events[i].MonotonicTicks < previous)
+                    if (events[i].Name != expected[i] || events[i].MonotonicTicks < previous ||
+                        before == null || after == null || events[i].MonotonicTicks < before.MonotonicTicks ||
+                        events[i].MonotonicTicks > after.MonotonicTicks)
                     {
                         complete = false;
                         break;
@@ -57,6 +59,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
             }
 
             assessment.EventCount = events == null ? 0 : events.Count;
+            assessment.StageEvents = events == null ? new string[0] : events.ConvertAll(x => x.Name).ToArray();
             assessment.EventTraceComplete = complete;
             assessment.Conclusive = assessment.Conclusive && complete;
             assessment.Status = assessment.Conclusive ? "OBSERVED" : "INCONCLUSIVE";
@@ -94,6 +97,8 @@ namespace EpsonRa.Bridge.Research.Supervisor
                         !(ticks is int) && !(ticks is long))
                         return null;
 
+                        var eventName = (string)name;
+                        if (!AllowedEvent(eventName) || Convert.ToInt64(ticks) < 0) return null;
                         result.Add(new StageEvent
                         {
                             Name = (string)name,
@@ -142,6 +147,13 @@ namespace EpsonRa.Bridge.Research.Supervisor
             }
 
             return Array.Empty<string>();
+        }
+
+        private static bool AllowedEvent(string name)
+        {
+            foreach (var operation in new[] { "Load", "Construct", "SetServerInstance", "Initialize", "Disconnect", "Dispose" })
+                if (name == "before:" + operation || name == "after:" + operation) return true;
+            return false;
         }
     }
 
@@ -510,3 +522,4 @@ namespace EpsonRa.Bridge.Research.Supervisor
         }
     }
 }
+

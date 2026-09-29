@@ -18,7 +18,7 @@ namespace EpsonRa.Bridge.Research.Tests
             {
                 var result = ExternalObservation.Evaluate(
                     Snapshot(0, 0, 10, 20, true, true, true),
-                    Snapshot(1, 2, 12, 24, true, true, true),
+                    Snapshot(1, 2, 12, 24, true, true, true, 20),
                     events,
                     Stage.InitializeObserve);
 
@@ -119,11 +119,11 @@ namespace EpsonRa.Bridge.Research.Tests
 
         private static ObservationSnapshot Snapshot(
             int ownedProcesses, int ownedTcp, int unrelatedProcesses, int unrelatedTcp,
-            bool processAvailable, bool tcpAvailable, bool ownershipUnambiguous)
+            bool processAvailable, bool tcpAvailable, bool ownershipUnambiguous, long ticks = 1)
         {
             return new ObservationSnapshot
             {
-                MonotonicTicks = 1,
+                MonotonicTicks = ticks,
                 OwnedProcessCount = ownedProcesses,
                 OwnedTcpCount = ownedTcp,
                 UnrelatedProcessCount = unrelatedProcesses,
@@ -201,3 +201,4 @@ namespace EpsonRa.Bridge.Research.Tests
         }
     }
 }
+

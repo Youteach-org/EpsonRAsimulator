@@ -82,7 +82,7 @@ namespace EpsonRa.Bridge.Research
             EnsureRange(optionalOffset + optionalSize, clrDirectoryOffset, 8);
             var clrRva = ReadUInt32(stream, clrDirectoryOffset);
             var clrSize = ReadUInt32(stream, clrDirectoryOffset + 4);
-            if (clrRva == 0 || clrSize < 0x14)
+            if (clrRva == 0 || clrSize < 0x48)
                 throw new InvalidDataException("CLR directory is absent.");
 
             var sectionTableOffset = checked(optionalOffset + optionalSize);
@@ -101,7 +101,7 @@ namespace EpsonRa.Bridge.Research
                 if ((ulong)clrRva >= virtualAddress && (ulong)clrRva < end)
                 {
                     var delta = clrRva - virtualAddress;
-                    if (delta >= rawSize)
+                    if (delta >= rawSize || clrSize > (ulong)rawSize - delta)
                         throw new InvalidDataException("CLR RVA is not backed by file data.");
                     clrFileOffset = checked((long)rawPointer + delta);
                     break;
@@ -111,8 +111,9 @@ namespace EpsonRa.Bridge.Research
             if (!clrFileOffset.HasValue)
                 throw new InvalidDataException("CLR RVA is not mapped.");
 
-            EnsureRange(length, clrFileOffset.Value, 0x14);
-            if (ReadUInt32(stream, clrFileOffset.Value) < 0x14)
+            EnsureRange(length, clrFileOffset.Value, clrSize);
+            var headerSize = ReadUInt32(stream, clrFileOffset.Value);
+            if (headerSize < 0x48 || headerSize > clrSize)
                 throw new InvalidDataException("Truncated CLR header.");
 
             var flags = ReadUInt32(stream, clrFileOffset.Value + 16);
@@ -167,3 +168,4 @@ namespace EpsonRa.Bridge.Research
         }
     }
 }
+

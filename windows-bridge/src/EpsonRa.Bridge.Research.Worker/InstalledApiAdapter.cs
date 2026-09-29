@@ -164,6 +164,12 @@ namespace EpsonRa.Bridge.Research.Worker
             if (!(nameValue is string) || numberValue == null || typeValue == null)
                 throw new InvalidOperationException("Connection descriptor values are invalid.");
 
+            var code = Type.GetTypeCode(typeValue.GetType());
+            if (code != TypeCode.SByte && code != TypeCode.Byte && code != TypeCode.Int16 &&
+                code != TypeCode.UInt16 && code != TypeCode.Int32 && code != TypeCode.UInt32 &&
+                code != TypeCode.Int64 && code != TypeCode.UInt64)
+                throw new InvalidOperationException("Connection type must be an integral value or enum.");
+
             return new NativeConnection
             {
                 Name = (string)nameValue,
@@ -187,3 +193,4 @@ namespace EpsonRa.Bridge.Research.Worker
         }
     }
 }
+

@@ -17,15 +17,17 @@ namespace EpsonRa.Bridge.Research
     public sealed class ObservationAssessment
     {
         public string Status { get; set; }
+        // Compatibility flag: usable sampled evidence, never proof of continuous absence.
         public bool Conclusive { get; set; }
-        public int OwnedProcessDelta { get; set; }
-        public int OwnedTcpDelta { get; set; }
-        public int UnrelatedProcessDelta { get; set; }
-        public int UnrelatedTcpDelta { get; set; }
+        public int? OwnedProcessDelta { get; set; }
+        public int? OwnedTcpDelta { get; set; }
+        public int? UnrelatedProcessDelta { get; set; }
+        public int? UnrelatedTcpDelta { get; set; }
         public string EndpointDetails { get; set; }
         public string Limitation { get; set; }
         public bool EventTraceComplete { get; set; }
         public int EventCount { get; set; }
+        public string[] StageEvents { get; set; }
     }
 
     public sealed class StageEvent
@@ -42,8 +44,8 @@ namespace EpsonRa.Bridge.Research
         public static ObservationAssessment Compare(ObservationSnapshot before, ObservationSnapshot after)
         {
             var conclusive =
-                before != null &&
-                after != null &&
+                Valid(before) && Valid(after) &&
+                after.MonotonicTicks >= before.MonotonicTicks &&
                 before.ProcessSampleAvailable &&
                 after.ProcessSampleAvailable &&
                 before.TcpSampleAvailable &&
@@ -59,18 +61,21 @@ namespace EpsonRa.Bridge.Research
             {
                 Status = conclusive ? "OBSERVED" : "INCONCLUSIVE",
                 Conclusive = conclusive,
-                OwnedProcessDelta = Delta(before == null ? 0 : before.OwnedProcessCount, after == null ? 0 : after.OwnedProcessCount),
-                OwnedTcpDelta = Delta(before == null ? 0 : before.OwnedTcpCount, after == null ? 0 : after.OwnedTcpCount),
-                UnrelatedProcessDelta = Delta(before == null ? 0 : before.UnrelatedProcessCount, after == null ? 0 : after.UnrelatedProcessCount),
-                UnrelatedTcpDelta = Delta(before == null ? 0 : before.UnrelatedTcpCount, after == null ? 0 : after.UnrelatedTcpCount),
+                OwnedProcessDelta = conclusive ? (int?)(after.OwnedProcessCount - before.OwnedProcessCount) : null,
+                OwnedTcpDelta = conclusive ? (int?)(after.OwnedTcpCount - before.OwnedTcpCount) : null,
+                UnrelatedProcessDelta = conclusive ? (int?)(after.UnrelatedProcessCount - before.UnrelatedProcessCount) : null,
+                UnrelatedTcpDelta = conclusive ? (int?)(after.UnrelatedTcpCount - before.UnrelatedTcpCount) : null,
                 EndpointDetails = null,
                 Limitation = PollingLimitation
             };
         }
 
-        private static int Delta(int before, int after)
+        private static bool Valid(ObservationSnapshot sample)
         {
-            return after - before;
+            return sample != null && sample.MonotonicTicks >= 0 && sample.ProcessAccessGapCount >= 0 &&
+                sample.OwnedProcessCount >= 0 && sample.OwnedTcpCount >= 0 &&
+                sample.UnrelatedProcessCount >= 0 && sample.UnrelatedTcpCount >= 0;
         }
     }
 }
+

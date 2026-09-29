@@ -51,6 +51,9 @@ namespace EpsonRa.Bridge.Research.Supervisor
             string events = null;
             Stage observationStage = Stage.MetadataOnly;
             bool observationRequired = false;
+            bool monitorDisposed = false;
+            var clock = Stopwatch.StartNew();
+            ObservationDeadline observer = null;
 
             try
             {
@@ -67,6 +70,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 }
 
                 string installRoot;
+                observer = new ObservationDeadline(clock, request.TimeoutSeconds);
                 if (TryReadObservationRequest(
                     request.RequestPath,
                     out observationStage,
@@ -79,8 +83,9 @@ namespace EpsonRa.Bridge.Research.Supervisor
 
                     try
                     {
-                        monitor = observationFactory.Create(installRoot);
+                        observer.Run(() => { monitor = observationFactory.Create(installRoot); });
                     }
+                    catch (TimeoutException) { throw; }
                     catch
                     {
                         return InconclusiveObservation(null, null, null);
@@ -116,13 +121,13 @@ namespace EpsonRa.Bridge.Research.Supervisor
                     }
                 };
 
-                var clock = Stopwatch.StartNew();
                 process.Start();
                 started = true;
 
                 if (monitor != null)
                 {
-                    try { monitor.WorkerStarted(process.Id); }
+                    try { observer.Run(() => monitor.WorkerStarted(process.Id)); }
+                    catch (TimeoutException) { throw; }
                     catch { observationFault = true; }
                 }
 
@@ -133,7 +138,8 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 {
                     if (monitor != null && !observationFault)
                     {
-                        try { monitor.Poll(); }
+                        try { observer.Run(monitor.Poll); }
+                        catch (TimeoutException) { throw; }
                         catch { observationFault = true; }
                     }
 
@@ -142,9 +148,6 @@ namespace EpsonRa.Bridge.Research.Supervisor
                         StopOwned(process);
                         return Fail(3, "FAILED", "OutputLimit", ExitCode(process));
                     }
-
-                    if (process.HasExited && output.Done && error.Done)
-                        break;
 
                     if (clock.ElapsedMilliseconds >= request.TimeoutSeconds * 1000L)
                     {
@@ -156,12 +159,23 @@ namespace EpsonRa.Bridge.Research.Supervisor
                             ExitCode(process));
                     }
 
+                    if (process.HasExited && output.Done && error.Done)
+                        break;
+
                     Thread.Sleep(10);
                 }
 
                 if (monitor != null && !observationFault)
                 {
-                    try { monitor.Poll(); }
+                    try { observer.Run(monitor.Poll); }
+                    catch (TimeoutException) { throw; }
+                    catch { observationFault = true; }
+                }
+
+                if (monitor != null)
+                {
+                    try { observer.Run(() => { monitorDisposed = true; monitor.Dispose(); }); }
+                    catch (TimeoutException) { throw; }
                     catch { observationFault = true; }
                 }
 
@@ -173,9 +187,6 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 if (output.Failed || error.Failed)
                     return Fail(3, "FAILED", "OutputReadFailure", exit);
 
-                if (exit != 0)
-                    return Fail(3, "FAILED", "WorkerNonZeroExit", exit);
-
                 if (error.Length != 0)
                     return Fail(3, "FAILED", "WorkerStderr", exit);
 
@@ -184,27 +195,35 @@ namespace EpsonRa.Bridge.Research.Supervisor
                     return Fail(3, "FAILED", "InvalidWorkerResult", exit);
 
                 ObservationAssessment observation = null;
-                if (observationRequired)
+                if (observationStage != Stage.MetadataOnly)
                 {
                     if (!observationFault && monitor != null)
                     {
                         try
                         {
-                            observation = ExternalObservation.Evaluate(
+                            observation = observer.Run(() => ExternalObservation.Evaluate(
                                 monitor.Before,
                                 monitor.After,
                                 events,
-                                observationStage);
+                                observationStage));
                         }
+                        catch (TimeoutException) { throw; }
                         catch
                         {
                             observationFault = true;
                         }
                     }
 
-                    if (observationFault ||
+                    if (monitor == null)
+                        observation = ExternalObservation.Evaluate(null, null, events, observationStage);
+
+                    if (exit != 0)
+                        return new SupervisorResult { Status = "FAILED", Success = false, WorkerExitCode = exit,
+                            WorkerResult = worker, Cleanup = worker.Cleanup, Error = "WorkerNonZeroExit", ExitCode = 3, Observation = observation };
+
+                    if (observationRequired && (observationFault ||
                         observation == null ||
-                        !observation.Conclusive)
+                        !observation.Conclusive))
                     {
                         return InconclusiveObservation(
                             worker,
@@ -214,6 +233,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 }
 
                 var success =
+                    exit == 0 &&
                     worker.Success &&
                     worker.Status == "COMPLETED" &&
                     worker.Cleanup == "CONFIRMED" &&
@@ -231,6 +251,11 @@ namespace EpsonRa.Bridge.Research.Supervisor
                     Observation = observation
                 };
             }
+            catch (TimeoutException)
+            {
+                if (started) StopOwned(process);
+                return Fail(124, "INCONCLUSIVE_TIMEOUT", "Timeout", started ? ExitCode(process) : null);
+            }
             catch
             {
                 if (started)
@@ -244,10 +269,8 @@ namespace EpsonRa.Bridge.Research.Supervisor
             }
             finally
             {
-                if (monitor != null)
-                {
-                    try { monitor.Dispose(); } catch { }
-                }
+                if (observer != null)
+                    observer.Release(() => { if (monitor != null && !monitorDisposed) { monitorDisposed = true; monitor.Dispose(); } });
 
                 if (process != null)
                     process.Dispose();
@@ -618,3 +641,4 @@ namespace EpsonRa.Bridge.Research.Supervisor
         }
     }
 }
+
