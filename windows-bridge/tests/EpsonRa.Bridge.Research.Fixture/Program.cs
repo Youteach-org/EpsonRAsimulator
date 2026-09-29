@@ -24,6 +24,12 @@ namespace EpsonRa.Bridge.Research.Fixture
                 return 7;
 
             if (mode == "absent") return 0;
+            if (mode == "valid-flood")
+            {
+                Console.Write("{\"schemaVersion\":1,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"CONFIRMED\"}");
+                Console.Write(new string(' ', 1024 * 1024));
+                return 0;
+            }
             if (mode == "inherited")
             {
                 using (var child = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo {

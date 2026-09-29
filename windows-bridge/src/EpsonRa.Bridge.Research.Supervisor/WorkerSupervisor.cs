@@ -76,6 +76,8 @@ namespace EpsonRa.Bridge.Research.Supervisor
                     Thread.Sleep(10);
                 }
                 var exit = process.ExitCode;
+                // Readers may finish between the loop's cap check and its completion check.
+                if (output.Exceeded || error.Exceeded) return Fail(3, "FAILED", "OutputLimit", exit);
                 if (output.Failed || error.Failed) return Fail(3, "FAILED", "OutputReadFailure", exit);
                 if (exit != 0) return Fail(3, "FAILED", "WorkerNonZeroExit", exit);
                 if (error.Length != 0) return Fail(3, "FAILED", "WorkerStderr", exit);

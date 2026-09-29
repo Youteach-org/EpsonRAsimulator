@@ -33,6 +33,7 @@ namespace EpsonRa.Bridge.Research.Tests
         [DataRow("contradiction")]
         [DataRow("stderr")]
         [DataRow("wrong-schema")]
+        [DataRow("valid-flood")]
         public void InvalidWorkerResultIsFailure(string mode)
         {
             Assert.AreEqual(3, Run(mode, 5).ExitCode);
@@ -80,6 +81,12 @@ namespace EpsonRa.Bridge.Research.Tests
         }
 
         [TestMethod]
+        public void TimeoutLeavesUnrelatedSentinelAlive()
+        {
+            SupervisorProtocolRegression.CheckSentinel(WorkerPath());
+        }
+
+        [TestMethod]
         public void InvalidTimeoutIsRejectedBeforeLaunch()
         {
             var result = Run("normal", 0);
@@ -88,10 +95,7 @@ namespace EpsonRa.Bridge.Research.Tests
 
         private static SupervisorResult Run(string mode, int timeout)
         {
-            var worker = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
-                "..", "..", "..", "..",
-                "EpsonRa.Bridge.Research.Fixture", "bin", "Release", "net48",
-                "EpsonRa.Bridge.Research.Fixture.exe"));
+            var worker = WorkerPath();
 
             var requestFile = Path.GetTempFileName();
             File.WriteAllText(requestFile, "{\"stage\":\"MetadataOnly\",\"installRoot\":\"C:\\\\EpsonRC70\",\"target\":null,\"serverInstance\":null,\"approved\":false}");
@@ -109,6 +113,13 @@ namespace EpsonRa.Bridge.Research.Tests
             {
                 try { File.Delete(requestFile); } catch { }
             }
+        }
+
+        private static string WorkerPath()
+        {
+            return Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory,
+                "..", "..", "..", "..", "EpsonRa.Bridge.Research.Fixture", "bin", "Release", "net48",
+                "EpsonRa.Bridge.Research.Fixture.exe"));
         }
     }
 }
