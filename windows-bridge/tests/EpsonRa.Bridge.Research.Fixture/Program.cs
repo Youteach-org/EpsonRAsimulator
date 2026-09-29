@@ -14,6 +14,25 @@ namespace EpsonRa.Bridge.Research.Fixture
             var mode = args.Length > 0 ? args[0] : "normal";
             if (args.Length != 5 || args[1] != "--request" || !File.Exists(args[2]) || args[3] != "--events") return 64;
 
+            if (mode == "observed")
+            {
+                File.WriteAllLines(args[4], new[]
+                {
+                    "{\"name\":\"before:Load\",\"monotonicTicks\":1}",
+                    "{\"name\":\"after:Load\",\"monotonicTicks\":2}",
+                    "{\"name\":\"before:Construct\",\"monotonicTicks\":3}",
+                    "{\"name\":\"after:Construct\",\"monotonicTicks\":4}",
+                    "{\"name\":\"before:SetServerInstance\",\"monotonicTicks\":5}",
+                    "{\"name\":\"after:SetServerInstance\",\"monotonicTicks\":6}",
+                    "{\"name\":\"before:Initialize\",\"monotonicTicks\":7}",
+                    "{\"name\":\"after:Initialize\",\"monotonicTicks\":8}",
+                    "{\"name\":\"before:Dispose\",\"monotonicTicks\":9}",
+                    "{\"name\":\"after:Dispose\",\"monotonicTicks\":10}"
+                });
+                Console.Write("{\"schemaVersion\":1,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"CONFIRMED\"}");
+                return 0;
+            }
+
             if (mode == "normal")
             {
                 Console.Write("{\"schemaVersion\":1,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"CONFIRMED\"}");
