@@ -192,6 +192,22 @@ Do not terminate it automatically.
 
 Parent PID / command line can establish how Windows launched the residual process, but not why Initialize is blocked.
 
+## Recently modified Epson-file metadata
+
+If postflight captured files under `C:\EpsonRC70` whose LastWriteTimeUtc is at/after v5 start, treat this as **discovery evidence only**.
+
+Useful outcomes:
+- a newly written/updated log, trace, crash, server-state or configuration file identifies a concrete artifact to inspect next;
+- repeated writes to the same file around the timeout may narrow the RC+ subsystem involved.
+
+Do not:
+- infer meaning from a filename alone;
+- commit raw file contents automatically;
+- modify, delete or rotate any discovered Epson file;
+- treat the absence of changed files as proof that RC+ wrote nothing elsewhere.
+
+If a promising file is found, first record its path category, size, timestamp and SHA256. Reading its contents is a separate read-only diagnostic step and should be limited to the relevant file.
+
 ## Windows Application event interpretation
 
 Review only records at/after v5 start.
