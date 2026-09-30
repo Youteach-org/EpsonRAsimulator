@@ -53,6 +53,22 @@ Preserved reviewed inputs:
 
 Current PR24 head after the sealed code checkpoint contains no `windows-bridge/` changes. The later commits are evidence/report/diagnostic documentation only.
 
+## OS compatibility preflight — read-only and fail-closed
+
+The exact Windows version/build has never been persisted in the handoff.
+
+Epson's official software-update matrix lists:
+- RC+ 7.5.3: Windows 10 and Windows 8
+- RC+ 7.5.4: Windows 11, Windows 10 and Windows 8
+
+The installed Epson version recorded for this machine is RC+ 7.5.3.
+
+Before attempt 5, record the OS identity read-only. If the Windows build is 22000 or greater (Windows 11 family), **do not launch InitializeObserve automatically**. Stop and classify RC+ 7.5.3 / Windows 11 compatibility as an unresolved environmental variable. Do not silently upgrade RC+, and do not use a timeout experiment to mask an unsupported/undocumented OS combination.
+
+If the machine is Windows 10, continue with the timeout-only experiment below.
+
+This OS check is not a native Epson operation and does not start/stop any process.
+
 ## Exact experiment
 
 Only one intentional native-variable change versus attempt 3:
@@ -80,6 +96,23 @@ This is inline PowerShell; it does not change ExecutionPolicy and does not execu
 
 ```powershell
 $ErrorActionPreference = 'Stop'
+
+# Read-only OS compatibility preflight.
+$os = Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
+$osEvidence = [ordered]@{
+  ProductName = $os.ProductName
+  DisplayVersion = $os.DisplayVersion
+  CurrentBuildNumber = $os.CurrentBuildNumber
+  UBR = $os.UBR
+}
+$osEvidence | ConvertTo-Json
+$buildNumber = 0
+if (-not [int]::TryParse([string]$os.CurrentBuildNumber, [ref]$buildNumber)) {
+  throw 'Cannot determine Windows build; no native execution'
+}
+if ($buildNumber -ge 22000) {
+  throw 'Windows 11-family build detected with installed RC+ 7.5.3; stop for compatibility review before native execution'
+}
 
 $base = 'C:\Users\BATMAN\Documents\Codex\2026-09-29\contin-a-epsonrasimulator-desde-el-ltimo\work'
 $supervisorRoot = Join-Path $base 'sealed-retained-events\extracted'
@@ -194,6 +227,14 @@ if ($state.eventsExists) { Get-Content -LiteralPath $eventsPath }
 Get-Process | Where-Object { $_.ProcessName -match '^(erc70|erc70PServer|EpsonRa.*)$' } |
   Select-Object Id, ProcessName, StartTime, MainWindowTitle
 ```
+
+## Release-note scan
+
+Official Epson release notes reviewed:
+- RC+ 7.5.3 (2022-06-30): fixes listed for General/USB, Force Guide, Vision Guide and Simulator; no RC+ API/Initialize/server-start fix is listed.
+- RC+ 7.5.4 (2023-05-12): fixes listed for General, Vision Guide, Part Feeding and Conveyor Tracking; no RC+ API/Initialize/server-start fix is listed.
+
+This does not prove no undocumented defect exists. It means there is no public release-note evidence that 7.5.4 specifically fixes the Initialize behavior observed here.
 
 ## Interpretation
 
