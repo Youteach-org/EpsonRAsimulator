@@ -50,6 +50,25 @@ Continue to Gate 2.
 Stop as:
 `INCONCLUSIVE_OS_IDENTITY`
 
+## Gate 1B — research runtime
+
+The compiled research worker/supervisor target **.NET Framework 4.8 (net48)**.
+
+Read `HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\Release`.
+
+Microsoft's minimum release-key test for .NET Framework 4.8 or later is `>= 528040`.
+
+### Release missing or < 528040
+Stop as:
+`BLOCKED_NET48_RUNTIME`
+
+Do not install/upgrade .NET automatically.
+
+### Release >= 528040
+Continue to Gate 2.
+
+This gate reflects the actual research binaries and is intentionally stricter than Epson's generic API minimum.
+
 ## Gate 2 — immutable artifact and process baseline
 
 Every artifact hash must match and no Epson/research process may already exist at baseline.
