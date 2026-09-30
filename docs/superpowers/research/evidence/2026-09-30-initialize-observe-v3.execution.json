@@ -1,0 +1,10 @@
+{
+  "startedUtc": "2026-09-30T18:22:31.0884575Z",
+  "status": "SUPERVISOR_EXIT_OBSERVED",
+  "supervisorPid": 19020,
+  "supervisorExited": true,
+  "supervisorExitCode": 124,
+  "resultExists": true,
+  "resultBytes": 364,
+  "cleanup": "UNKNOWN"
+}
