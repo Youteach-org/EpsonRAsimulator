@@ -113,6 +113,19 @@ https://files.support.epson.com/far/docs/epson_rc_pl_70_users_guide-rc700_rc90(v
 
 The user guide says the RC+ API loads RC+ automatically and that ordinary RC+ startup reads current-user/local-system settings. This is relevant background for a possible startup-context dependency but is not sufficient to name a specific blocking setting.
 
+## Manual ambiguity retained: Initialize is not proven connection-free
+
+Rev.19 contains two relevant statements that cannot safely be collapsed into one behavior claim:
+
+- In direct RCAPINet LabVIEW usage, the documented sequence is Spel construction -> `Initialize()` -> separate `Connect`.
+- In the multi-threading discussion, Epson says the first Spel instance for each Controller initializes an RC+ server process and connects to the specified Controller.
+
+These statements may describe different usage contexts, implicit behavior, or shorthand. They are not sufficient to prove either:
+- that native `Spel.Initialize()` never communicates with/connects to a Controller; or
+- that every `Initialize()` necessarily connects.
+
+The project therefore keeps its earlier safety ruling: initialization/connection behavior remains externally observed and inconclusive unless evidence is complete. No physical/default/last-used fallback is permitted.
+
 ## Documentation correction: direct RCAPINet vs high-level LabVIEW VI
 
 The RC+ API manual contains two LabVIEW integration paths that must not be conflated:
