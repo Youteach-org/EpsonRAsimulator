@@ -74,13 +74,20 @@ Current evidence only proves RCAPINet.dll is installed/loadable, not that the Co
 ### Evidence against
 No direct evidence either way. The manual does not identify a missing API key as the cause of an Initialize hang, and no safely connection-free option query has been established.
 
+### Additional official UI finding
+The RC+ 7.5 User's Guide documents [Setup] -> [Options] as a Controller option dialog. It says RC+ uses a key stored in the Spel controller board and shows RC+ API in the option list.
+
+No official connection-free PC-local key query was found. The documented UI is Controller-contextual; therefore opening/using it must not be treated as a harmless local substitute for the existing connection gate.
+
 ### Priority
 **Material unresolved environmental/configuration hypothesis.**
 
 ### Next test
 Do **not** insert IsOptionActive/GetControllerInfo into InitializeObserve.
 
-Resolve option/key status by a separately safe route after v5/OS preflight, ideally using a read-only local configuration/UI artifact if one can be identified without controller communication. Any RCAPINet option query needs separate review because the manual allows implicit initialization/controller communication for methods/properties.
+No documented connection-free local method is currently known. Resolve option/key status only if a separately reviewed route becomes available. The documented Setup -> Options UI is controller-scoped and must not be opened/used automatically as though it were a PC-only read.
+
+Any RCAPINet option query needs separate review because the manual allows implicit initialization/controller communication for methods/properties.
 
 ## H4 — ServerInstance=10 is invalid or inherently unsupported
 
