@@ -69,6 +69,8 @@ If the machine is Windows 10, continue with the timeout-only experiment below.
 
 This OS check is not a native Epson operation and does not start/stop any process.
 
+The research worker/supervisor are built for **.NET Framework 4.8 (net48)**. Microsoft documents Release DWORD `>= 528040` as the minimum test for .NET Framework 4.8 or later. V5 therefore also fails closed before native launch if that minimum is not detected. This is stricter than Epson's generic 4.5+ API minimum because it reflects the actual compiled research binaries.
+
 ## Important manual ambiguity: Initialize vs controller connection
 
 The Epson manual does **not** establish that native `Spel.Initialize()` is connection-free.
@@ -208,6 +210,7 @@ $dotNetRelease = $null
 try {
   $dotNetRelease = (Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full').Release
 } catch {}
+$dotNet48MinimumRelease = 528040
 
 $ercInfo = if (Test-Path -LiteralPath $erc70 -PathType Leaf) {
   [Diagnostics.FileVersionInfo]::GetVersionInfo($erc70)
@@ -266,6 +269,9 @@ if (-not [int]::TryParse([string]$os.CurrentBuildNumber, [ref]$buildNumber)) {
 }
 if ($buildNumber -ge 22000) {
   throw 'Windows 11-family build detected with installed RC+ 7.5.3; stop for compatibility review before native execution'
+}
+if ($null -eq $dotNetRelease -or [int64]$dotNetRelease -lt $dotNet48MinimumRelease) {
+  throw '.NET Framework 4.8 or later not detected; research binaries target net48, so no native execution'
 }
 if (@($artifactChecks | Where-Object { -not $_.Match }).Count) {
   throw 'Artifact mismatch or missing artifact; no native execution'
