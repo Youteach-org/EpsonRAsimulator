@@ -1,0 +1,21 @@
+{
+  "checkedUtc": "2026-09-30T04:59:34.6697756Z",
+  "nativeAttempt": 2,
+  "status": "INCONCLUSIVE_TIMEOUT",
+  "supervisorExitCode": 124,
+  "cleanup": "UNKNOWN",
+  "processes": [
+    {
+      "Id": 9880,
+      "ProcessName": "erc70",
+      "StartTime": "2026-09-29T22:58:50.4271745-06:00",
+      "MainWindowHandle": {
+        "value": 657884
+      },
+      "MainWindowTitle": ""
+    }
+  ],
+  "inventoryExecuted": false,
+  "connectExecuted": false,
+  "retryAfterTimeout": false
+}
