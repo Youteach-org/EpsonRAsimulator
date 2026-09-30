@@ -1,6 +1,19 @@
 EpsonRAsimulator handoff — 2026-09-27
 
 
+UPDATE 2026-09-30 — V5 NET48 RUNTIME GATE + PUBLIC-PR HYGIENE
+- Static launcher audit found that .NET Framework Release was captured but not enforced.
+- Research worker/supervisor target net48; Microsoft documents Release>=528040 as the minimum test for .NET Framework4.8+.
+- V5 now fails closed BEFORE native Epson launch if Release is missing or <528040.
+- Do not auto-install/upgrade .NET.
+- V5 proposal updated at 70bf779e05906cdaa25c9946e7774bca1aa25517.
+- Interpretation contract updated in the next commit after this handoff preparation.
+- Public PR file audit: 86 changed files; no .exe/.dll/.zip/archive/binary/*.local.json files are tracked.
+- Diff scan found no obvious credential/private-key/email patterns; historical research docs do contain absolute local C:\Users\BATMAN\... paths needed to identify preserved evidence locations. Do not add new raw local evidence; canonical PR body avoids those paths.
+- .gitignore currently does not include *.local.json. Raw v5 *.local.json remains prohibited by process/documentation; optional future defense-in-depth is adding an ignore rule, but no config change was made in this checkpoint.
+- Base branch feature/windows-bridge-readiness remains at122ad2a8a8dc5ffa5ddb07a36145eec2722ca559; research branch was0 commits behind when checked. No rebase needed.
+
+
 UPDATE 2026-09-30 — API KEY CHECK IS CONTROLLER-SCOPED
 - RC+7.5 User's Guide [Setup]->[Options] is explicitly a Controller options dialog; the option key is stored in the Spel controller board and RC+ API appears in that option list.
 - No official/documented connection-free PC-local method was found to verify RC+ API key state.
