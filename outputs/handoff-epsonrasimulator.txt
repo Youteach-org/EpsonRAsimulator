@@ -1,6 +1,18 @@
 EpsonRAsimulator handoff — 2026-09-27
 
 
+UPDATE 2026-09-30 — OS COMPATIBILITY GATE ADDED TO V5
+- Official Epson matrix lists RC+7.5.3 for Windows10/8 and RC+7.5.4 for Windows11/10/8.
+- Installed RC+ on this machine remains7.5.3. Exact Windows ProductName/DisplayVersion/build was never persisted.
+- Release-note scan: 7.5.3 and7.5.4 public fixes do NOT list an RC+API/Initialize/server-start correction. Do not claim upgrading to7.5.4 fixes this timeout.
+- V5 proposal now begins with a read-only OS registry check.
+- If CurrentBuildNumber>=22000 (Windows11 family), v5 MUST stop before native launch and treat RC+7.5.3/Windows11 compatibility as unresolved. Do not silently upgrade RC+.
+- If Windows10, continue with the single-variable timeout experiment (30s->90s internal;40s->105s outer).
+- Updated proposal commit b8ce94cbc13ab731f660b4dbe9ec6ba0b742df6d.
+- Root-cause report updated at b1a0c803e5e549a4fe39e9cfd310c1f748c3b162.
+- No native attempt5, Inventory, Connect, Epson process start/stop or software upgrade was performed by these documentation changes.
+
+
 UPDATE 2026-09-30 — ROOT-CAUSE CHECKPOINT AFTER ATTEMPTS 2–4
 - New consolidated report: docs/superpowers/reports/2026-09-30-initialize-observe-root-cause-checkpoint.md
 - Evidence pattern across v2/v3/v4:
