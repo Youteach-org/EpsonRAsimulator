@@ -1,6 +1,15 @@
 EpsonRAsimulator handoff — 2026-09-27
 
 
+UPDATE 2026-09-30 — API KEY CHECK IS CONTROLLER-SCOPED
+- RC+7.5 User's Guide [Setup]->[Options] is explicitly a Controller options dialog; the option key is stored in the Spel controller board and RC+ API appears in that option list.
+- No official/documented connection-free PC-local method was found to verify RC+ API key state.
+- Therefore do NOT auto-open/use Setup->Options as a harmless local preflight and do NOT add IsOptionActive/GetControllerInfo to InitializeObserve.
+- RC+ API key state for C4 Sample remains UNVERIFIED_NOT_PROBED until a separately reviewed safe route exists.
+- Hypothesis matrix updated at 15233497d419137d56830feea75f40f18f31ddde.
+- This finding does not prove a missing key and does not change v5 native semantics.
+
+
 UPDATE 2026-09-30 — HYPOTHESIS MATRIX + CONNECTION AMBIGUITY + PASSIVE FILE DISCOVERY
 - Official Rev19 manual is context-dependent about connection behavior during Initialize:
   direct RCAPINet LabVIEW flow documents Initialize then separate Connect;
