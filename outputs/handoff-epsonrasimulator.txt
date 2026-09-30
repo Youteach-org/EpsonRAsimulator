@@ -1,6 +1,28 @@
 EpsonRAsimulator handoff — 2026-09-27
 
 
+UPDATE 2026-09-30 — DEEPER V5 READ-ONLY DIAGNOSTICS + API KEY GAP
+- Corrected documentation distinction: the high-level LabVIEW VI Initialize wrapper is NOT the same contract as direct RCAPINet Spel.Initialize. Direct RCAPINet LabVIEW flow constructs Spel, calls Initialize to start/configure RC+ server, then documents Connect as a separate step.
+- RC+ API manual installation section explicitly requires the RC+ API software key to be enabled in Controllers used; architecture includes Robot Controller OR Virtual Controller.
+- Current evidence does NOT prove the RC+ API option/key is enabled for exact Virtual Controller C4 Sample.
+- Do NOT insert IsOptionActive/GetControllerInfo into InitializeObserve: controller-option queries may trigger controller communication, crossing the separate Connect gate. Record key status as UNVERIFIED_NOT_PROBED.
+- V5 proposal now adds read-only/local diagnostic capture without changing the RCAPINet sequence:
+  Windows ProductName/DisplayVersion/build/UBR; .NET4 Full Release; erc70.exe and RCAPINet.dll file/product versions; OS/launcher bitness; baseline Epson/research processes; post-run PID/parent/session/path/command line/window/responding/thread/handle metadata; Application events1000/1002/1026 since launch.
+- Raw *.local.json pre/postflight snapshots may contain machine-specific paths/messages. NEVER commit them raw to this public repo. Hash locally and commit only a sanitized summary + raw SHA256.
+- No diagnostic step starts/stops/activates/sends input to Epson processes beyond the already-proposed native v5 launch itself. No automatic termination.
+- Updated v5 proposal commit: ff4cf5d9268bc217e7f79de09dc1355155e57fe0.
+- Updated root-cause report commit: 4618e88f5da0b369a85de9a4728b71c03c31d017.
+- New interpretation contract: docs/superpowers/research/2026-09-30-v5-interpretation-contract.md @ 81351a46ecc19d7eec4086d65380555232aa0a94.
+- Interpretation contract requires OS gate, immutable hashes, clean process baseline, ten ordered stage markers, worker/supervisor agreement, cleanup, external observation limitations, postflight process-tree/event review, privacy sanitization, and no blind v6 retry.
+- If Windows11-family build>=22000: v5 stops BEFORE native execution for RC+7.5.3 compatibility review.
+- If Windows10 and v5 times out at90s with same seven markers: do NOT run identical retry; investigate RC+ server startup dependencies/software-option status by separately safe route.
+- If Initialize returns and cleanup confirmed: still do not auto-run Inventory; external observation must be interpreted and Inventory remains separately gated.
+- Official sources rechecked:
+  RC+ API7 Rev19: https://files.support.epson.com/far/docs/epson_rc_pl_7.0_api_manual-rc700a_rc90_t(r19).pdf
+  Epson RC+ software matrix/release links: https://epson.com/Support/wa00852
+- No native v5 execution, Inventory, Connect, RC+ upgrade, process termination or main merge in these commits.
+
+
 UPDATE 2026-09-30 — OS COMPATIBILITY GATE ADDED TO V5
 - Official Epson matrix lists RC+7.5.3 for Windows10/8 and RC+7.5.4 for Windows11/10/8.
 - Installed RC+ on this machine remains7.5.3. Exact Windows ProductName/DisplayVersion/build was never persisted.
