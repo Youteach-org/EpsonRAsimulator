@@ -69,6 +69,22 @@ If the machine is Windows 10, continue with the timeout-only experiment below.
 
 This OS check is not a native Epson operation and does not start/stop any process.
 
+## Important manual ambiguity: Initialize vs controller connection
+
+The Epson manual does **not** establish that native `Spel.Initialize()` is connection-free.
+
+Evidence in the same Rev.19 manual is context-dependent:
+- the direct RCAPINet LabVIEW sequence documents `Initialize()` and then a separate `Connect` step;
+- the multi-threading section says the first Spel instance for each Controller initializes an RC+ server process **and connects to the specified Controller**;
+- the general API behavior states that initialization can be implicit on first method/property access.
+
+Therefore:
+- do not infer “no implicit connection” from the direct LabVIEW sequence;
+- do not infer “Initialize always connects” from the multi-threading prose;
+- treat connection behavior during Initialize as unresolved for this installed version/configuration;
+- retain external process/TCP observation and the no-physical-controller / Auto Connect OFF environmental safeguards;
+- a timeout or successful return from Initialize alone never proves absence of controller communication.
+
 ## RC+ API software-key evidence gap
 
 EPSON's RC+ API 7.0 Rev.19 installation instructions explicitly require the RC+ API software key to be enabled in the Controllers being used. The same manual's architecture diagram explicitly includes a Robot Controller **or Virtual Controller**.
