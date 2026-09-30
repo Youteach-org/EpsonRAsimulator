@@ -62,6 +62,18 @@ Any baseline Epson/research process:
 
 Record the process; do not terminate it automatically.
 
+## Connection-behavior caution
+
+Do not classify v5 as “connection-free Initialize”.
+
+The official manual separately documents a direct `Initialize -> Connect` sequence, but elsewhere describes the first Spel instance per Controller as initializing a server and connecting to the specified Controller. Treat that as unresolved documentation ambiguity.
+
+Consequences for interpretation:
+- worker success does not prove no implicit controller communication occurred;
+- absence of sampled TCP traffic does not prove absence of short-lived traffic or USB activity;
+- the exact Virtual target policy and physical-isolation safeguards remain mandatory;
+- do not relax the separate Inventory/Connect gates after v5.
+
 ## Gate 3 — software-key state
 
 Record:
