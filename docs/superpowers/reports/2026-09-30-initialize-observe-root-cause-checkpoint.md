@@ -113,6 +113,53 @@ https://files.support.epson.com/far/docs/epson_rc_pl_70_users_guide-rc700_rc90(v
 
 The user guide says the RC+ API loads RC+ automatically and that ordinary RC+ startup reads current-user/local-system settings. This is relevant background for a possible startup-context dependency but is not sufficient to name a specific blocking setting.
 
+## Documentation correction: direct RCAPINet vs high-level LabVIEW VI
+
+The RC+ API manual contains two LabVIEW integration paths that must not be conflated:
+
+1. **High-level LabVIEW VI library** — its Initialize VI is a wrapper that accepts connection/project-oriented inputs and may establish controller connectivity as part of that wrapper flow.
+2. **Direct LabVIEW use of RCAPINet.dll** — this is the closer analog to the compiled research worker. It constructs `RCAPINet.Spel`, invokes native `Spel.Initialize()` to configure/start RC+ as a background server, and documents `Connect` as a subsequent separate step.
+
+Therefore the high-level VI wrapper must not be used as evidence that native `Spel.Initialize()` itself necessarily performs the same controller-connect workflow.
+
+The manual also documents `ParentWindowHandle` for RC+ dialogs/windows. It does not establish a .NET WinForms parent/message loop as a prerequisite for native `Spel.Initialize()`. Attempt 4 already showed that STA alone was insufficient.
+
+## RC+ API software-key evidence gap
+
+The RC+ API 7.0 manual states that the RC+ API software key must be enabled in the Controller(s) being used, and its architecture explicitly includes Robot Controller or Virtual Controller.
+
+Current evidence proves:
+- `RCAPINet.dll` is installed;
+- the exact `RCAPINet.Spel` type loads;
+- Spel construction succeeds;
+- `ServerInstance=10` can be assigned.
+
+Current evidence does **not** prove that the RC+ API option/key is enabled for the exact Virtual Controller `C4 Sample`.
+
+The API exposes controller-option queries such as `IsOptionActive(SpelOptions.API)`, but controller option queries may require controller communication. The API documentation also states generally that a Spel instance may automatically connect when a method requires controller communication.
+
+Therefore:
+- do not add `IsOptionActive`, `GetControllerInfo`, or a similar option query to InitializeObserve;
+- do not cross the Connect gate merely to diagnose the option key;
+- record RC+ API key status as `UNVERIFIED_NOT_PROBED`;
+- do not claim a missing key is the timeout cause — the documentation found does not establish where in startup the key is checked;
+- resolve option/key status by a separately safe and explicitly reviewed route before accepting any later controller-communicating stage.
+
+## Read-only evidence to collect with attempt 5
+
+Without changing the RCAPINet call sequence, the v5 outer launcher should capture local-only diagnostic evidence before/after launch:
+
+- Windows ProductName, DisplayVersion, build and UBR;
+- .NET Framework 4 Full Release value;
+- file/product version of installed `erc70.exe` and `RCAPINet.dll`;
+- OS and launcher process bitness;
+- Epson/research process baseline;
+- residual `erc70` PID, parent PID, session, executable path and command line when readable;
+- window handle/title, Responding state, thread count and handle count when readable;
+- Application log records since launch for Application Error 1000, Application Hang 1002 and .NET Runtime 1026.
+
+Raw snapshots can expose machine-specific paths/messages. Keep them local as `*.local.json`; only sanitized summaries and hashes belong in this public repository.
+
 ## Release-note / OS compatibility finding
 
 Official Epson software-update matrix:
