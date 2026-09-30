@@ -52,6 +52,13 @@ namespace EpsonRa.Bridge.Research.Fixture
                 return 3;
             }
 
+            if (mode == "stage-timeout")
+            {
+                File.WriteAllText(args[4], "{\"name\":\"before:Initialize\",\"monotonicTicks\":7}\n");
+                Thread.Sleep(TimeSpan.FromSeconds(30));
+                return 0;
+            }
+
             if (mode == "evidence")
             {
                 Console.Write("{\"schemaVersion\":1,\"status\":\"COMPLETED\",\"success\":true,\"cleanup\":\"CONFIRMED\",\"machine\":332,\"corFlags\":9,\"architecture\":\"AnyCpu\",\"eligibleName\":\"C4 Sample\",\"eligibleConnectionNumber\":2,\"eligibleTypeNumber\":3}");

@@ -13,6 +13,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
     {
         public string WorkerPath { get; set; }
         public string RequestPath { get; set; }
+        public string EventsPath { get; set; }
         public int TimeoutSeconds { get; set; } = 30;
         public string[] ExtraArguments { get; set; }
     }
@@ -28,6 +29,8 @@ namespace EpsonRa.Bridge.Research.Supervisor
         public string Error { get; set; }
         public int ExitCode { get; set; }
         public ObservationAssessment Observation { get; set; }
+        // Raw worker evidence only; this path may be absent/empty if the worker never wrote.
+        public string StageEventsPath { get; set; }
     }
 
     public static class WorkerSupervisor
@@ -41,6 +44,16 @@ namespace EpsonRa.Bridge.Research.Supervisor
         }
 
         public static SupervisorResult Run(
+            WorkerRequest request,
+            IObservationMonitorFactory observationFactory)
+        {
+            var result = RunCore(request, observationFactory);
+            if (result.Error != "InvalidArguments" && request != null)
+                result.StageEventsPath = request.EventsPath;
+            return result;
+        }
+
+        private static SupervisorResult RunCore(
             WorkerRequest request,
             IObservationMonitorFactory observationFactory)
         {
@@ -63,6 +76,8 @@ namespace EpsonRa.Bridge.Research.Supervisor
                     !Path.IsPathRooted(request.WorkerPath) ||
                     !File.Exists(request.WorkerPath) ||
                     !File.Exists(request.RequestPath) ||
+                    (request.EventsPath != null &&
+                        (!IsFullyQualifiedPath(request.EventsPath) || File.Exists(request.EventsPath))) ||
                     request.TimeoutSeconds < 1 ||
                     request.TimeoutSeconds > 120)
                 {
@@ -92,7 +107,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
                     }
                 }
 
-                events = Path.Combine(
+                events = request.EventsPath ?? Path.Combine(
                     Path.GetTempPath(),
                     "epson-ra-events-" + Guid.NewGuid().ToString("N") + ".jsonl");
 
@@ -277,11 +292,26 @@ namespace EpsonRa.Bridge.Research.Supervisor
 
                 try
                 {
-                    if (events != null && File.Exists(events))
+                    // Durable capture retains the worker-owned sidecar even on timeout.
+                    // No extra read/copy at the deadline, and no claim that partial markers
+                    // establish successful initialization, disposal, or complete observation.
+                    if (events != null && request.EventsPath == null && File.Exists(events))
                         File.Delete(events);
                 }
                 catch { }
             }
+        }
+
+        private static bool IsFullyQualifiedPath(string path)
+        {
+            try
+            {
+                var root = Path.GetPathRoot(path);
+                return !string.IsNullOrEmpty(root) && string.Equals(
+                    root.Replace('/', '\\'), Path.GetPathRoot(Path.GetFullPath(path)),
+                    StringComparison.OrdinalIgnoreCase);
+            }
+            catch { return false; }
         }
 
         private static SupervisorResult InconclusiveObservation(
@@ -641,4 +671,3 @@ namespace EpsonRa.Bridge.Research.Supervisor
         }
     }
 }
-

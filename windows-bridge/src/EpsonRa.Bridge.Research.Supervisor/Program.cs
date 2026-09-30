@@ -56,6 +56,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 {
                     WorkerPath = worker,
                     RequestPath = request,
+                    EventsPath = resultFile == null ? null : resultFile + ".events.jsonl",
                     TimeoutSeconds = timeout
                 });
 
