@@ -1,6 +1,43 @@
 EpsonRAsimulator handoff — 2026-09-27
 
 
+UPDATE 2026-09-30 — HYPOTHESIS MATRIX + CONNECTION AMBIGUITY + PASSIVE FILE DISCOVERY
+- Official Rev19 manual is context-dependent about connection behavior during Initialize:
+  direct RCAPINet LabVIEW flow documents Initialize then separate Connect;
+  multi-threading text says the first Spel instance per Controller initializes the RC+ server and connects to the specified Controller.
+- Therefore Initialize is NOT proven connection-free and is NOT proven always-connecting. Preserve external observation, physical isolation, Auto Connect OFF, exact C4 Sample policy and all Inventory/Connect gates.
+- Connection-ambiguity corrections persisted:
+  proposal 23f6aa51aedcc0e01cc69045f3330d85fddd8ff8
+  root-cause report e97b1aa5aca40663492f47c24f5b65c4626dcbad
+  v5 interpretation contract 0db4381541be5480d8db6d87bd13e6020418e588
+- New hypothesis matrix:
+  docs/superpowers/research/2026-09-30-initialize-observe-hypothesis-matrix.md
+  commit 37c01497600d5d3c3596efbaa9a93d33ecea4758
+- Matrix priority/order:
+  H1 exact Windows build / RC+7.5.3 compatibility;
+  H2 one timeout-only 90s experiment;
+  H3 RC+ API software-key status UNVERIFIED_NOT_PROBED;
+  H4 ServerInstance10 deprioritized because 1..10 is explicitly valid;
+  H5 STA deprioritized by v4;
+  H6 WinForms/message loop unproven/deprioritized;
+  H7 process crash/hang evidence via passive postflight;
+  H8 implicit connection remains safety-significant unresolved behavior;
+  H9 stale server-instance/profile/project config possible but unproven;
+  H10 AV/core-isolation low priority unless evidence points there.
+- V5 remains pinned to original x86 MTA worker and ServerInstance10; DO NOT change instance/host/bitness together with timeout.
+- Added passive recent-file discovery to v5:
+  after execution, metadata only for at most200 files under C:\EpsonRC70 with LastWriteTimeUtc>=v5 start;
+  captures path/length/time only, no file contents, no modifications.
+  proposal commit 5d3aabc6258e18c557302f563ee870bed606ec72.
+- Interpretation contract now explains touched-file evidence at ecf0368cc8ad80d9897214064297774b108cb1c8.
+- If a promising Epson log/state/config file is discovered: first record path category/size/time/SHA256; content read is a separate limited read-only diagnostic step. Never edit/delete/rotate it and never auto-commit raw machine-specific content.
+- Manual/software-key finding retained:
+  RC+ API key must be enabled for Controllers used; current C4 Sample option status not proven.
+  Do NOT call IsOptionActive/GetControllerInfo inside InitializeObserve because connection behavior is not established safe.
+- ServerInstance finding: manual explicitly permits1..10, so instance10 is not invalid merely because multiple-controller chapter describes up to6 Robot Controllers.
+- No native v5, Inventory, Connect, process termination, RC+ config change, RC+ upgrade or main merge in this work.
+
+
 UPDATE 2026-09-30 — DEEPER V5 READ-ONLY DIAGNOSTICS + API KEY GAP
 - Corrected documentation distinction: the high-level LabVIEW VI Initialize wrapper is NOT the same contract as direct RCAPINet Spel.Initialize. Direct RCAPINet LabVIEW flow constructs Spel, calls Initialize to start/configure RC+ server, then documents Connect as a separate step.
 - RC+ API manual installation section explicitly requires the RC+ API software key to be enabled in Controllers used; architecture includes Robot Controller OR Virtual Controller.
