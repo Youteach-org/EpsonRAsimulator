@@ -16,3 +16,6 @@ Evidence SHA256:
 - events:8E116949467A79E3DC9610F52160B1E7012CCF308BF9E55456EFC8B49C93725E
 
 Only LoadOnly remains accepted. Keep PR24 Draft/stacked, no merge. Next work: inspect host/startup requirements and residual process state before selecting another discriminating experiment. User authorization permits necessary diagnostic attempts, not blind retries; Inventory/Connect remain gated. Process closure approval covered PID9880 only.
+
+
+Follow-up: user explicitly approved closure of residual PID29976 only. Exact name/start identity verified before Stop-Process; subsequent process precheck found zero Epson/research processes. Both closures were specifically authorized. No fourth attempt executed.

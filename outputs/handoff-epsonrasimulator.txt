@@ -395,7 +395,7 @@ Sealed artifact11109775310, ZIP SHA2563071CA8FC6D4A42DD11CFAC62BCF048465CA6B10BA
 Read-only process check at2026-09-30T15:46:17Z still found erc70PID9880, empty title. It was not terminated. This is a process observation, not proof of visible RC+ UI. No third InitializeObserve/Inventory/Connect authorized or executed. Before another proposed native attempt, residual process state must be resolved without automatic shared-process termination and a new exact command/approval prepared. Do not reuse old approval or claim the native timeout's cause is fixed. Only the evidence-retention defect is corrected.
 
 
-## Latest: authorized third attempt, operation localized
+## Latest authorized third attempt
 
 # InitializeObserve attempt 3 — retained stage trace
 
@@ -415,3 +415,6 @@ Evidence SHA256:
 - events:8E116949467A79E3DC9610F52160B1E7012CCF308BF9E55456EFC8B49C93725E
 
 Only LoadOnly remains accepted. Keep PR24 Draft/stacked, no merge. Next work: inspect host/startup requirements and residual process state before selecting another discriminating experiment. User authorization permits necessary diagnostic attempts, not blind retries; Inventory/Connect remain gated. Process closure approval covered PID9880 only.
+
+
+Follow-up: user explicitly approved closure of residual PID29976 only. Exact name/start identity verified before Stop-Process; subsequent process precheck found zero Epson/research processes. Both closures were specifically authorized. No fourth attempt executed.
