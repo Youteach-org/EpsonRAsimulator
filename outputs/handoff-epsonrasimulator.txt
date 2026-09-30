@@ -1,6 +1,17 @@
 EpsonRAsimulator handoff — 2026-09-27
 
 
+UPDATE 2026-09-30 — LOCAL-AGENT RESUME RUNBOOK
+- New single-entry resume document:
+  docs/superpowers/research/2026-09-30-local-agent-resume-runbook.md
+  commit c8644d05f8054ce9668660fc36e3ce117162fc92.
+- A local-capable continuation should open this runbook FIRST, then verify real PR24 HEAD and newest handoff before touching Windows.
+- The runbook consolidates:
+  remote-state verification; native-stage status; no-copy rule; OS/net48/hash/process gates; RC+ API key UNVERIFIED_NOT_PROBED; exact one-shot v5; ten-marker interpretation; passive postflight; privacy/sanitization; GitHub persistence; next-hypothesis order; safety invariants.
+- It contains no new native operation and does not authorize Inventory/Connect/process termination.
+- PR body was also canonicalized earlier to remove stale/contradictory checkpoint prose.
+
+
 UPDATE 2026-09-30 — V5 NET48 RUNTIME GATE + PUBLIC-PR HYGIENE
 - Static launcher audit found that .NET Framework Release was captured but not enforced.
 - Research worker/supervisor target net48; Microsoft documents Release>=528040 as the minimum test for .NET Framework4.8+.
