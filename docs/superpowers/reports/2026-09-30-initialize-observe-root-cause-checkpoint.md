@@ -113,6 +113,27 @@ https://files.support.epson.com/far/docs/epson_rc_pl_70_users_guide-rc700_rc90(v
 
 The user guide says the RC+ API loads RC+ automatically and that ordinary RC+ startup reads current-user/local-system settings. This is relevant background for a possible startup-context dependency but is not sufficient to name a specific blocking setting.
 
+## Release-note / OS compatibility finding
+
+Official Epson software-update matrix:
+- RC+ 7.5.3 is listed for Windows 10 and Windows 8.
+- RC+ 7.5.4 is listed for Windows 11, Windows 10 and Windows 8.
+
+The installed RC+ version recorded for this machine is 7.5.3. The exact Windows version/build has never been persisted in the project handoff.
+
+Release-note scan:
+- RC+ 7.5.3 public fixes: USB/core-isolation communications support, Force Guide, Vision Guide and Simulator items; no RC+ API/Initialize/server-start fix is listed.
+- RC+ 7.5.4 public fixes: General, Vision Guide, Part Feeding and Conveyor Tracking items; no RC+ API/Initialize/server-start fix is listed.
+
+Therefore:
+1. there is no public release-note evidence that 7.5.4 specifically fixes this Initialize timeout;
+2. Windows 11 compatibility remains a material environmental variable if the machine build is 22000+;
+3. before attempt 5, record ProductName/DisplayVersion/CurrentBuildNumber/UBR read-only;
+4. if build >= 22000, stop before native execution and investigate/update RC+ compatibility instead of producing another ambiguous timeout;
+5. do not silently upgrade RC+.
+
+The v5 proposal now contains this fail-closed preflight.
+
 ## Current code/CI boundary
 
 PR24 remains Draft/stacked and unmerged.
