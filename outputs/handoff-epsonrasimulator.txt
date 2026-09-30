@@ -1,6 +1,31 @@
 EpsonRAsimulator handoff — 2026-09-27
 
 
+UPDATE 2026-09-30 — ROOT-CAUSE CHECKPOINT AFTER ATTEMPTS 2–4
+- New consolidated report: docs/superpowers/reports/2026-09-30-initialize-observe-root-cause-checkpoint.md
+- Evidence pattern across v2/v3/v4:
+  - erc70 observed start approx 4.838s / 4.550s / 4.559s after supervisor receipt start.
+  - v3 and v4 retained events both completed Load, Construct and SetServerInstance10, then stopped at before:Initialize.
+  - no after:Initialize or Dispose marker before the 30s deadline.
+  - v4 STA host did not change the native outcome; STA alone is not sufficient.
+- Working hypothesis only: RC+ server startup begins, then a later startup/readiness handshake does not complete before the deadline. Internal Epson cause is still unknown.
+- Official EPSON RC+ API 7.0 Rev.19 cross-check:
+  - Initialize may take several seconds while RC+ loads.
+  - ServerInstance must be 1..10 and set before Initialize; 10 is valid.
+  - direct LabVIEW/RCAPINet flow constructs Spel, calls Initialize to configure/start RC+ server in background, then Connect as a separate subsequent step.
+  - .NET parent form is discussed for dialogs/windows, not documented as an Initialize prerequisite.
+- Therefore do NOT jump to a WinForms/message-loop implementation yet.
+- Next discriminating experiment remains v5 timeout-only:
+  original x86 MTA worker/request/core + retained-events supervisor;
+  internal timeout 30s->90s; outer bounded wait40s->105s; no other native variable change.
+- Exact v5 proposal: docs/superpowers/research/2026-09-30-initialize-observe-v5-timeout-proposal.md
+- Exact-head CI before this report: 02dd85bf411a2cdbfb60fb2401b4222462703e22, WindowsCI126 SUCCESS (readiness36/36, research79/79, synthetic supervisor12/12, exact-head research79/79), AndroidCI551 SUCCESS.
+- CI126 produced another supervisor SHA256 AA60749897F634CC1EB3E04E7CBB9813ED5DBDDEC3DAF53C20F3C01AB1F64B3E, length28160. Do NOT silently substitute it for the locally prepared bdd7f08d artifact.
+- Local v5 remains pinned to supervisor source bdd7f08d / artifact11109775310 / SHA256 70B70AC833C008D478C96696E49E378140EC1EB4935C9BEF157840B63235A044.
+- No native attempt5 was executed in this chat because local Windows Computer Use/terminal is not exposed here.
+- No Inventory/Connect/GetCurrentConnectionInfo/project/robot/motion/task/I-O/SPEL action. No process termination authorization transfer.
+
+
 UPDATE 2026-09-30 — ATTEMPT 5 TIMEOUT-ONLY PROPOSAL
 - No manual binary copy is required. Existing local prepared paths from prior authorized work are sufficient:
   supervisor/core: C:\Users\BATMAN\Documents\Codex\2026-09-29\contin-a-epsonrasimulator-desde-el-ltimo\work\sealed-retained-events\extracted
