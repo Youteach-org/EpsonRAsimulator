@@ -109,6 +109,7 @@ Attempt 5 keeps one native-variable change only (the longer timeout), but the ou
 - post-run `erc70`/research process metadata, including PID, parent PID, session, executable path and command line when Windows permits access;
 - post-run process window/handle/thread/handle-count metadata when available;
 - Windows Application events since launch for Application Error 1000, Application Hang 1002 and .NET Runtime 1026.
+- metadata only (path, length, last-write UTC) for up to 200 files under `C:\EpsonRC70` whose last-write time is at/after v5 launch, to discover logs/state artifacts without guessing paths or opening their contents.
 
 These diagnostic snapshots are written as `*.local.json` under the fresh v5 evidence directory. They may contain machine-specific paths or Windows messages and therefore are **local evidence only**. Do not commit the raw snapshots to this public repository. Persist only a sanitized summary and hashes after review.
 
@@ -388,6 +389,17 @@ try {
   $appEventsAvailable = $false
 }
 
+$recentEpsonFilesAvailable = $true
+$recentEpsonFiles = @()
+try {
+  $recentEpsonFiles = @(Get-ChildItem -LiteralPath 'C:\EpsonRC70' -File -Recurse -ErrorAction Stop |
+    Where-Object { $_.LastWriteTimeUtc -ge $startedUtc } |
+    Sort-Object LastWriteTimeUtc -Descending |
+    Select-Object -First 200 FullName,Length,@{N='LastWriteTimeUtc';E={$_.LastWriteTimeUtc.ToString('o')}})
+} catch {
+  $recentEpsonFilesAvailable = $false
+}
+
 $postflight = [ordered]@{
   capturedUtc = [DateTime]::UtcNow.ToString('o')
   nativeInterpretation = 'NOT_ASSIGNED_BY_DIAGNOSTICS'
@@ -396,6 +408,8 @@ $postflight = [ordered]@{
   cimProcesses = $postCim
   applicationEventCaptureAvailable = $appEventsAvailable
   applicationEvents = $appEvents
+  recentEpsonFileMetadataAvailable = $recentEpsonFilesAvailable
+  recentEpsonFileMetadata = $recentEpsonFiles
   note = 'Raw local evidence only. Do not auto-kill residual Epson processes and do not commit this file unsanitized.'
 }
 try { & $writeNewJson $postflightPath $postflight } catch {}
