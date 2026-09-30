@@ -1,6 +1,25 @@
 EpsonRAsimulator handoff — 2026-09-27
 
 
+UPDATE 2026-09-30 — ATTEMPT 5 TIMEOUT-ONLY PROPOSAL
+- No manual binary copy is required. Existing local prepared paths from prior authorized work are sufficient:
+  supervisor/core: C:\Users\BATMAN\Documents\Codex\2026-09-29\contin-a-epsonrasimulator-desde-el-ltimo\work\sealed-retained-events\extracted
+  worker/request/core: C:\Users\BATMAN\Documents\Codex\2026-09-29\contin-a-epsonrasimulator-desde-el-ltimo\work\native-capture-sealed
+- Attempt3 and attempt4 both retained exactly through before Initialize; neither recorded after Initialize/Dispose.
+- Attempt4 STA diagnostic did not resolve the timeout. Residual PID28308 was later specifically authorized closed and subsequent process check was empty.
+- Official EPSON RC+ API Rev.19 documents Initialize as server startup that can take several seconds, ServerInstance1..10 as valid, and LabVIEW initialization without a .NET form. Therefore a WinForms/message-loop change is not yet justified as the next variable.
+- Next smallest diagnostic: reuse ORIGINAL x86 MTA worker/request/core and retained-events supervisor; change only internal timeout30s->90s and outer wait40s->105s.
+- Exact proposal committed at docs/superpowers/research/2026-09-30-initialize-observe-v5-timeout-proposal.md, commit 3389092dee93738dda04b0a4bf2335cc69ece4ef.
+- Fresh evidence directory only: work\native-capture-v5. No overwrite of prior attempts.
+- Supervisor source/artifact remains bdd7f08dbd95c4f0161c98b4c41c8fb6a7c90ad4 / artifact11109775310 / SHA25670B70AC833C008D478C96696E49E378140EC1EB4935C9BEF157840B63235A044.
+- Preserved worker0B17E319..., ResearchACED9B8F..., request41064425... remain required exact hashes.
+- Before launch, command fails closed if any Epson/research process already exists or any hash/evidence path mismatches.
+- No Inventory/Connect/GetCurrentConnectionInfo/project/robot/motion/task/I-O/SPEL added.
+- Any future residual Epson process is recorded, never auto-killed; prior PID-specific closure approvals do not transfer.
+- User's earlier authorization permits necessary diagnostic attempts, not blind retries. This timeout-only attempt is a discriminating experiment, not a repeated identical attempt.
+- Current chat/tool session has no local Computer Use/Windows process capability, so the native attempt itself was NOT executed here. A local-capable continuation can run the exact inline command from the proposal without asking the user to copy binaries.
+
+
 UPDATE 2026-09-29 — SEALED DURABLE SUPERVISOR
 - PR24 remains Draft; no merge/main action.
 - Workflow-only code checkpoint c571aa96b0edf91587a5f43c14ca2cfbf06d7880 adds a dedicated exact-PR-head sealing job.
