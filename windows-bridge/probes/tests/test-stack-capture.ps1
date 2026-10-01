@@ -62,8 +62,8 @@ try {
 
     $document = $reportText | ConvertFrom-Json
     if ($document.schemaVersion -ne 1 -or $document.status -ne 'COMPLETED' -or
-        $document.architecture -ne 'x86' -or $document.source -ne 'live-suspend') {
-        throw 'Stack report did not return the expected completed x86 live-suspend schema.'
+        $document.architecture -ne 'x86' -or $document.source -ne 'live-snapshot') {
+        throw 'Stack report did not return the expected completed x86 live-snapshot schema.'
     }
     if ($fixtureProcess.HasExited) {
         throw 'Synthetic fixture exited during live stack reporting.'
