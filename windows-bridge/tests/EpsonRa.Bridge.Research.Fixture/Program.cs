@@ -9,6 +9,12 @@ namespace EpsonRa.Bridge.Research.Fixture
     {
         private static int Main(string[] args)
         {
+            if (args.Length == 2 && args[0] == "--managed-wait")
+            {
+                ManagedWait(args[1]);
+                return 0;
+            }
+
             // Finite leaf process: never enters the fixture dispatcher or spawns children.
             if (args.Length == 1 && args[0] == "--hold-stdout") { Thread.Sleep(5000); return 0; }
             // Supervisor CLI integration uses a plain synthetic mode request, never vendor input.
@@ -133,6 +139,21 @@ namespace EpsonRa.Bridge.Research.Fixture
             }
 
             return 64;
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static void ManagedWait(string readyPath)
+        {
+            var fullReadyPath = Path.GetFullPath(readyPath);
+            var directory = Path.GetDirectoryName(fullReadyPath);
+            if (!string.IsNullOrEmpty(directory))
+                Directory.CreateDirectory(directory);
+
+            File.WriteAllText(fullReadyPath,
+                System.Diagnostics.Process.GetCurrentProcess().Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+
+            using (var gate = new ManualResetEvent(false))
+                gate.WaitOne();
         }
     }
 }
