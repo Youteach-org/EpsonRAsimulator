@@ -39,66 +39,7 @@ try {
     }
 
     $readyText = (Get-Content -LiteralPath $ready -Raw).Trim()
-    if ($readyText -notmatch '^(\d+)\|x86
-    & $capture --pid $fixtureProcess.Id --expected-image $fixture --dump $dump
-    if ($LASTEXITCODE -ne 0) {
-        throw "Dump capture exited $LASTEXITCODE"
-    }
-    if (-not (Test-Path -LiteralPath $dump -PathType Leaf) -or (Get-Item -LiteralPath $dump).Length -le 0) {
-        throw 'Dump capture did not produce a non-empty dump.'
-    }
-
-    $expectedStartUtc = $fixtureProcess.StartTime.ToUniversalTime().ToString('o')
-    & $report --pid $fixtureProcess.Id --expected-image $fixture --expected-start-utc $expectedStartUtc |
-        Set-Content -LiteralPath $reportJson -Encoding utf8
-    $reportExitCode = $LASTEXITCODE
-    $reportText = if (Test-Path -LiteralPath $reportJson -PathType Leaf) {
-        Get-Content -LiteralPath $reportJson -Raw
-    } else {
-        ''
-    }
-    if ($reportExitCode -ne 0) {
-        throw "Stack report exited $reportExitCode; output: $reportText"
-    }
-
-    $document = $reportText | ConvertFrom-Json
-    if ($document.schemaVersion -ne 1 -or $document.status -ne 'COMPLETED' -or
-        $document.architecture -ne 'x86' -or $document.source -ne 'live-snapshot') {
-        throw 'Stack report did not return the expected completed x86 live-snapshot schema.'
-    }
-    if ($fixtureProcess.HasExited) {
-        throw 'Synthetic fixture exited during live stack reporting.'
-    }
-
-    Start-Sleep -Milliseconds 500
-    $heartbeatAfter = (Get-Item -LiteralPath $heartbeat).Length
-    if ($heartbeatAfter -le $heartbeatBefore) {
-        throw 'Synthetic fixture heartbeat did not resume after live stack reporting.'
-    }
-
-    $frames = @($document.threads | ForEach-Object { $_.frames } | ForEach-Object { $_.display })
-    if (-not ($frames -match 'ManagedWait')) {
-        throw 'Managed stack did not contain the synthetic ManagedWait method.'
-    }
-    if (-not ($frames -match 'WaitOne')) {
-        throw 'Managed stack did not contain WaitHandle.WaitOne.'
-    }
-
-    Write-Host ('PASS stack capture: {0} bytes, {1} threads' -f (Get-Item -LiteralPath $dump).Length, @($document.threads).Count)
-}
-finally {
-    if ($null -ne $fixtureProcess) {
-        try {
-            if (-not $fixtureProcess.HasExited) {
-                Stop-Process -Id $fixtureProcess.Id -Force
-                $fixtureProcess.WaitForExit(5000) | Out-Null
-            }
-        } catch {}
-        $fixtureProcess.Dispose()
-    }
-    try { Remove-Item -LiteralPath $root -Recurse -Force } catch {}
-}
-) {
+    if ($readyText -notmatch '^(\d+)\|x86$') {
         throw "Synthetic fixture did not report x86 runtime architecture: $readyText"
     }
     if ([int]$Matches[1] -ne $fixtureProcess.Id) {
@@ -152,7 +93,11 @@ finally {
         throw 'Managed stack did not contain WaitHandle.WaitOne.'
     }
 
-    Write-Host ('PASS stack capture: {0} bytes, {1} threads' -f (Get-Item -LiteralPath $dump).Length, @($document.threads).Count)
+    Write-Host ('PASS stack capture: {0} bytes, {1} threads, heartbeat {2}->{3}' -f
+        (Get-Item -LiteralPath $dump).Length,
+        @($document.threads).Count,
+        $heartbeatBefore,
+        $heartbeatAfter)
 }
 finally {
     if ($null -ne $fixtureProcess) {
