@@ -4,6 +4,9 @@ using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 using System.Web.Script.Serialization;
 using Microsoft.Diagnostics.Runtime;
 
@@ -50,6 +53,28 @@ namespace EpsonRa.Bridge.Research.StackReport
 
     internal static class Program
     {
+        private const uint ProcessQueryLimitedInformation = 0x1000;
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint desiredAccess, bool inheritHandle, int processId);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr handle);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool QueryFullProcessImageName(
+            IntPtr processHandle,
+            uint flags,
+            StringBuilder executableName,
+            ref int size);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetProcessTimes(
+            IntPtr processHandle,
+            out FILETIME creationTime,
+            out FILETIME exitTime,
+            out FILETIME kernelTime,
+            out FILETIME userTime);
         private static int Main(string[] args)
         {
             Options options;
@@ -100,44 +125,53 @@ namespace EpsonRa.Bridge.Research.StackReport
             if (!File.Exists(expectedFull))
                 throw new InvalidOperationException("ExpectedImageMissing");
 
-            using (var process = Process.GetProcessById(options.ProcessId.Value))
+            var pid = options.ProcessId.Value;
+            if (pid == Process.GetCurrentProcess().Id)
+                throw new InvalidOperationException("SelfSnapshotRejected");
+
+            var handle = OpenProcess(ProcessQueryLimitedInformation, false, pid);
+            if (handle == IntPtr.Zero)
+                throw new InvalidOperationException(
+                    "TargetOpenFailed:" + Marshal.GetLastWin32Error().ToString(CultureInfo.InvariantCulture));
+
+            try
             {
-                if (process.HasExited)
-                    throw new InvalidOperationException("TargetAlreadyExited");
-                if (process.Id == Process.GetCurrentProcess().Id)
-                    throw new InvalidOperationException("SelfSnapshotRejected");
+                var imageBuffer = new StringBuilder(32768);
+                var imageLength = imageBuffer.Capacity;
+                if (!QueryFullProcessImageName(handle, 0, imageBuffer, ref imageLength))
+                    throw new InvalidOperationException(
+                        "TargetImageUnavailable:" + Marshal.GetLastWin32Error().ToString(CultureInfo.InvariantCulture));
 
-                string actualImage;
-                try
-                {
-                    actualImage = process.MainModule == null ? null : process.MainModule.FileName;
-                }
-                catch (Exception exception)
-                {
-                    throw new InvalidOperationException("TargetImageUnavailable:" + exception.GetType().Name);
-                }
-
+                var actualImage = imageBuffer.ToString();
                 if (string.IsNullOrEmpty(actualImage) ||
                     !string.Equals(Path.GetFullPath(actualImage), expectedFull, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException("TargetImageMismatch");
 
-                DateTime actualStartUtc;
-                try
-                {
-                    actualStartUtc = process.StartTime.ToUniversalTime();
-                }
-                catch (Exception exception)
-                {
-                    throw new InvalidOperationException("TargetStartTimeUnavailable:" + exception.GetType().Name);
-                }
+                FILETIME creationTime;
+                FILETIME exitTime;
+                FILETIME kernelTime;
+                FILETIME userTime;
+                if (!GetProcessTimes(handle, out creationTime, out exitTime, out kernelTime, out userTime))
+                    throw new InvalidOperationException(
+                        "TargetStartTimeUnavailable:" + Marshal.GetLastWin32Error().ToString(CultureInfo.InvariantCulture));
 
+                var actualStartUtc = DateTime.FromFileTimeUtc(ToLong(creationTime));
                 var expectedStartUtc = options.ExpectedStartUtc.Value.ToUniversalTime();
                 if (actualStartUtc.ToFileTimeUtc() != expectedStartUtc.ToFileTimeUtc())
                     throw new InvalidOperationException("TargetStartTimeMismatch");
-
-                using (var target = DataTarget.CreateSnapshotAndAttach(process.Id))
-                    return ReportTarget(target, "live-snapshot", process.Id);
             }
+            finally
+            {
+                CloseHandle(handle);
+            }
+
+            using (var target = DataTarget.CreateSnapshotAndAttach(pid))
+                return ReportTarget(target, "live-snapshot", pid);
+        }
+
+        private static long ToLong(FILETIME value)
+        {
+            return ((long)value.dwHighDateTime << 32) | (uint)value.dwLowDateTime;
         }
 
         private static int ReportTarget(DataTarget target, string source, int? targetPid)
