@@ -44,7 +44,9 @@ try {
         throw 'Dump capture did not produce a non-empty dump.'
     }
 
-    & $report --dump $dump | Set-Content -LiteralPath $reportJson -Encoding utf8
+    $expectedStartUtc = $fixtureProcess.StartTime.ToUniversalTime().ToString('o')
+    & $report --pid $fixtureProcess.Id --expected-image $fixture --expected-start-utc $expectedStartUtc |
+        Set-Content -LiteralPath $reportJson -Encoding utf8
     $reportExitCode = $LASTEXITCODE
     $reportText = if (Test-Path -LiteralPath $reportJson -PathType Leaf) {
         Get-Content -LiteralPath $reportJson -Raw
@@ -56,8 +58,12 @@ try {
     }
 
     $document = $reportText | ConvertFrom-Json
-    if ($document.schemaVersion -ne 1 -or $document.status -ne 'COMPLETED' -or $document.architecture -ne 'x86') {
-        throw 'Stack report did not return the expected completed x86 schema.'
+    if ($document.schemaVersion -ne 1 -or $document.status -ne 'COMPLETED' -or
+        $document.architecture -ne 'x86' -or $document.source -ne 'live-snapshot') {
+        throw 'Stack report did not return the expected completed x86 live-snapshot schema.'
+    }
+    if ($fixtureProcess.HasExited) {
+        throw 'Synthetic fixture exited during live stack reporting.'
     }
 
     $frames = @($document.threads | ForEach-Object { $_.frames } | ForEach-Object { $_.display })
