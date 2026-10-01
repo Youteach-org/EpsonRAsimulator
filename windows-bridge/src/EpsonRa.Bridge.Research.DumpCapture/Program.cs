@@ -21,13 +21,14 @@ namespace EpsonRa.Bridge.Research.DumpCapture
         [Flags]
         private enum MiniDumpType : uint
         {
-            WithFullMemory = 0x00000002,
+            WithDataSegs = 0x00000001,
             WithHandleData = 0x00000004,
             WithUnloadedModules = 0x00000020,
+            WithIndirectlyReferencedMemory = 0x00000040,
             WithProcessThreadData = 0x00000100,
+            WithPrivateReadWriteMemory = 0x00000200,
             WithFullMemoryInfo = 0x00000800,
-            WithThreadInfo = 0x00001000,
-            IgnoreInaccessibleMemory = 0x00020000
+            WithThreadInfo = 0x00001000
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]
@@ -111,13 +112,14 @@ namespace EpsonRa.Bridge.Research.DumpCapture
                             throw new InvalidOperationException("TargetImageMismatch");
 
                         var flags =
-                            MiniDumpType.WithFullMemory |
+                            MiniDumpType.WithDataSegs |
                             MiniDumpType.WithHandleData |
                             MiniDumpType.WithUnloadedModules |
+                            MiniDumpType.WithIndirectlyReferencedMemory |
                             MiniDumpType.WithProcessThreadData |
+                            MiniDumpType.WithPrivateReadWriteMemory |
                             MiniDumpType.WithFullMemoryInfo |
-                            MiniDumpType.WithThreadInfo |
-                            MiniDumpType.IgnoreInaccessibleMemory;
+                            MiniDumpType.WithThreadInfo;
 
                         using (var stream = new FileStream(dumpFull, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read))
                         {
