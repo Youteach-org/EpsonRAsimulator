@@ -160,8 +160,12 @@ namespace EpsonRa.Bridge.Research.Fixture
             };
             heartbeat.Start();
 
-            File.WriteAllText(fullReadyPath,
-                System.Diagnostics.Process.GetCurrentProcess().Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            var architecture = Environment.Is64BitProcess ? "x64" : "x86";
+            File.WriteAllText(
+                fullReadyPath,
+                System.Diagnostics.Process.GetCurrentProcess().Id.ToString(System.Globalization.CultureInfo.InvariantCulture) +
+                "|" +
+                architecture);
 
             using (var gate = new ManualResetEvent(false))
                 gate.WaitOne();
