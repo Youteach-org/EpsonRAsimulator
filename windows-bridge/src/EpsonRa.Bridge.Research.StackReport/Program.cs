@@ -63,9 +63,15 @@ namespace EpsonRa.Bridge.Research.StackReport
                         throw new InvalidOperationException("ClrRuntimeMissing");
 
                     var info = target.ClrVersions[0];
-                    var dacPath = info.DacInfo.LocalDacPath;
-                    if (string.IsNullOrEmpty(dacPath) || !File.Exists(dacPath))
-                        throw new InvalidOperationException("LocalDacUnavailable");
+                    var windowsDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                    var dacPath = Path.Combine(
+                        windowsDirectory,
+                        "Microsoft.NET",
+                        "Framework",
+                        "v4.0.30319",
+                        "mscordacwks.dll");
+                    if (string.IsNullOrEmpty(windowsDirectory) || !File.Exists(dacPath))
+                        throw new InvalidOperationException("LocalX86DacUnavailable");
 
                     using (var runtime = info.CreateRuntime(dacPath))
                     {
