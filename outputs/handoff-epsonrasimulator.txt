@@ -1,3 +1,6 @@
+LATEST — RESIDUAL CLOSURE VERIFIED 2026-10-01T17:40:33.8407305Z
+User explicitly authorized only erc70 PID38980/startUTC2026-10-01T17:37:01.2409107Z. Name/PID/start rechecked; termination completed and exit confirmed. No other process targeted. This resolves residual handling, not native Cleanup=UNKNOWN. Attempt5 remains INCONCLUSIVE_TIMEOUT; no identical retry. Next investigation is read-only server startup/configuration evidence.
+
 LATEST VERIFIED — FIFTH NATIVE ATTEMPT COMPLETED
 
 # Attempt 5 — timeout-only experiment on RC+7.5.3
