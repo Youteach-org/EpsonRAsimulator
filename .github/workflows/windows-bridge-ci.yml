@@ -27,9 +27,9 @@ jobs:
         shell: pwsh
         run: dotnet build windows-bridge/tests/EpsonRa.Bridge.Research.Fixture/EpsonRa.Bridge.Research.Fixture.csproj -c Release -p:PlatformTarget=x86 -p:Prefer32Bit=false -o windows-bridge/artifacts/stack-capture/fixture
 
-      - name: Build dump-capture diagnostic x64
+      - name: Build dump-capture diagnostic x86
         shell: pwsh
-        run: dotnet build windows-bridge/src/EpsonRa.Bridge.Research.DumpCapture/EpsonRa.Bridge.Research.DumpCapture.csproj -c Release -p:PlatformTarget=x64 -p:Prefer32Bit=false -o windows-bridge/artifacts/stack-capture/capture
+        run: dotnet build windows-bridge/src/EpsonRa.Bridge.Research.DumpCapture/EpsonRa.Bridge.Research.DumpCapture.csproj -c Release -p:PlatformTarget=x86 -p:Prefer32Bit=false -o windows-bridge/artifacts/stack-capture/capture
 
       - name: Build stack-report diagnostic x86
         shell: pwsh
