@@ -5,7 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
+using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 using System.Text;
 using System.Web.Script.Serialization;
 using Microsoft.Diagnostics.Runtime;
