@@ -1,9 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..')).Path
-$fixture = Join-Path $repoRoot 'artifacts\stack-capture\fixture\EpsonRa.Bridge.Research.Fixture.exe'
-$capture = Join-Path $repoRoot 'artifacts\stack-capture\capture\EpsonRa.Bridge.Research.DumpCapture.exe'
-$report = Join-Path $repoRoot 'artifacts\stack-capture\report\EpsonRa.Bridge.Research.StackReport.exe'
+$windowsBridgeRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$fixture = Join-Path $windowsBridgeRoot 'artifacts\stack-capture\fixture\EpsonRa.Bridge.Research.Fixture.exe'
+$capture = Join-Path $windowsBridgeRoot 'artifacts\stack-capture\capture\EpsonRa.Bridge.Research.DumpCapture.exe'
+$report = Join-Path $windowsBridgeRoot 'artifacts\stack-capture\report\EpsonRa.Bridge.Research.StackReport.exe'
 
 if (-not (Test-Path -LiteralPath $fixture -PathType Leaf)) {
     throw "Synthetic fixture is missing: $fixture"
