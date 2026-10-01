@@ -18,23 +18,28 @@ if (-not (Test-Path -LiteralPath $report -PathType Leaf)) {
 $root = Join-Path ([IO.Path]::GetTempPath()) ('epson-stack-capture-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root | Out-Null
 $ready = Join-Path $root 'managed-wait.ready'
+$heartbeat = Join-Path $root 'managed-wait.heartbeat'
 $dump = Join-Path $root 'managed-wait.dmp'
 $reportJson = Join-Path $root 'managed-wait.stack.json'
 $fixtureProcess = $null
 
 try {
-    $fixtureProcess = Start-Process -FilePath $fixture -ArgumentList @('--managed-wait', $ready) -PassThru -WindowStyle Hidden
+    $fixtureProcess = Start-Process -FilePath $fixture -ArgumentList @('--managed-wait', $ready, $heartbeat) -PassThru -WindowStyle Hidden
 
     $deadline = [DateTime]::UtcNow.AddSeconds(10)
-    while (-not (Test-Path -LiteralPath $ready -PathType Leaf)) {
+    while (-not (Test-Path -LiteralPath $ready -PathType Leaf) -or
+           -not (Test-Path -LiteralPath $heartbeat -PathType Leaf)) {
         if ($fixtureProcess.HasExited) {
             throw "Synthetic fixture exited before entering ManagedWait: $($fixtureProcess.ExitCode)"
         }
         if ([DateTime]::UtcNow -ge $deadline) {
-            throw 'Synthetic fixture did not publish its ManagedWait readiness marker.'
+            throw 'Synthetic fixture did not publish its ManagedWait readiness/heartbeat markers.'
         }
         Start-Sleep -Milliseconds 50
     }
+
+    Start-Sleep -Milliseconds 250
+    $heartbeatBefore = [int64](Get-Content -LiteralPath $heartbeat -Raw)
 
     & $capture --pid $fixtureProcess.Id --expected-image $fixture --dump $dump
     if ($LASTEXITCODE -ne 0) {
@@ -59,11 +64,17 @@ try {
 
     $document = $reportText | ConvertFrom-Json
     if ($document.schemaVersion -ne 1 -or $document.status -ne 'COMPLETED' -or
-        $document.architecture -ne 'x86' -or $document.source -ne 'live-snapshot') {
-        throw 'Stack report did not return the expected completed x86 live-snapshot schema.'
+        $document.architecture -ne 'x86' -or $document.source -ne 'live-suspend') {
+        throw 'Stack report did not return the expected completed x86 live-suspend schema.'
     }
     if ($fixtureProcess.HasExited) {
         throw 'Synthetic fixture exited during live stack reporting.'
+    }
+
+    Start-Sleep -Milliseconds 500
+    $heartbeatAfter = [int64](Get-Content -LiteralPath $heartbeat -Raw)
+    if ($heartbeatAfter -le $heartbeatBefore) {
+        throw 'Synthetic fixture heartbeat did not resume after live stack reporting.'
     }
 
     $frames = @($document.threads | ForEach-Object { $_.frames } | ForEach-Object { $_.display })
