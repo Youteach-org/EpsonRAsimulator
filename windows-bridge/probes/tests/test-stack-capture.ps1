@@ -45,11 +45,17 @@ try {
     }
 
     & $report --dump $dump | Set-Content -LiteralPath $reportJson -Encoding utf8
-    if ($LASTEXITCODE -ne 0) {
-        throw "Stack report exited $LASTEXITCODE"
+    $reportExitCode = $LASTEXITCODE
+    $reportText = if (Test-Path -LiteralPath $reportJson -PathType Leaf) {
+        Get-Content -LiteralPath $reportJson -Raw
+    } else {
+        ''
+    }
+    if ($reportExitCode -ne 0) {
+        throw "Stack report exited $reportExitCode; output: $reportText"
     }
 
-    $document = Get-Content -LiteralPath $reportJson -Raw | ConvertFrom-Json
+    $document = $reportText | ConvertFrom-Json
     if ($document.schemaVersion -ne 1 -or $document.status -ne 'COMPLETED' -or $document.architecture -ne 'x86') {
         throw 'Stack report did not return the expected completed x86 schema.'
     }
