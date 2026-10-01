@@ -1,3 +1,9 @@
+LATEST — RESIDUAL CLOSED; WAIT-CHAIN CAPABILITY LIMITED
+
+User approved exact erc70 PID10140/start2026-10-01T17:48:04.5827898Z. Identity verified, closure confirmed2026-10-01T17:50:55.0287190Z. No other process targeted; native Cleanup remains UNKNOWN.
+
+A local synthetic mutex-blocked thread was inspected with Windows GetThreadWaitChain, without enabling privileges or loading Epson. API succeeded but returned only one blocked-thread node (type8/status3), no owner/lock chain, no cycle. This verifies API availability only, not useful CLR wait attribution; do not run another native trial merely to repeat this incomplete view. Windows documentation notes unsupported synchronization can return one node: https://learn.microsoft.com/en-us/windows/win32/api/wct/nf-wct-getthreadwaitchain . Next diagnostic requires a verified managed/native stack capture route, tested on a synthetic blocked fixture first. Do not claim WCT localized the Epson wait. Native count6 unchanged; no Inventory/Connect.
+
 LATEST VERIFIED — ATTEMPT6 INPUT-IDLE OBSERVATION
 
 # Attempt6 — passive input-idle discrimination
