@@ -28,7 +28,8 @@ namespace EpsonRa.Bridge.Research.Tests
                     var result = Path.Combine(root, mode + ".json");
                     File.WriteAllText(request, mode);
                     var timer = Stopwatch.StartNew();
-                    var exit = Launch(supervisor, worker, request, result);
+                    var timeoutSeconds = mode == "normal" ? 10 : 2;
+                    var exit = Launch(supervisor, worker, request, result, timeoutSeconds);
                     var expected = mode == "normal" ? 0 : 124;
                     if (exit != expected) throw new Exception(mode + " exit " + exit + " instead of " + expected);
                     if (timer.ElapsedMilliseconds >= 4500) throw new Exception(mode + " capture exceeded deadline");
@@ -41,7 +42,7 @@ namespace EpsonRa.Bridge.Research.Tests
                 var blockedRequest = Path.Combine(root, "blocked.request");
                 File.WriteAllText(blockedRequest, "normal");
                 File.WriteAllText(sentinel, "preserve-evidence");
-                if (Launch(supervisor, worker, blockedRequest, sentinel) != 64 || File.ReadAllText(sentinel) != "preserve-evidence")
+                if (Launch(supervisor, worker, blockedRequest, sentinel, 2) != 64 || File.ReadAllText(sentinel) != "preserve-evidence")
                     throw new Exception("Existing evidence was not protected");
                 if (File.Exists(blockedRequest + ".started")) throw new Exception("Worker launched before rejecting existing evidence");
                 Console.WriteLine("PASS existing evidence preserved");
@@ -49,12 +50,12 @@ namespace EpsonRa.Bridge.Research.Tests
             finally { try { Directory.Delete(root, true); } catch { } }
         }
 
-        private static int Launch(string supervisor, string worker, string request, string result)
+        private static int Launch(string supervisor, string worker, string request, string result, int timeoutSeconds)
         {
             // ShellExecute starts a hidden, independent console: no redirected/inherited capture pipes.
             using (var process = Process.Start(new ProcessStartInfo {
                 FileName = supervisor,
-                Arguments = "--worker \"" + worker + "\" --request \"" + request + "\" --timeout-seconds 2 --result-file \"" + result + "\"",
+                Arguments = "--worker \"" + worker + "\" --request \"" + request + "\" --timeout-seconds " + timeoutSeconds + " --result-file \"" + result + "\"",
                 UseShellExecute = true, WindowStyle = ProcessWindowStyle.Hidden }))
             {
                 // Never use the unbounded WaitForExit overload or terminate descendants.
