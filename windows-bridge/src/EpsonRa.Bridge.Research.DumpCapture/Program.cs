@@ -59,12 +59,6 @@ namespace EpsonRa.Bridge.Research.DumpCapture
                 return 64;
             }
 
-            if (Environment.Is64BitProcess)
-            {
-                WriteResult("FAILED", false, "CaptureProcessMustBeX86", null, null, null);
-                return 3;
-            }
-
             var partialDump = false;
             try
             {
