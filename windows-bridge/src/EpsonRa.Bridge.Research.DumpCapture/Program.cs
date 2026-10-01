@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Text;
 using System.Web.Script.Serialization;
 using Microsoft.Win32.SafeHandles;
 
@@ -34,6 +35,13 @@ namespace EpsonRa.Bridge.Research.DumpCapture
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool CloseHandle(IntPtr handle);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool QueryFullProcessImageName(
+            IntPtr processHandle,
+            uint flags,
+            StringBuilder executableName,
+            ref int size);
 
         [DllImport("Dbghelp.dll", SetLastError = true)]
         private static extern bool MiniDumpWriteDump(
@@ -85,20 +93,6 @@ namespace EpsonRa.Bridge.Research.DumpCapture
                     if (process.Id == Process.GetCurrentProcess().Id)
                         throw new InvalidOperationException("SelfCaptureRejected");
 
-                    string actualImage;
-                    try
-                    {
-                        actualImage = process.MainModule == null ? null : process.MainModule.FileName;
-                    }
-                    catch (Exception)
-                    {
-                        throw new InvalidOperationException("TargetImageUnavailable");
-                    }
-
-                    if (string.IsNullOrEmpty(actualImage) ||
-                        !string.Equals(Path.GetFullPath(actualImage), expectedFull, StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException("TargetImageMismatch");
-
                     var access = ProcessVmRead | ProcessDupHandle | ProcessQueryInformation | ProcessQueryLimitedInformation;
                     var processHandle = OpenProcess(access, false, pid);
                     if (processHandle == IntPtr.Zero)
@@ -106,6 +100,16 @@ namespace EpsonRa.Bridge.Research.DumpCapture
 
                     try
                     {
+                        var imageBuffer = new StringBuilder(32768);
+                        var imageLength = imageBuffer.Capacity;
+                        if (!QueryFullProcessImageName(processHandle, 0, imageBuffer, ref imageLength))
+                            throw new InvalidOperationException("TargetImageUnavailable:" + Marshal.GetLastWin32Error().ToString(CultureInfo.InvariantCulture));
+
+                        var actualImage = imageBuffer.ToString();
+                        if (string.IsNullOrEmpty(actualImage) ||
+                            !string.Equals(Path.GetFullPath(actualImage), expectedFull, StringComparison.OrdinalIgnoreCase))
+                            throw new InvalidOperationException("TargetImageMismatch");
+
                         var flags =
                             MiniDumpType.WithFullMemory |
                             MiniDumpType.WithHandleData |
