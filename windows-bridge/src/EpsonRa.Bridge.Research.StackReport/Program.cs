@@ -165,8 +165,8 @@ namespace EpsonRa.Bridge.Research.StackReport
                 CloseHandle(handle);
             }
 
-            using (var target = DataTarget.AttachToProcess(pid, true))
-                return ReportTarget(target, "live-suspend", pid);
+            using (var target = DataTarget.CreateSnapshotAndAttach(pid))
+                return ReportTarget(target, "live-snapshot", pid);
         }
 
         private static long ToLong(FILETIME value)
