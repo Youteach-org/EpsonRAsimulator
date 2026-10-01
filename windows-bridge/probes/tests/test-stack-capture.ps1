@@ -39,7 +39,7 @@ try {
     }
 
     Start-Sleep -Milliseconds 250
-    $heartbeatBefore = [int64](Get-Content -LiteralPath $heartbeat -Raw)
+    $heartbeatBefore = (Get-Item -LiteralPath $heartbeat).Length
 
     & $capture --pid $fixtureProcess.Id --expected-image $fixture --dump $dump
     if ($LASTEXITCODE -ne 0) {
@@ -72,7 +72,7 @@ try {
     }
 
     Start-Sleep -Milliseconds 500
-    $heartbeatAfter = [int64](Get-Content -LiteralPath $heartbeat -Raw)
+    $heartbeatAfter = (Get-Item -LiteralPath $heartbeat).Length
     if ($heartbeatAfter -le $heartbeatBefore) {
         throw 'Synthetic fixture heartbeat did not resume after live stack reporting.'
     }
