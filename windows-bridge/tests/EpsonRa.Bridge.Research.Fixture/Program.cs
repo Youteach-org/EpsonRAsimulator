@@ -9,9 +9,9 @@ namespace EpsonRa.Bridge.Research.Fixture
     {
         private static int Main(string[] args)
         {
-            if (args.Length == 2 && args[0] == "--managed-wait")
+            if (args.Length == 3 && args[0] == "--managed-wait")
             {
-                ManagedWait(args[1]);
+                ManagedWait(args[1], args[2]);
                 return 0;
             }
 
@@ -142,18 +142,43 @@ namespace EpsonRa.Bridge.Research.Fixture
         }
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
-        private static void ManagedWait(string readyPath)
+        private static void ManagedWait(string readyPath, string heartbeatPath)
         {
             var fullReadyPath = Path.GetFullPath(readyPath);
-            var directory = Path.GetDirectoryName(fullReadyPath);
-            if (!string.IsNullOrEmpty(directory))
-                Directory.CreateDirectory(directory);
+            var fullHeartbeatPath = Path.GetFullPath(heartbeatPath);
+            var readyDirectory = Path.GetDirectoryName(fullReadyPath);
+            var heartbeatDirectory = Path.GetDirectoryName(fullHeartbeatPath);
+            if (!string.IsNullOrEmpty(readyDirectory))
+                Directory.CreateDirectory(readyDirectory);
+            if (!string.IsNullOrEmpty(heartbeatDirectory))
+                Directory.CreateDirectory(heartbeatDirectory);
+
+            var heartbeat = new Thread(() => Heartbeat(fullHeartbeatPath))
+            {
+                IsBackground = true,
+                Name = "SyntheticHeartbeat"
+            };
+            heartbeat.Start();
 
             File.WriteAllText(fullReadyPath,
                 System.Diagnostics.Process.GetCurrentProcess().Id.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
             using (var gate = new ManualResetEvent(false))
                 gate.WaitOne();
+        }
+
+        private static void Heartbeat(string path)
+        {
+            var bytes = Encoding.UTF8.GetBytes("x\n");
+            using (var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.ReadWrite))
+            {
+                while (true)
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush();
+                    Thread.Sleep(50);
+                }
+            }
         }
     }
 }
