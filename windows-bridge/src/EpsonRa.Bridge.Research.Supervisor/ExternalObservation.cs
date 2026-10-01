@@ -266,7 +266,7 @@ namespace EpsonRa.Bridge.Research.Supervisor
 
             foreach (var pair in tcpByPid)
             {
-                if (pair.Key == _workerPid)
+                if (_workerPid > 0 && pair.Key == _workerPid)
                     snapshot.OwnedTcpCount += pair.Value;
                 else if (observedPids.Contains(pair.Key))
                     snapshot.UnrelatedTcpCount += pair.Value;
@@ -522,4 +522,3 @@ namespace EpsonRa.Bridge.Research.Supervisor
         }
     }
 }
-
