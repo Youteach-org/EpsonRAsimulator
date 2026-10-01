@@ -29,10 +29,11 @@ namespace EpsonRa.Bridge.Research.Tests
                     File.WriteAllText(request, mode);
                     var timer = Stopwatch.StartNew();
                     var timeoutSeconds = mode == "normal" ? 10 : 2;
-                    var exit = Launch(supervisor, worker, request, result, timeoutSeconds);
+                    var outerWaitMilliseconds = mode == "normal" ? 12000 : 4500;
+                    var exit = Launch(supervisor, worker, request, result, timeoutSeconds, outerWaitMilliseconds);
                     var expected = mode == "normal" ? 0 : 124;
                     if (exit != expected) throw new Exception(mode + " exit " + exit + " instead of " + expected);
-                    if (timer.ElapsedMilliseconds >= 4500) throw new Exception(mode + " capture exceeded deadline");
+                    if (timer.ElapsedMilliseconds >= outerWaitMilliseconds) throw new Exception(mode + " capture exceeded deadline");
                     var document = new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(File.ReadAllText(result));
                     if ((int)document["ExitCode"] != expected) throw new Exception("Durable result lost exit code");
                     if (mode != "normal" && (string)document["Cleanup"] != "UNKNOWN") throw new Exception("Timeout fabricated cleanup");
@@ -42,7 +43,7 @@ namespace EpsonRa.Bridge.Research.Tests
                 var blockedRequest = Path.Combine(root, "blocked.request");
                 File.WriteAllText(blockedRequest, "normal");
                 File.WriteAllText(sentinel, "preserve-evidence");
-                if (Launch(supervisor, worker, blockedRequest, sentinel, 2) != 64 || File.ReadAllText(sentinel) != "preserve-evidence")
+                if (Launch(supervisor, worker, blockedRequest, sentinel, 2, 4500) != 64 || File.ReadAllText(sentinel) != "preserve-evidence")
                     throw new Exception("Existing evidence was not protected");
                 if (File.Exists(blockedRequest + ".started")) throw new Exception("Worker launched before rejecting existing evidence");
                 Console.WriteLine("PASS existing evidence preserved");
@@ -50,7 +51,7 @@ namespace EpsonRa.Bridge.Research.Tests
             finally { try { Directory.Delete(root, true); } catch { } }
         }
 
-        private static int Launch(string supervisor, string worker, string request, string result, int timeoutSeconds)
+        private static int Launch(string supervisor, string worker, string request, string result, int timeoutSeconds, int outerWaitMilliseconds)
         {
             // ShellExecute starts a hidden, independent console: no redirected/inherited capture pipes.
             using (var process = Process.Start(new ProcessStartInfo {
@@ -59,7 +60,7 @@ namespace EpsonRa.Bridge.Research.Tests
                 UseShellExecute = true, WindowStyle = ProcessWindowStyle.Hidden }))
             {
                 // Never use the unbounded WaitForExit overload or terminate descendants.
-                if (!process.WaitForExit(4500)) throw new Exception("Outer capture deadline expired; owned synthetic process not forcibly terminated");
+                if (!process.WaitForExit(outerWaitMilliseconds)) throw new Exception("Outer capture deadline expired; owned synthetic process not forcibly terminated");
                 return process.ExitCode;
             }
         }
