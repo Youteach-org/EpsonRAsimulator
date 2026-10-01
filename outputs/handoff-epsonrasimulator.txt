@@ -1,3 +1,7 @@
+LATEST — 2026-10-01: CONTINUE WITH INSTALLED RC+7.5.3
+
+User explicitly requested continuing with available7.5.3 and executing pending tests. This supersedes the historical mandatory Windows11 upgrade stop below. Compatibility remains unresolved, not proven timeout causation; no installation authorized or required for this diagnostic. One pending timeout-only90s trial is authorized, original MTA x86 worker/instance10/request and retained-events supervisor70B unchanged. Fresh evidence directory native-capture-v5-resume; preserve previous v5 preflight. Known PID0 observer defect in this preserved supervisor prevents treating observation as conclusive. No Inventory/Connect or automatic residual termination. Read-only stored Controller flags: AutoConnect=False, Offline=False; no Epson/research process baseline. No configuration changes.
+
 LATEST VERIFIED CHECKPOINT — OBSERVER FIX COMPLETE; NATIVE ENVIRONMENT STILL BLOCKED
 
 # Observer PID-zero baseline correction and remaining blockers
