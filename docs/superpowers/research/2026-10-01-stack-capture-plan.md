@@ -1,6 +1,6 @@
 # Managed/native stack-capture diagnostic plan — 2026-10-01
 
-Status: TDD RED prepared first. No Epson/native execution is authorized by this plan.
+Status: SYNTHETIC GREEN VERIFIED. No Epson/native execution is authorized by this plan.
 
 ## Why this is the next diagnostic
 
@@ -75,3 +75,49 @@ Before a native use:
 6. separately review whether native-stack symbolization is needed after the managed stack result.
 
 Native attempt count remains 6 at this planning checkpoint.
+
+
+## Implementation update — synthetic GREEN
+
+The initial x86-dump/x86-dump-reader assumption was disproven during TDD.
+
+Verified final architecture:
+- x64 `DumpCapture` creates the private raw minidump for the WOW64/x86 target;
+- x86 `StackReport` does **not** read that x64-created dump for the managed summary;
+- x86 `StackReport` verifies exact PID/image/start identity and uses ClrMD `AttachToProcess(pid, suspend: true)` for a temporary managed inspection;
+- the synthetic fixture publishes `PID|x86` and a heartbeat;
+- the test requires `ManagedWait`, `WaitOne`, and heartbeat growth after the reporter returns.
+
+Why:
+- x64 dump creation succeeded, but the x86 dump-report path saw an architecture mismatch;
+- x86 `MiniDumpWriteDump` failed with partial-copy behavior;
+- ClrMD `CreateSnapshotAndAttach` produced a WOW64 architecture mismatch through its PSS clone path;
+- the fixture itself was then proven to have been running x64 despite the workflow argument;
+- pinning the fixture project to x86 exposed the intended target and allowed the suspended-live route to pass.
+
+Windows Bridge CI181 synthetic result:
+- dump 54,913 bytes;
+- report 3 managed threads;
+- `ManagedWait` found;
+- `WaitOne` found;
+- heartbeat 14 -> 84 after reporting.
+
+Full details:
+`docs/superpowers/reports/2026-10-01-stack-capture-capability.md`
+
+### Safety-boundary correction
+
+The original plan said the stack-report path should not suspend/resume the target. That proved incompatible with the supported ClrMD live-inspection contract for this WOW64 test.
+
+The verified managed route now **temporarily suspends the owned worker** through ClrMD and relies on disposal to resume it. The synthetic heartbeat independently verifies normal-path resumption.
+
+Therefore native use is a higher-impact diagnostic than passive observation:
+- one shot only;
+- exact owned worker PID/path/start identity;
+- never `erc70`;
+- before supervisor timeout;
+- no Inventory/Connect;
+- raw dump private;
+- sanitized stack summary only in GitHub.
+
+Synthetic GREEN is a capability result, not authorization for another Epson attempt.
