@@ -1,3 +1,40 @@
+LATEST VERIFIED — ATTEMPT6 INPUT-IDLE OBSERVATION
+
+# Attempt6 — passive input-idle discrimination
+
+One authorized diagnostic executed2026-10-01T17:47:59.8985894Z with original x86MTA worker, request, instance10 and sealed70B supervisor. Internal30s/outer45s. Same native sequence as v3, with additional read-only System.Diagnostics.Process.WaitForInputIdle(0) samples every5s for erc70 started after launch. No input, configuration change or additional Epson API calls. Fresh native-capture-v6-idle evidence; all original inputs/config verified and baseline empty.
+
+Supervisor32864 exited124, INCONCLUSIVE_TIMEOUT, result369bytes; retained seven markers424bytes end before:Initialize. No after:Initialize/Dispose. WorkerResult and Observation null; Cleanup UNKNOWN. Native attempt count6; only LoadOnly accepted.
+
+Residual erc70 PID10140 started2026-10-01T17:48:04.5827898Z. Five input-idle queries returned true with no errors at17:48:06.2370093Z,11.2904015Z,16.3566950Z,21.4041371Z,26.4684230Z. First true about1.65s after server start. This disfavors an ongoing input-idle wait as the reason for the full timeout. It does not provide a worker stack or prove which readiness/IPC/mutex operation blocks.
+
+Postflight Application log available, no matching error/hang/runtime events; recent Epson file scan available, no modified files. CIM unavailable previously and omitted. Process reported Responding=true,21threads,455handles, empty window title. Computer Use listed no targetable Epson window; no launch or UI input used as fallback. Hidden dialog absence is not proven.
+
+Specific permission requested to close only PID10140/start above; pending at this checkpoint. No automatic termination. No identical retry; next useful evidence must locate worker/server waits rather than change apartment, timeout or version speculatively. RC+7.5.3 retained. Inventory/Connect remain prohibited.
+
+SHA256:
+- receipt2FFECB735840D3F91EFC11DA686624869776F74D09A460DA235BDEE1D948B85E
+- result521E7379BEB31D1D2B464294708845BFD809EA08FE0F737019CC0AAFDE43C96D
+- eventsD9B05038E789B7109936D36E70581FCA89F23B6489BEF87EF82DE55DACF4464B
+- private preflight4FAB92A370862E0B8B571B4C7112E85AE926A7BB53085FB54EE8874EFB9E1580
+- private postflight34F575F2F7CD630E91A6EC208E7BA11582AA9D982C3CFAD83CB71C1D874651EE
+
+# Read-only startup diagnosis — 2026-10-01
+
+No Windows Application events1000/1002/1026 matched the fifth attempt interval17:36:50Z–17:39:00Z. Application log is readable. Prior capture incorrectly classified NoMatchingEventsFound as unavailable; original evidence remains unchanged. This narrow negative result does not prove absence of all errors.
+
+Registry Install.Version=7.5.3, Misc.AppPath points to installed root. Misc.OS contains legacy Windows7; this is a stored application value, not actual OS identity or proven cause. Version subkey has no nested settings. No configuration was changed.
+
+Read-only x86 ReflectionOnlyLoadFrom metadata inspection resolved direct managed references of erc70.exe, erc70main.dll and RCAPINet.dll. Requested versions matched except CLR reflection unification of mscorlib2 to4; not proof of actual runtime binding behavior. No Epson method/constructor was invoked by this inspection. Transitive/dynamic/COM dependencies remain unverified. OutputSHA256 D62A5203290AFA32EA0FDFEFD009E2BAA53E43F51AC069CC03E2C5735D9632FD.
+
+Native static imports show x86 erc70PIF.dll in SysWOW64; WBCommon70.dll also exists there, not under Epson exe. VCRUNTIME140 and mscoree x86 files exist. Initial app-directory-only absence is NOT a missing-dependency finding. API-set import names are not validated by checking for same-named files. No repair/reinstall indicated by this limited check.
+
+Local call metadata inspection of Initialize found parameterless Process.WaitForInputIdle, wait handles and subsequent server-readiness/IPC operations. This is static potential flow, not an observed stack or proof of blockage location. An existing-process path can call Process.Kill; clean baseline remains required. Proprietary instruction/call metadata remains local and is not published.
+
+Next discriminating observation: a bounded one-shot input-idle sampler during an otherwise unchanged30s attempt, without calling any additional Epson API. True samples would disfavor an ongoing input-idle wait; false/error cannot identify root cause. Preserve all prior evidence and no automatic process cleanup.
+
+
+--- Prior checkpoints ---
 LATEST — RESIDUAL CLOSURE VERIFIED 2026-10-01T17:40:33.8407305Z
 User explicitly authorized only erc70 PID38980/startUTC2026-10-01T17:37:01.2409107Z. Name/PID/start rechecked; termination completed and exit confirmed. No other process targeted. This resolves residual handling, not native Cleanup=UNKNOWN. Attempt5 remains INCONCLUSIVE_TIMEOUT; no identical retry. Next investigation is read-only server startup/configuration evidence.
 
