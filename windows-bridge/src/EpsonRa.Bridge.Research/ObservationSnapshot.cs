@@ -8,6 +8,11 @@ namespace EpsonRa.Bridge.Research
         public bool TcpIpv6SampleAvailable { get; set; }
         public bool OwnershipUnambiguous { get; set; }
         public int ProcessAccessGapCount { get; set; }
+        public int ProcessAccessDeniedCount { get; set; }
+        public int ProcessExitedCount { get; set; }
+        public int ProcessUnsupportedCount { get; set; }
+        public int ProcessModuleUnavailableCount { get; set; }
+        public int ProcessOtherFailureCount { get; set; }
         public int OwnedProcessCount { get; set; }
         public int OwnedTcpCount { get; set; }
         public int UnrelatedProcessCount { get; set; }
@@ -89,6 +94,16 @@ namespace EpsonRa.Bridge.Research
                 reasons.Add(prefix + "_TCP_IPV6_SAMPLE_UNAVAILABLE");
             if (sample.ProcessAccessGapCount > 0)
                 reasons.Add(prefix + "_PROCESS_ACCESS_GAPS:" + sample.ProcessAccessGapCount);
+            if (sample.ProcessAccessDeniedCount > 0)
+                reasons.Add(prefix + "_PROCESS_ACCESS_DENIED:" + sample.ProcessAccessDeniedCount);
+            if (sample.ProcessExitedCount > 0)
+                reasons.Add(prefix + "_PROCESS_EXITED:" + sample.ProcessExitedCount);
+            if (sample.ProcessUnsupportedCount > 0)
+                reasons.Add(prefix + "_PROCESS_UNSUPPORTED:" + sample.ProcessUnsupportedCount);
+            if (sample.ProcessModuleUnavailableCount > 0)
+                reasons.Add(prefix + "_PROCESS_MODULE_UNAVAILABLE:" + sample.ProcessModuleUnavailableCount);
+            if (sample.ProcessOtherFailureCount > 0)
+                reasons.Add(prefix + "_PROCESS_OTHER_FAILURE:" + sample.ProcessOtherFailureCount);
             if (!sample.OwnershipUnambiguous)
                 reasons.Add(prefix + "_OWNERSHIP_AMBIGUOUS");
         }
@@ -96,6 +111,9 @@ namespace EpsonRa.Bridge.Research
         private static bool Valid(ObservationSnapshot sample)
         {
             return sample != null && sample.MonotonicTicks >= 0 && sample.ProcessAccessGapCount >= 0 &&
+                sample.ProcessAccessDeniedCount >= 0 && sample.ProcessExitedCount >= 0 &&
+                sample.ProcessUnsupportedCount >= 0 && sample.ProcessModuleUnavailableCount >= 0 &&
+                sample.ProcessOtherFailureCount >= 0 &&
                 sample.OwnedProcessCount >= 0 && sample.OwnedTcpCount >= 0 &&
                 sample.UnrelatedProcessCount >= 0 && sample.UnrelatedTcpCount >= 0;
         }

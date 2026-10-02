@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -242,11 +243,15 @@ namespace EpsonRa.Bridge.Research.Supervisor
                         }
 
                         string path;
-                        if (!TryProcessPath(process, out path))
+                        ProcessPathFailure pathFailure;
+                        if (!TryProcessPath(process, out path, out pathFailure))
                         {
                             // PID 4 is the Windows System process and cannot be an Epson user process.
                             if (pid != 4)
+                            {
                                 snapshot.ProcessAccessGapCount++;
+                                RecordProcessPathFailure(snapshot, pathFailure);
+                            }
                             continue;
                         }
 
@@ -297,6 +302,11 @@ namespace EpsonRa.Bridge.Research.Supervisor
                 TcpIpv6SampleAvailable = current.TcpIpv6SampleAvailable && next.TcpIpv6SampleAvailable,
                 OwnershipUnambiguous = current.OwnershipUnambiguous && next.OwnershipUnambiguous,
                 ProcessAccessGapCount = Math.Max(current.ProcessAccessGapCount, next.ProcessAccessGapCount),
+                ProcessAccessDeniedCount = Math.Max(current.ProcessAccessDeniedCount, next.ProcessAccessDeniedCount),
+                ProcessExitedCount = Math.Max(current.ProcessExitedCount, next.ProcessExitedCount),
+                ProcessUnsupportedCount = Math.Max(current.ProcessUnsupportedCount, next.ProcessUnsupportedCount),
+                ProcessModuleUnavailableCount = Math.Max(current.ProcessModuleUnavailableCount, next.ProcessModuleUnavailableCount),
+                ProcessOtherFailureCount = Math.Max(current.ProcessOtherFailureCount, next.ProcessOtherFailureCount),
                 OwnedProcessCount = Math.Max(current.OwnedProcessCount, next.OwnedProcessCount),
                 OwnedTcpCount = Math.Max(current.OwnedTcpCount, next.OwnedTcpCount),
                 UnrelatedProcessCount = Math.Max(current.UnrelatedProcessCount, next.UnrelatedProcessCount),
@@ -323,17 +333,80 @@ namespace EpsonRa.Bridge.Research.Supervisor
             }
         }
 
-        private static bool TryProcessPath(Process process, out string path)
+        private enum ProcessPathFailure
+        {
+            None,
+            AccessDenied,
+            Exited,
+            Unsupported,
+            ModuleUnavailable,
+            Other
+        }
+
+        private static bool TryProcessPath(
+            Process process,
+            out string path,
+            out ProcessPathFailure failure)
         {
             path = null;
+            failure = ProcessPathFailure.None;
             try
             {
-                path = process.MainModule == null ? null : process.MainModule.FileName;
+                var module = process.MainModule;
+                if (module == null || string.IsNullOrWhiteSpace(module.FileName))
+                {
+                    failure = ProcessPathFailure.ModuleUnavailable;
+                    return false;
+                }
+
+                path = module.FileName;
                 return true;
+            }
+            catch (Win32Exception error)
+            {
+                failure = error.NativeErrorCode == 5
+                    ? ProcessPathFailure.AccessDenied
+                    : ProcessPathFailure.Other;
+                return false;
+            }
+            catch (InvalidOperationException)
+            {
+                failure = ProcessPathFailure.Exited;
+                return false;
+            }
+            catch (NotSupportedException)
+            {
+                failure = ProcessPathFailure.Unsupported;
+                return false;
             }
             catch
             {
+                failure = ProcessPathFailure.Other;
                 return false;
+            }
+        }
+
+        private static void RecordProcessPathFailure(
+            ObservationSnapshot snapshot,
+            ProcessPathFailure failure)
+        {
+            switch (failure)
+            {
+                case ProcessPathFailure.AccessDenied:
+                    snapshot.ProcessAccessDeniedCount++;
+                    break;
+                case ProcessPathFailure.Exited:
+                    snapshot.ProcessExitedCount++;
+                    break;
+                case ProcessPathFailure.Unsupported:
+                    snapshot.ProcessUnsupportedCount++;
+                    break;
+                case ProcessPathFailure.ModuleUnavailable:
+                    snapshot.ProcessModuleUnavailableCount++;
+                    break;
+                default:
+                    snapshot.ProcessOtherFailureCount++;
+                    break;
             }
         }
 
