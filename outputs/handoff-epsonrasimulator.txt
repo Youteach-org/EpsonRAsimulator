@@ -1,3 +1,15 @@
+LATEST — EXPLICIT OBSERVATION FAILURE REASONS IMPLEMENTED
+
+Checkpoint2026-10-02 after normal-desktop observer/process-access diagnosis. No additional Epson native execution occurred. Native count remains8. V8 Initialize/Dispose remains COMPLETED with Cleanup CONFIRMED; overall observation gate remains UNACCEPTED. Inventory/Connect remain unexecuted.
+
+RED commit e78201cdb590dbb330a1c3e7276b4e92affb7afe added tests requiring machine-readable inconclusive reasons. Windows Bridge CI196/run37022189399 failed at research-core as expected before implementation.
+
+GREEN commit 94526027b8aa54256be29ed187071d34fefc5338 adds ObservationAssessment.InconclusiveReasons without relaxing acceptance. It reports invalid snapshots, snapshot ordering, process/TCP/IPv6 sampling gaps, process-access gap counts, ambiguous ownership and incomplete event trace. Existing conclusive requirements are unchanged: valid ordered snapshots, process/TCP/IPv6 coverage, zero process access gaps, unambiguous ownership and complete ordered stage events.
+
+Verification for GREEN: Windows Bridge CI197/run37022263087 SUCCESS including readiness and exact-head sealing; Android CI622/run37022263232 SUCCESS. No production bridge behavior, RC+ configuration, permissions, registry, native stage, endpoint capture or process identifiers were added.
+
+PR24 remains Draft/stacked. No merge. Do not repeat DesktopInitializeOnce, DesktopObservationOnly or DesktopProcessAccess merely to reproduce known results. Limited-query fallback remains insufficient and must not be treated as acceptance. Any future change to observation scope/acceptance requires a separately justified design; do not silently weaken the zero-gap policy.
+
 LATEST — NORMAL-DESKTOP LIMITED-QUERY COMPARISON COMPLETED
 
 User output2026-10-02T14:40:12.8437776Z: restrictedToken=false,x64,total340. MainModule149 success/191 Win32error5. Limited-query155 success/185 Openerror5. Recovered6 paths;0 disagreements among mutually readable paths; exit state unavailable for185 unresolved. No Epson process started, no permissions changed.
