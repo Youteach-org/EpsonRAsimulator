@@ -1,3 +1,12 @@
+LATEST — PROCESS ACCESS COMPARISON READY, DESKTOP RUN PENDING
+
+Prepared x64 DesktopProcessAccess.exe in local work/observer-diagnosis, SHA256ADC29561C6E2B9F2859F02EB833CA8E3DFBA61D10341D05D1AA5F7A4D48305AF. Read-only OS characterization compares Process.MainModule.FileName against OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION=0x1000)/QueryFullProcessImageName. Aggregate error codes, recovery counts, disagreements and ability to observe exit state only; no identifiers/paths/endpoints retained. No Epson load/start, permissions changes or additional native stage.
+
+Restricted-context validation at2026-10-02T14:39:01.6785800Z:353 eligible PIDs; MainModule106 success/247 Win32error5; limited query111 success/242 Openerror5;5 recovered,0 path disagreements; exit state inaccessible for242 unresolved. This does not predict normal-desktop outcome. Existing desktop observer197 gaps still needs this same-context comparison. API documentation https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-queryfullprocessimagenamew .
+
+User action: run work/observer-diagnosis/DesktopProcessAccess.exe once, normal non-admin desktop, then report listo. Reads only and saves timestamped outputs/process-access-desktop-*.json. No repeat of DesktopInitializeOnce or native Initialize. Native count8; v8 Initialize/Dispose completed, overall observation unaccepted. Do not ignore remaining gaps or infer protected/system ownership from access-denied alone.
+
+
 LATEST — NORMAL-DESKTOP OBSERVER GAP MEASURED
 
 User ran DesktopObservationOnly.exe. Capture2026-10-02T14:35:30.5287460Z, restrictedToken=false, elapsed14591ms. Before/after process/TCP/IPv6 sample flags and ownership true; ProcessAccessGapCount197/197. Owned process0->1 (diagnostic self PID), owned TCP0->0. Comparison INCONCLUSIVE because path access gaps are nonzero. No Epson API loaded or process launched; current Epson/research process baseline empty. This diagnostic has no native event trace by design.
