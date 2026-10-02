@@ -1,3 +1,14 @@
+LATEST — USER-RUN DESKTOP LAUNCHER READY, NOT EXECUTED
+
+Prepared DesktopInitializeOnce.exe, SHA256179B7F0394558073D4B0BB9C1432C589053A872760385BB06468A2195028D78A, in local work directory. Explicit manual user execution only, normal non-admin desktop. No tool-based sandbox escape. Native count remains7; v8 receipt absent. Code and tests saved in docs/superpowers/diagnostics/desktop-initialize-once.
+
+Requires unrestricted token, writable HKCU handle (no write), net48, machine AutoConnectOFF and no enabled explicit user override, empty Epson/research baseline, six matching pinned inputs. Deliberately uses corrected supervisor763458C8 (previous CI-verified PID0 attribution correction), original x86 worker/request/instance10 unchanged.30s internal45s outer, exclusive flushed receipt before start, rejects existing receipt/result/events. No automatic retry, Inventory/Connect or shared process termination. Native outcome remains pending; this is not a single-variable timing comparison.
+
+Synthetic tests pass real child exit7, receipt visible before child marker, replay evidence unchanged/no second marker, bounded timeout with child still alive (test then cleans only its own fixture). Initial stub RED observed, implementation GREEN. Final --check exits3 on restricted context without native launch; no native receipt and no Epson process afterward. Independent reviewer found a timeout mislabeling issue, corrected to launcherExitCode rather than falsely reporting supervisor exit; rereview no important issue remaining. Full standalone test suite passes; no repository production binaries rebuilt.
+
+User action: run work/DesktopInitializeOnce.exe once from Explorer, without administrator, then report listo. Result directory work/native-desktop-v8. Maintain prior physical-isolation/closed-RC+/AutoConnectOFF conditions. RC+ may save normal preferences in user profile; no permission or security edits. Read result/events/receipt/postflight before accepting any stage. A launcher completion or zero code alone is not acceptance. If runtime residual remains, obtain exact PID/start closure permission.
+
+
 LATEST — NORMAL DESKTOP PREFLIGHT CONFIRMED 2026-10-02T14:18:13.5924934Z
 
 User manually ran DesktopContextPreflight.exe in normal desktop session. Output: restrictedToken=false, hkcuSoftwareWritableHandle=true, handleErrorType=none, languageKeyExists=true, registryWritesPerformed=false, epsonStarted=false. Compare restricted-context baseline: true/false/SecurityException/languageKeyExists=false. This confirms the two execution contexts expose different registry access/profile state. Attempt7 startup UnauthorizedAccessException is established; a successful Initialize in the normal context is NOT yet established. Native count remains7. No Inventory/Connect, registry/ACL/security change or upgrade.
