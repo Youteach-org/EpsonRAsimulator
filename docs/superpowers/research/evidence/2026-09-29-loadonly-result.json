@@ -1,0 +1,38 @@
+{
+  "SchemaVersion": 1,
+  "Status": "COMPLETED",
+  "Success": true,
+  "WorkerExitCode": 0,
+  "WorkerResult": {
+    "SchemaVersion": 1,
+    "Status": "COMPLETED",
+    "Success": true,
+    "Cleanup": "CONFIRMED",
+    "Error": null,
+    "Machine": null,
+    "CorFlags": null,
+    "Architecture": null,
+    "EligibleName": null,
+    "EligibleConnectionNumber": null,
+    "EligibleTypeNumber": null
+  },
+  "Cleanup": "CONFIRMED",
+  "Error": null,
+  "ExitCode": 0,
+  "Observation": {
+    "Status": "INCONCLUSIVE",
+    "Conclusive": false,
+    "OwnedProcessDelta": null,
+    "OwnedTcpDelta": null,
+    "UnrelatedProcessDelta": null,
+    "UnrelatedTcpDelta": null,
+    "EndpointDetails": null,
+    "Limitation": "Polling cannot prove absence of short-lived traffic or USB communication.",
+    "EventTraceComplete": false,
+    "EventCount": 2,
+    "StageEvents": [
+      "before:Load",
+      "after:Load"
+    ]
+  }
+}

@@ -20,6 +20,36 @@ jobs:
       - name: Test readiness core
         shell: pwsh
         run: dotnet test windows-bridge/tests/EpsonRa.Bridge.Readiness.Tests/EpsonRa.Bridge.Readiness.Tests.csproj -c Release --logger "trx;LogFileName=readiness.trx"
+      - name: Test research core with synthetic PE images
+        shell: pwsh
+        run: dotnet test windows-bridge/tests/EpsonRa.Bridge.Research.Tests/EpsonRa.Bridge.Research.Tests.csproj -c Release --logger "trx;LogFileName=research.trx"
+      - name: Build stack-capture synthetic fixture x86
+        shell: pwsh
+        run: dotnet build windows-bridge/tests/EpsonRa.Bridge.Research.Fixture/EpsonRa.Bridge.Research.Fixture.csproj -c Release -p:PlatformTarget=x86 -p:Prefer32Bit=false -o windows-bridge/artifacts/stack-capture/fixture
+
+      - name: Build dump-capture diagnostic x64
+        shell: pwsh
+        run: dotnet build windows-bridge/src/EpsonRa.Bridge.Research.DumpCapture/EpsonRa.Bridge.Research.DumpCapture.csproj -c Release -p:PlatformTarget=x64 -p:Prefer32Bit=false -o windows-bridge/artifacts/stack-capture/capture
+
+      - name: Build stack-report diagnostic x86
+        shell: pwsh
+        run: dotnet build windows-bridge/src/EpsonRa.Bridge.Research.StackReport/EpsonRa.Bridge.Research.StackReport.csproj -c Release -p:PlatformTarget=x86 -p:Prefer32Bit=false -o windows-bridge/artifacts/stack-capture/report
+
+      - name: Verify synthetic blocked-stack capture
+        shell: pwsh
+        run: pwsh -NoProfile -File windows-bridge/probes/tests/test-stack-capture.ps1
+      - name: Build compiled worker x86
+        shell: pwsh
+        run: dotnet build windows-bridge/src/EpsonRa.Bridge.Research.Worker/EpsonRa.Bridge.Research.Worker.csproj -c Release -p:PlatformTarget=x86 -p:Prefer32Bit=false -o windows-bridge/artifacts/compiled-worker/x86
+
+      - name: Build compiled worker x64
+        shell: pwsh
+        run: dotnet build windows-bridge/src/EpsonRa.Bridge.Research.Worker/EpsonRa.Bridge.Research.Worker.csproj -c Release -p:PlatformTarget=x64 -p:Prefer32Bit=false -o windows-bridge/artifacts/compiled-worker/x64
+
+      - name: Verify compiled worker output gate
+        shell: pwsh
+        run: pwsh -NoProfile -File windows-bridge/probes/tests/test-compiled-worker-outputs.ps1
+
       - name: Build inspect host
         shell: pwsh
         run: dotnet build windows-bridge/src/EpsonRa.Bridge.Inspect/EpsonRa.Bridge.Inspect.csproj -c Release
@@ -66,10 +96,158 @@ jobs:
             throw "Reference-assembly packages must remain build-only."
           }
 
+      - name: Self-test virtual controller probe safety guards
+        shell: pwsh
+        run: pwsh -NoProfile -File windows-bridge/probes/virtual-controller-probe.ps1 -SelfTest
+
+      - name: Verify virtual controller probe preflight output
+        shell: pwsh
+        run: |
+          $emptyRoot = Join-Path $env:RUNNER_TEMP "epson-probe-empty"
+          New-Item -ItemType Directory -Path $emptyRoot -Force | Out-Null
+          $jsonFile = Join-Path $env:RUNNER_TEMP "virtual-probe-preflight.json"
+          $process = Start-Process -FilePath pwsh -ArgumentList @(
+            "-NoProfile",
+            "-File", "windows-bridge/probes/virtual-controller-probe.ps1",
+            "-Stage", "Preflight",
+            "-InstallRoot", $emptyRoot
+          ) -Wait -PassThru -NoNewWindow -RedirectStandardOutput $jsonFile
+          if ($process.ExitCode -ne 2) {
+            throw "Expected probe preflight exit code 2 for an empty root, got $($process.ExitCode)."
+          }
+          $jsonText = Get-Content $jsonFile -Raw
+          $json = $jsonText | ConvertFrom-Json
+          if ($json.schemaVersion -ne 1 -or $json.stage -ne "Preflight" -or $json.success -ne $false) {
+            throw "Probe preflight did not return the expected schema."
+          }
+
+      - name: Verify probe invalid arguments stay structured
+        shell: pwsh
+        run: |
+          $jsonFile = Join-Path $env:RUNNER_TEMP "virtual-probe-invalid.json"
+          $errorFile = Join-Path $env:RUNNER_TEMP "virtual-probe-invalid.err"
+          $process = Start-Process -FilePath pwsh -ArgumentList @(
+            "-NoProfile",
+            "-File", "windows-bridge/probes/virtual-controller-probe.ps1",
+            "-Stage", "NotAStage",
+            "-ServerInstance", "11"
+          ) -Wait -PassThru -NoNewWindow -RedirectStandardOutput $jsonFile -RedirectStandardError $errorFile
+          if ($process.ExitCode -ne 64) {
+            throw "Expected invalid-argument exit code 64, got $($process.ExitCode)."
+          }
+          $jsonText = Get-Content $jsonFile -Raw
+          $json = $jsonText | ConvertFrom-Json
+          if ($json.schemaVersion -ne 1 -or $json.status -ne "INVALID_ARGUMENTS" -or $json.success -ne $false) {
+            throw "Invalid arguments did not return the expected JSON schema."
+          }
+
+      - name: Verify probe argument regressions
+        shell: pwsh
+        run: pwsh -NoProfile -File windows-bridge/probes/test-probe-arguments.ps1
+
+      - name: Verify probe native error normalization without Epson
+        shell: pwsh
+        run: pwsh -NoProfile -File windows-bridge/probes/test-probe-errors.ps1
+
+      - name: Verify virtual controller supervisor synthetic lifecycle
+        shell: pwsh
+        run: pwsh -NoProfile -File windows-bridge/probes/tests/test-virtual-controller-supervisor.ps1
+
       - name: Upload TRX
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: windows-bridge-readiness-trx
           path: windows-bridge/tests/EpsonRa.Bridge.Readiness.Tests/TestResults/readiness.trx
+          if-no-files-found: ignore
+
+
+  sealed-supervisor:
+    name: Seal durable research supervisor x64
+    needs: readiness-tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Verify research tests on exact PR head
+        shell: pwsh
+        run: dotnet test windows-bridge/tests/EpsonRa.Bridge.Research.Tests/EpsonRa.Bridge.Research.Tests.csproj -c Release --logger "trx;LogFileName=sealed-supervisor-research.trx"
+      - name: Build and seal durable research supervisor x64
+        shell: pwsh
+        run: |
+          $outputDir = "windows-bridge/artifacts/research-supervisor/x64"
+          $publishDir = "windows-bridge/artifacts/research-supervisor/publish"
+          Remove-Item -LiteralPath $outputDir -Recurse -Force -ErrorAction SilentlyContinue
+          Remove-Item -LiteralPath $publishDir -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+          New-Item -ItemType Directory -Path $publishDir -Force | Out-Null
+
+          $checkoutCommit = (git rev-parse HEAD).Trim()
+          $expectedCommit = "${{ github.event.pull_request.head.sha }}"
+          if ($checkoutCommit -ne $expectedCommit) {
+            throw "Checkout commit $checkoutCommit does not match PR head $expectedCommit."
+          }
+
+          dotnet build windows-bridge/src/EpsonRa.Bridge.Research.Supervisor/EpsonRa.Bridge.Research.Supervisor.csproj `
+            -c Release `
+            -p:PlatformTarget=x64 `
+            -p:Prefer32Bit=false `
+            -o $outputDir
+          if ($LASTEXITCODE -ne 0) {
+            throw "Durable supervisor x64 build failed with exit code $LASTEXITCODE."
+          }
+
+          $exePath = Join-Path $outputDir "EpsonRa.Bridge.Research.Supervisor.exe"
+          if (-not (Test-Path -LiteralPath $exePath -PathType Leaf)) {
+            throw "Expected durable supervisor executable was not produced."
+          }
+
+          $publishedExe = Join-Path $publishDir "EpsonRa.Bridge.Research.Supervisor.exe"
+          Copy-Item -LiteralPath $exePath -Destination $publishedExe
+
+          $configPath = "$exePath.config"
+          if (Test-Path -LiteralPath $configPath -PathType Leaf) {
+            Copy-Item -LiteralPath $configPath -Destination (Join-Path $publishDir "EpsonRa.Bridge.Research.Supervisor.exe.config")
+          }
+
+          $hash = (Get-FileHash -LiteralPath $publishedExe -Algorithm SHA256).Hash.ToUpperInvariant()
+          $file = Get-Item -LiteralPath $publishedExe
+          $manifestPath = Join-Path $publishDir "supervisor-manifest.json"
+          [ordered]@{
+            schemaVersion = 1
+            sourceCommit = $checkoutCommit
+            targetFramework = "net48"
+            platformTarget = "x64"
+            fileName = $file.Name
+            sha256 = $hash
+            length = $file.Length
+            sealedAtUtc = [DateTime]::UtcNow.ToString("o")
+          } | ConvertTo-Json | Set-Content -LiteralPath $manifestPath -Encoding utf8
+
+          $publishedHash = (Get-FileHash -LiteralPath $publishedExe -Algorithm SHA256).Hash.ToUpperInvariant()
+          if ($publishedHash -ne $hash) {
+            throw "Published supervisor hash changed after sealing."
+          }
+
+          Write-Host "Durable supervisor source commit: $checkoutCommit"
+          Write-Host "Durable supervisor SHA256: $hash"
+          Write-Host "Durable supervisor length: $($file.Length)"
+
+      - name: Upload durable research supervisor x64
+        uses: actions/upload-artifact@v4
+        with:
+          name: epson-ra-research-supervisor-x64-${{ github.event.pull_request.head.sha }}
+          path: windows-bridge/artifacts/research-supervisor/publish/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload sealed supervisor research TRX
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sealed-supervisor-research-trx-${{ github.event.pull_request.head.sha }}
+          path: windows-bridge/tests/EpsonRa.Bridge.Research.Tests/TestResults/sealed-supervisor-research.trx
           if-no-files-found: ignore

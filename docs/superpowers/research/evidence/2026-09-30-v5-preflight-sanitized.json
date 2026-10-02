@@ -1,0 +1,23 @@
+{
+  "classification": "BLOCKED_ENVIRONMENT_COMPATIBILITY_REVIEW",
+  "nativeLaunched": false,
+  "osBuild": "22000.376",
+  "osFamily": "Windows 11 21H2",
+  "registryProductName": "Windows 10 Pro",
+  "kernelVersion": "10.0.22000.376",
+  "installedPackage": {
+    "DisplayName": "EPSON RC+ 7.0",
+    "DisplayVersion": "7.5.3",
+    "Publisher": "SEIKO EPSON CORPORATION"
+  },
+  "netFrameworkRelease": 528449,
+  "artifactMatchCount": 5,
+  "artifactTotal": 5,
+  "baselineProcessCount": 0,
+  "cimAvailable": false,
+  "rawPreflightSha256": "35CE190C39A2ECB3413E6AF3DCB1CAA949CA1068AAFB28C9486A6C347D6B517A",
+  "rcApiKey": "UNVERIFIED_NOT_PROBED",
+  "receiptExists": false,
+  "resultExists": false,
+  "eventsExists": false
+}

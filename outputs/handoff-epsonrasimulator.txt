@@ -1,0 +1,865 @@
+LATEST — PROCESS-PATH ACCESS GAPS NOW CLASSIFIED
+
+Checkpoint2026-10-02. No Epson native execution occurred; native count remains8. V8 Initialize/Dispose remains COMPLETED with Cleanup CONFIRMED. External observation remains unaccepted; Inventory/Connect remain unexecuted.
+
+Test checkpoint30d1d92aef89a757e20ca211b20a6732254d1cfa requires privacy-preserving process-gap categories. GREEN154379ac5ec17db1d295a66a279b1f0303554c8b classifies existing Process.MainModule failures as access-denied, exited/unavailable, unsupported, module-unavailable or other and surfaces aggregate counts through InconclusiveReasons. It does not record process IDs/paths/endpoints and does not use QueryFullProcessImageName as an acceptance fallback.
+
+Important stricter correction: Process.MainModule returning null/empty is now a process-access gap (PROCESS_MODULE_UNAVAILABLE) instead of being treated as a successfully readable non-Epson process. This is fail-closed and may increase gaps; it does not relax the zero-gap gate.
+
+Verification: Windows Bridge CI199/run37023748932 SUCCESS including exact-head sealing; Android CI624/run37023749082 SUCCESS. PR24 remains Draft/stacked and unmerged.
+
+No repeated desktop/native diagnostic is justified merely to populate the new categories. The implementation is ready for a future already-justified observation, but it is not authorization for attempt9, Inventory or Connect. Any observation-scope/acceptance change still requires a separate design.
+
+LATEST — EXPLICIT OBSERVATION FAILURE REASONS IMPLEMENTED
+
+Checkpoint2026-10-02 after normal-desktop observer/process-access diagnosis. No additional Epson native execution occurred. Native count remains8. V8 Initialize/Dispose remains COMPLETED with Cleanup CONFIRMED; overall observation gate remains UNACCEPTED. Inventory/Connect remain unexecuted.
+
+RED commit e78201cdb590dbb330a1c3e7276b4e92affb7afe added tests requiring machine-readable inconclusive reasons. Windows Bridge CI196/run37022189399 failed at research-core as expected before implementation.
+
+GREEN commit 94526027b8aa54256be29ed187071d34fefc5338 adds ObservationAssessment.InconclusiveReasons without relaxing acceptance. It reports invalid snapshots, snapshot ordering, process/TCP/IPv6 sampling gaps, process-access gap counts, ambiguous ownership and incomplete event trace. Existing conclusive requirements are unchanged: valid ordered snapshots, process/TCP/IPv6 coverage, zero process access gaps, unambiguous ownership and complete ordered stage events.
+
+Verification for GREEN: Windows Bridge CI197/run37022263087 SUCCESS including readiness and exact-head sealing; Android CI622/run37022263232 SUCCESS. No production bridge behavior, RC+ configuration, permissions, registry, native stage, endpoint capture or process identifiers were added.
+
+PR24 remains Draft/stacked. No merge. Do not repeat DesktopInitializeOnce, DesktopObservationOnly or DesktopProcessAccess merely to reproduce known results. Limited-query fallback remains insufficient and must not be treated as acceptance. Any future change to observation scope/acceptance requires a separately justified design; do not silently weaken the zero-gap policy.
+
+LATEST — NORMAL-DESKTOP LIMITED-QUERY COMPARISON COMPLETED
+
+User output2026-10-02T14:40:12.8437776Z: restrictedToken=false,x64,total340. MainModule149 success/191 Win32error5. Limited-query155 success/185 Openerror5. Recovered6 paths;0 disagreements among mutually readable paths; exit state unavailable for185 unresolved. No Epson process started, no permissions changed.
+
+Conclusion: limited-query fallback modestly improves coverage but cannot satisfy current zero-access-gap gate on this desktop. Do not implement it as a sufficient fix, ignore185 gaps, assert they are all protected/system processes, or request another identical user-run diagnostic. Counts vary across separate samples;197 earlier vs191 now is not a controlled improvement.
+
+Native v8 remains COMPLETED with Cleanup CONFIRMED; overall observation INCONCLUSIVE. Native count8. Inventory/Connect still not executed. Next code work can make observation failure reasons explicit while preserving policy; any change to observation scope/acceptance requires a separately justified design, not a silent relaxation. No more native/user diagnostic replay is currently justified by this comparison.
+
+
+LATEST — PROCESS ACCESS COMPARISON READY, DESKTOP RUN PENDING
+
+Prepared x64 DesktopProcessAccess.exe in local work/observer-diagnosis, SHA256ADC29561C6E2B9F2859F02EB833CA8E3DFBA61D10341D05D1AA5F7A4D48305AF. Read-only OS characterization compares Process.MainModule.FileName against OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION=0x1000)/QueryFullProcessImageName. Aggregate error codes, recovery counts, disagreements and ability to observe exit state only; no identifiers/paths/endpoints retained. No Epson load/start, permissions changes or additional native stage.
+
+Restricted-context validation at2026-10-02T14:39:01.6785800Z:353 eligible PIDs; MainModule106 success/247 Win32error5; limited query111 success/242 Openerror5;5 recovered,0 path disagreements; exit state inaccessible for242 unresolved. This does not predict normal-desktop outcome. Existing desktop observer197 gaps still needs this same-context comparison. API documentation https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-queryfullprocessimagenamew .
+
+User action: run work/observer-diagnosis/DesktopProcessAccess.exe once, normal non-admin desktop, then report listo. Reads only and saves timestamped outputs/process-access-desktop-*.json. No repeat of DesktopInitializeOnce or native Initialize. Native count8; v8 Initialize/Dispose completed, overall observation unaccepted. Do not ignore remaining gaps or infer protected/system ownership from access-denied alone.
+
+
+LATEST — NORMAL-DESKTOP OBSERVER GAP MEASURED
+
+User ran DesktopObservationOnly.exe. Capture2026-10-02T14:35:30.5287460Z, restrictedToken=false, elapsed14591ms. Before/after process/TCP/IPv6 sample flags and ownership true; ProcessAccessGapCount197/197. Owned process0->1 (diagnostic self PID), owned TCP0->0. Comparison INCONCLUSIVE because path access gaps are nonzero. No Epson API loaded or process launched; current Epson/research process baseline empty. This diagnostic has no native event trace by design.
+
+Restricted comparison before251/after252 versus desktop197/197 identifies persistent process-path coverage gaps even outside sandbox. These are separate time samples; do not attribute every difference solely to context. Do not label all197 protected/system processes without classifying errors. No detailed path/error breakdown was retained. This is strong supporting evidence for v8 observation failure, not recovered v8 raw snapshot evidence.
+
+Native v8 Initialize/Dispose success and Cleanup CONFIRMED stand; full observation gate remains unaccepted. Native count8; no ninth attempt, Inventory or Connect. Next engineering work: characterize failed process-path reads and evaluate documented limited-query alternatives in the desktop context, with privacy-preserving counts; make missing-evidence reasons explicit. Do not simply ignore gaps, elevate or weaken the gate. Earlier limited-query comparison was restricted-context only and does not settle desktop behavior.
+
+
+LATEST — OBSERVATION-ONLY DIAGNOSTIC PREPARED; NO NINTH NATIVE ATTEMPT
+
+V8 evidence cannot identify the particular observation gate because raw before/after flags were not serialized. Current source comparison requires both snapshots valid, ordered ticks, process/TCP/IPv6 flags true, unambiguous ownership and zero process path access gaps. Its generic polling limitation appears regardless of which prerequisite failed. Do not infer v8's exact gap from earlier runs.
+
+Prepared DesktopObservationOnly.exe under local work/observer-diagnosis/sealed, SHA2561C12FDA0D3F60809CCBD210735B5548321BE0D336458DFC5043B8A2E54BE39C1. Verifies exact sealed supervisor763458C8/coreACED hashes, uses public monitor factory and registers only its own PID as synthetic worker identity. Three polls plus disposal, aggregate flags/counts and Compare output saved to timestamped outputs/observer-only-*.json. No Epson API loaded or process launched, no connection/controller calls, no writes except local report. Source committed with this checkpoint; do not relocate exe away from its sealed dependencies.
+
+Actual restricted-context validation completed in20279ms: process/TCP/IPv6/ownership flags true; ProcessAccessGapCount before251/after252; owned baseline0/0; comparison INCONCLUSIVE. No Epson/research process afterward. This identifies the gate for this separate diagnostic only. EventTraceComplete=false/count0 here is expected because no native stage ran; do not treat it as v8 marker loss. V8 still has all ten markers, native success and confirmed cleanup.
+
+Next user action: run DesktopObservationOnly.exe manually once from normal non-admin desktop, wait about20–30seconds for console closure and say listo. The agent then reads aggregate output and diagnoses the normal-desktop observer separately. Do not repeat DesktopInitializeOnce, change permissions or relax observation policy. Native count8, Inventory/Connect not executed.
+
+
+LATEST VERIFIED — V8 NATIVE INITIALIZATION COMPLETED
+
+# V8: Initialize and Dispose completed; external observation inconclusive
+
+User manually executed reviewed DesktopInitializeOnce.exe in normal non-admin desktop context on2026-10-02. Receipt started14:28:52.4858488Z, supervisor28660 exited3; postflight14:29:20.4620068Z. Native count now8. No automatic retry.
+
+WorkerExitCode=0, WorkerResult.Status=COMPLETED, Success=true, Error=null, Cleanup=CONFIRMED. All ten ordered markers retained: before/after Load, Construct, SetServerInstance, Initialize, Dispose. This is the first captured successful native Initialize/Dispose completion in this series. No timeout. Supervisor Cleanup=CONFIRMED; receipt cleanupUNKNOWN is its fixed conservative placeholder, not a conflicting native cleanup result.
+
+Supervisor Status=INCONCLUSIVE_OBSERVATION, Success=false, ExitCode=3, Error=ObservationInconclusive. Observation Status=INCONCLUSIVE, Conclusive=false, EventTraceComplete=true, EventCount=10. Process/TCP deltas and endpoint details are null, not zero. Reported polling limitation cannot prove absence of short-lived traffic or USB. This payload does not identify the particular failed sampler/ownership check; do not assume which gap occurred from older captures.
+
+Postflight lists zero Epson/research processes; follow-up process check also empty. No residual closure needed. Inventory/Connect not executed. Initialize component completion established; full InitializeObserve gate is NOT accepted while external observation is inconclusive. Do not advance controller-communicating stages or claim no traffic.
+
+Installed RC+7.5.3 retained. Original x86 worker/request/instance10 unchanged. Deliberate corrected supervisor763458C8 used as documented. Together with captured v7 registry UnauthorizedAccessException and normal-desktop permission comparison, v8 strongly supports restricted execution context as the earlier observed startup blocker. Supervisor also changed from70B to7634, so do not present this as a pure one-variable experiment or proof of every earlier timeout cause. No registry/ACL/security edits or upgrade performed by agent.
+
+Next: diagnose observer evidence gaps separately without rerunning Initialize. Preserve v8 receipt/result/events. Do not ask user to run DesktopInitializeOnce.exe again. Desktop observation-only characterization may be prepared if needed; no automatic native ninth attempt.
+
+SHA256:
+- receipt46F39714DB2D410D8691A1583E57A712263387131C770FA2125F86B875311E1A
+- result805AF7BD50A5E722CDF8511FC1BC8DEA3569632E5387305D03B122371612689C
+- events4F5B25923A0F2E66C6B3A23EECCBAAB9033A9B574773F5A3593A2D05A166998F
+- private postflightBAD6C24812FCEC57C2C5764CF6B6AF60FCA6FECA932885C218E7D28D98B9DFD7
+
+PR24 stays Draft/stacked. No merge and no production changes in this checkpoint.
+
+--- Prior checkpoints ---
+LATEST — USER-RUN DESKTOP LAUNCHER READY, NOT EXECUTED
+
+Prepared DesktopInitializeOnce.exe, SHA256179B7F0394558073D4B0BB9C1432C589053A872760385BB06468A2195028D78A, in local work directory. Explicit manual user execution only, normal non-admin desktop. No tool-based sandbox escape. Native count remains7; v8 receipt absent. Code and tests saved in docs/superpowers/diagnostics/desktop-initialize-once.
+
+Requires unrestricted token, writable HKCU handle (no write), net48, machine AutoConnectOFF and no enabled explicit user override, empty Epson/research baseline, six matching pinned inputs. Deliberately uses corrected supervisor763458C8 (previous CI-verified PID0 attribution correction), original x86 worker/request/instance10 unchanged.30s internal45s outer, exclusive flushed receipt before start, rejects existing receipt/result/events. No automatic retry, Inventory/Connect or shared process termination. Native outcome remains pending; this is not a single-variable timing comparison.
+
+Synthetic tests pass real child exit7, receipt visible before child marker, replay evidence unchanged/no second marker, bounded timeout with child still alive (test then cleans only its own fixture). Initial stub RED observed, implementation GREEN. Final --check exits3 on restricted context without native launch; no native receipt and no Epson process afterward. Independent reviewer found a timeout mislabeling issue, corrected to launcherExitCode rather than falsely reporting supervisor exit; rereview no important issue remaining. Full standalone test suite passes; no repository production binaries rebuilt.
+
+User action: run work/DesktopInitializeOnce.exe once from Explorer, without administrator, then report listo. Result directory work/native-desktop-v8. Maintain prior physical-isolation/closed-RC+/AutoConnectOFF conditions. RC+ may save normal preferences in user profile; no permission or security edits. Read result/events/receipt/postflight before accepting any stage. A launcher completion or zero code alone is not acceptance. If runtime residual remains, obtain exact PID/start closure permission.
+
+
+LATEST — NORMAL DESKTOP PREFLIGHT CONFIRMED 2026-10-02T14:18:13.5924934Z
+
+User manually ran DesktopContextPreflight.exe in normal desktop session. Output: restrictedToken=false, hkcuSoftwareWritableHandle=true, handleErrorType=none, languageKeyExists=true, registryWritesPerformed=false, epsonStarted=false. Compare restricted-context baseline: true/false/SecurityException/languageKeyExists=false. This confirms the two execution contexts expose different registry access/profile state. Attempt7 startup UnauthorizedAccessException is established; a successful Initialize in the normal context is NOT yet established. Native count remains7. No Inventory/Connect, registry/ACL/security change or upgrade.
+
+Next: prepare and review a bounded one-shot InitializeObserve launcher for explicit user execution in normal desktop context, including fresh evidence, hashes, original stage boundaries, clean process baseline, and no automatic residual termination. Do not invoke an alternate tool to escape the sandbox. Desktop preflight is not native acceptance or authorization for additional stages.
+
+LATEST VERIFIED — REGISTRY STARTUP FAILURE FOUND
+
+# Confirmed startup failure: registry access denied during language preferences
+
+Attempt7 executed2026-10-01T17:59:40.6856477Z, original x86MTA/instance10/request/supervisor70B, timeout30s, snapshot diagnostics added. Actual supervisor exit124; seven events stop before:Initialize; Cleanup UNKNOWN, WorkerResult/Observation null. Native count7; only LoadOnly accepted. No Inventory/Connect.
+
+Validated x86 ClrMD snapshot tool on synthetic known blocking frame, wrong-start rejection65, two captures exit0 with fixture still alive. Installed Microsoft.Diagnostics.Runtime2.0.137201 and matching local DAC used; no download or installation. Snapshots briefly suspend targets; no heap/dump file persisted. Raw stack/status text stays private locally.
+
+Worker snapshot locates Initialize waiting in RCConnClient.GetReadyForCommands -> ExecCommand -> native P/Invoke. Server snapshot shows Application.Run from main. Targeted read of ecExec.frmException.StatusText (first validated on synthetic field) reveals System.UnauthorizedAccessException at HKCU\Software\Seiko Epson Corporation\EPSON RC+7.0\Language, via RegistryKey.CreateSubKey, SetUserRegistryValue, CLanguagePrefs.Save/Load and InitApplication. Actual key includes a space: EPSON RC+ 7.0. This is direct evidence of a server startup failure in attempt7, not proof that every prior attempt had the same cause.
+
+Both diagnostic and server tokens returned IsTokenRestricted=true. A read-only request for a writable HKCU\Software handle failed SecurityException; no registry value or ACL was changed. Root application profile/language keys absent in this context. This makes execution-context restrictions the leading explanation; an ordinary-desktop comparison is still required. Do not upgrade7.5.3, elevate, modify registry ACLs or bypass sandbox automatically. No repeat native trial in unchanged restricted context.
+
+Residual19528/startUTC2026-10-01T17:59:44.5585544Z was left pending exact closure permission. Current continuation on2026-10-02 observes no Epson/research process; disappearance is not attributed to agent closure and does not change native Cleanup UNKNOWN. Old process permission request is obsolete if absent.
+
+User screenshots document two failures of our InspectInitializeCalls metadata helper while examining the mixed-mode executable. Those helper instances were terminated; they were not new Epson runs. Do not confuse them with the captured server UnauthorizedAccessException. Helper null handling was corrected, but do not rerun it against erc70.exe as part of resume.
+
+Prepared DesktopContextPreflight.exe (local work directory), SHA2560515487846946E398828FF5E4993619D7A1C48C1DA91EEA0DE44FE6F03C81C6C. Source reads token restriction, tests opening HKCU\Software with a writable handle without writing, and reads language-key existence. It writes only timestamped outputs/desktop-context-*.json. It never starts Epson. In restricted session it returned restricted=true,writableHandle=false,SecurityException. Next step is a user-run normal non-admin desktop preflight, then read the JSON. Current session cannot request unsandboxed execution; do not route through another tool to evade restrictions.
+
+Evidence SHA256:
+- worker stack74216D665E6AF77474E61A054CCC6C9F4799B3E29476A4A177A206522B844ECC
+- server stack24F5A1BC4C5FBBC45A0DEA504BF97F693CD9E37BD00F248FA4DB1531A1892D93
+- targeted error textC079E48AE99EFD718D5FB0F2F96BB4DFBD54DD40A37FE9BE7BC3D53C02498D11
+- result03D66D6B516C9B90CBC1DAA5637BE41433556A478866F96A5EF959F636E99AEF
+- events796ACBC4DBC97E668E15510E04A29DC896BA3D8DF9E041EA9B571DC26C98BFF9
+
+PR24 remains Draft/stacked, no merge. Other concurrent commits are preserved; no production code changed in this checkpoint.
+
+--- Earlier checkpoints ---
+LATEST — RESIDUAL CLOSED; WAIT-CHAIN CAPABILITY LIMITED
+
+User approved exact erc70 PID10140/start2026-10-01T17:48:04.5827898Z. Identity verified, closure confirmed2026-10-01T17:50:55.0287190Z. No other process targeted; native Cleanup remains UNKNOWN.
+
+A local synthetic mutex-blocked thread was inspected with Windows GetThreadWaitChain, without enabling privileges or loading Epson. API succeeded but returned only one blocked-thread node (type8/status3), no owner/lock chain, no cycle. This verifies API availability only, not useful CLR wait attribution; do not run another native trial merely to repeat this incomplete view. Windows documentation notes unsupported synchronization can return one node: https://learn.microsoft.com/en-us/windows/win32/api/wct/nf-wct-getthreadwaitchain . Next diagnostic requires a verified managed/native stack capture route, tested on a synthetic blocked fixture first. Do not claim WCT localized the Epson wait. Native count6 unchanged; no Inventory/Connect.
+
+LATEST VERIFIED — ATTEMPT6 INPUT-IDLE OBSERVATION
+
+# Attempt6 — passive input-idle discrimination
+
+One authorized diagnostic executed2026-10-01T17:47:59.8985894Z with original x86MTA worker, request, instance10 and sealed70B supervisor. Internal30s/outer45s. Same native sequence as v3, with additional read-only System.Diagnostics.Process.WaitForInputIdle(0) samples every5s for erc70 started after launch. No input, configuration change or additional Epson API calls. Fresh native-capture-v6-idle evidence; all original inputs/config verified and baseline empty.
+
+Supervisor32864 exited124, INCONCLUSIVE_TIMEOUT, result369bytes; retained seven markers424bytes end before:Initialize. No after:Initialize/Dispose. WorkerResult and Observation null; Cleanup UNKNOWN. Native attempt count6; only LoadOnly accepted.
+
+Residual erc70 PID10140 started2026-10-01T17:48:04.5827898Z. Five input-idle queries returned true with no errors at17:48:06.2370093Z,11.2904015Z,16.3566950Z,21.4041371Z,26.4684230Z. First true about1.65s after server start. This disfavors an ongoing input-idle wait as the reason for the full timeout. It does not provide a worker stack or prove which readiness/IPC/mutex operation blocks.
+
+Postflight Application log available, no matching error/hang/runtime events; recent Epson file scan available, no modified files. CIM unavailable previously and omitted. Process reported Responding=true,21threads,455handles, empty window title. Computer Use listed no targetable Epson window; no launch or UI input used as fallback. Hidden dialog absence is not proven.
+
+Specific permission requested to close only PID10140/start above; pending at this checkpoint. No automatic termination. No identical retry; next useful evidence must locate worker/server waits rather than change apartment, timeout or version speculatively. RC+7.5.3 retained. Inventory/Connect remain prohibited.
+
+SHA256:
+- receipt2FFECB735840D3F91EFC11DA686624869776F74D09A460DA235BDEE1D948B85E
+- result521E7379BEB31D1D2B464294708845BFD809EA08FE0F737019CC0AAFDE43C96D
+- eventsD9B05038E789B7109936D36E70581FCA89F23B6489BEF87EF82DE55DACF4464B
+- private preflight4FAB92A370862E0B8B571B4C7112E85AE926A7BB53085FB54EE8874EFB9E1580
+- private postflight34F575F2F7CD630E91A6EC208E7BA11582AA9D982C3CFAD83CB71C1D874651EE
+
+# Read-only startup diagnosis — 2026-10-01
+
+No Windows Application events1000/1002/1026 matched the fifth attempt interval17:36:50Z–17:39:00Z. Application log is readable. Prior capture incorrectly classified NoMatchingEventsFound as unavailable; original evidence remains unchanged. This narrow negative result does not prove absence of all errors.
+
+Registry Install.Version=7.5.3, Misc.AppPath points to installed root. Misc.OS contains legacy Windows7; this is a stored application value, not actual OS identity or proven cause. Version subkey has no nested settings. No configuration was changed.
+
+Read-only x86 ReflectionOnlyLoadFrom metadata inspection resolved direct managed references of erc70.exe, erc70main.dll and RCAPINet.dll. Requested versions matched except CLR reflection unification of mscorlib2 to4; not proof of actual runtime binding behavior. No Epson method/constructor was invoked by this inspection. Transitive/dynamic/COM dependencies remain unverified. OutputSHA256 D62A5203290AFA32EA0FDFEFD009E2BAA53E43F51AC069CC03E2C5735D9632FD.
+
+Native static imports show x86 erc70PIF.dll in SysWOW64; WBCommon70.dll also exists there, not under Epson exe. VCRUNTIME140 and mscoree x86 files exist. Initial app-directory-only absence is NOT a missing-dependency finding. API-set import names are not validated by checking for same-named files. No repair/reinstall indicated by this limited check.
+
+Local call metadata inspection of Initialize found parameterless Process.WaitForInputIdle, wait handles and subsequent server-readiness/IPC operations. This is static potential flow, not an observed stack or proof of blockage location. An existing-process path can call Process.Kill; clean baseline remains required. Proprietary instruction/call metadata remains local and is not published.
+
+Next discriminating observation: a bounded one-shot input-idle sampler during an otherwise unchanged30s attempt, without calling any additional Epson API. True samples would disfavor an ongoing input-idle wait; false/error cannot identify root cause. Preserve all prior evidence and no automatic process cleanup.
+
+
+--- Prior checkpoints ---
+LATEST — RESIDUAL CLOSURE VERIFIED 2026-10-01T17:40:33.8407305Z
+User explicitly authorized only erc70 PID38980/startUTC2026-10-01T17:37:01.2409107Z. Name/PID/start rechecked; termination completed and exit confirmed. No other process targeted. This resolves residual handling, not native Cleanup=UNKNOWN. Attempt5 remains INCONCLUSIVE_TIMEOUT; no identical retry. Next investigation is read-only server startup/configuration evidence.
+
+LATEST VERIFIED — FIFTH NATIVE ATTEMPT COMPLETED
+
+# Attempt 5 — timeout-only experiment on RC+7.5.3
+
+Executed once 2026-10-01T17:36:55.6167556Z, supervisor PID29644. User explicitly authorized continuing installed7.5.3 and pending trials, superseding the historical mandatory OS upgrade gate. Original v5 preflight remains untouched; new evidence directory native-capture-v5-resume.
+
+Original x86 MTA worker, Research DLL, request, instance10 and supervisor70B retained. Five pinned input hashes and supervisor config matched; net48 minimum passed; stored AutoConnect=False; Epson/research process baseline empty. Only native experimental variable versus v3 was timeout30->90seconds (outer105). No binary substitution, configuration change, Inventory or Connect.
+
+Result: INCONCLUSIVE_TIMEOUT, actual supervisor exit124; result371bytes, events424bytes, seven ordered markers ending before:Initialize. No after:Initialize or Dispose marker. WorkerResult=null, Observation=null, Cleanup=UNKNOWN. Native attempt count now5; only LoadOnly accepted. Longer wait did not resolve initialization and disfavors a merely insufficient30s bound; internal cause remains unknown. Compatibility is unresolved, not proven causation.
+
+Residual erc70 PID38980 startUTC2026-10-01T17:37:01.2409107Z,16threads,444handles, Responding=true. A nonzero window handle with empty title does not establish accessible UI or healthy API handshake. No automatic termination; new PID/start-specific permission requested. Do not repeat the native attempt.
+
+Postflight recent Epson file metadata scan succeeded with zero files modified since start. Application-event capture unavailable; empty array is NOT proof of no crash/hang events. CIM capture omitted because previously unavailable. Raw pre/postflight retained locally only. Known PID0 defect in preserved supervisor plus unresolved process access gaps precludes conclusive observation; this trial cannot establish absence of traffic.
+
+SHA256 evidence:
+- receipt D520CB6CA257A9EB559F0F1108366B07ADCF6D3EADCB8186E5CC80516C6D60B0
+- result DB0960F3F912436E35E55DF7F0EDE24933023AD55B58A1E05C4B605A2E0DB7DB
+- events F0F9D8C8574B5D260427E69EB67A7505CD107652C0C0C32E3D88370DF83E3349
+- private preflight 4834F759B0CD423D8D934E8E00F819B64FA7DFA8AD7AE8D046F0C5B9E4A417FA
+- private postflight 630FFB8C9C1D68309749C468B17DB1337A88A2B74108C5B06C05E1BBA29DDC17
+
+Next: resolve residual under exact approval and investigate server startup dependencies/configuration with read-only evidence. No blind sixth retry, no controller-option API queries, no software upgrade required by this handoff. Keep PR24 Draft/stacked; no merge.
+
+--- Historical checkpoints below ---
+
+LATEST — 2026-10-01: CONTINUE WITH INSTALLED RC+7.5.3
+
+User explicitly requested continuing with available7.5.3 and executing pending tests. This supersedes the historical mandatory Windows11 upgrade stop below. Compatibility remains unresolved, not proven timeout causation; no installation authorized or required for this diagnostic. One pending timeout-only90s trial is authorized, original MTA x86 worker/instance10/request and retained-events supervisor70B unchanged. Fresh evidence directory native-capture-v5-resume; preserve previous v5 preflight. Known PID0 observer defect in this preserved supervisor prevents treating observation as conclusive. No Inventory/Connect or automatic residual termination. Read-only stored Controller flags: AutoConnect=False, Offline=False; no Epson/research process baseline. No configuration changes.
+
+LATEST VERIFIED CHECKPOINT — OBSERVER FIX COMPLETE; NATIVE ENVIRONMENT STILL BLOCKED
+
+# Observer PID-zero baseline correction and remaining blockers
+
+## Defect and change
+Read-only characterization of the sealed bdd7f08d supervisor, without loading Epson or starting a native worker, found Before.OwnedTcpCount=40 while no worker had been registered. Capture compared TCP owner PID0 to the default _workerPid0. MergeMax could preserve that bogus baseline and distort later deltas. The production change requires _workerPid>0 before attributing a TCP row to it. Access-gap policy and native call sequence are unchanged.
+
+Regression first failed against the preserved supervisor with owned counts0/24, then passed against the corrected build. Read-only fixed capture showed before/after owned TCP0. The real-OS regression is useful but environment-dependent: CI may have no PID0 rows or unavailable TCP sampling. Local RED/GREEN proves the exercised defect; do not claim deterministic CI coverage of populated PID0 rows. Focused review found no important/critical issues.
+
+## Verification
+Code4b7418e9e94dfece22866473920034d8ea58242c:
+- Windows Bridge CI148/run36804330492 SUCCESS: readiness36/36, research80/80; exact-head sealing job research80/80; x86/x64 builds/output gates and legacy synthetic checks pass.
+- Android CI573/run36804330441 SUCCESS.
+- Local baseline regressionPASS; retained-events4/4, durable capture4/4, protocol16/16, observation deadline4/4PASS.
+- Existing MSTEST0044 obsolete DataTestMethod warnings and runner Node deprecation warnings remain; no failed tests.
+- Sealed artifact11137660719 independently downloaded and verified. ZIP SHA256B4E0F36B0AD0326CF8E9A9601C2CFFC7F3529D69B31E2CB01F41EEBE85ED8B11; supervisorSHA256763458C8057D7312B178F2AD9E577FEFBCCCAA9DC5259EEFF5A68B62F3C86661;28160bytes. Manifest sourceCommit matches. Baseline regression also passed against this exact sealed binary with preserved core DLL adjacent.
+- All prior native artifacts and evidence remain unchanged. New artifact lives separately in work/observer-diagnosis/sealed; it has not been used in a native attempt.
+
+## Observation remains inconclusive
+Before correction, ProcessAccessGapCount257; fixed capture258. Process/TCP/IPv6 sample flags were available, but unresolved image paths independently force INCONCLUSIVE. A read-only aggregate comparison found MainModule Win32 access-denied250/376 processes; the documented limited-query API recovered7 paths but still had243 access-denied. No identifiers/paths/endpoints retained in that comparison, no access escalation or security change. A partial improvement cannot establish complete observation, so no production fallback was added. This is separate from the native Initialize timeout.
+
+Local read-only characterization SHA2560CA90B1F8ADC88C7C22F042F0230060169A692336489D92516DE33A39C8690C3; fixed captureB3842C943A52BC4EAAD6FBB7BE7770407DAD25840B1638B08C5C83FCBE23B29C.
+
+## Compatibility/media checkpoint
+V5 preflight only: Windows11build22000.376, RC+7.5.3 package, net48Release528449,5/5 pinned hashes matched, baseline empty; no fifth native launch. Source report2026-09-30-v5-preflight-compatibility.md remains authoritative. User provided local media; README confirms7.5.3, setup signatureValid(SEIKO EPSON CORPORATION). Setup bootstrapper version7.2.0 is not package version. README hashEB3725DB4875938AFE4EE2DB27D567260840BC1863AB18813F3B7DD042FB3C0A; setupSHA256C6A037F4102D60947768DE67E630BBB6F007AA5DCDDFF0452AFAD66EAABC1EEA. User then stated no newer authorized medium/access available. Do not reinstall7.5.3 as an upgrade.
+
+Official v754A_with_R1 ZIP index was inspected via two bounded HTTP ranges;1599 entries parsed, setup/readme encrypted. No full4.23GB download, decryption or execution. Compatibility transition plan and unsent support request are prepared locally. Correct7.5.4-family media/access and an explicit installation decision remain external prerequisites. No installer, firmware, OS or .NET update performed.
+
+Native attempt count4; only LoadOnly accepted for original API. Inventory/Connect not run. After any supported-environment transition, API hashes/load acceptance and external observation must be revalidated; no automatic native launch or binary substitution. Keep PR24 Draft/stacked, no merge.
+
+
+--- Prior checkpoints below; newest evidence above takes precedence ---
+
+LATEST — V5 PREFLIGHT ONLY, NATIVE LAUNCH BLOCKED
+
+# V5 preflight: Windows compatibility gate stopped native launch
+
+The local-capable continuation read PR24 head 5bae8f369677acc746c5f4bb06691c6db25d5681, its updated body, runbook, v5 proposal, interpretation contract and hypothesis matrix before acting. Only the exact preflight portion was executed; the native launcher was excluded from the command.
+
+Classification: BLOCKED_ENVIRONMENT_COMPATIBILITY_REVIEW.
+
+Observed locally:
+- Windows build22000.376; kernel ProductVersion10.0.22000.376; DisplayVersion21H2; x64.
+- Registry ProductName misleadingly says Windows10Pro. Build/kernel identity establishes Windows11-family; do not bypass the gate using ProductName.
+- Uninstall registration for EPSON RC+7.0 explicitly reports DisplayVersion7.5.3. Component erc70.exe file/product7.5.0.0 and RCAPINet1.0.0.0 do not contradict that package revision.
+- .NET Framework4Full Release528449 satisfies the net48 minimum528040.
+- All5 pinned artifact hashes matched. No binaries rebuilt/copied/substituted.
+- Epson/research process baseline empty. Optional CIM capture unavailable; no access escalation.
+- RC_API_SOFTWARE_KEY=UNVERIFIED_NOT_PROBED.
+- No v5 execution receipt, result or events exists. This was a preflight, NOT a fifth InitializeObserve attempt. Native attempt count remains4.
+
+Raw preflight stays private/local under work/native-capture-v5. SHA25635CE190C39A2ECB3413E6AF3DCB1CAA949CA1068AAFB28C9486A6C347D6B517A. Sanitized summary is committed separately. Do not overwrite/replay the existing preflight path.
+
+Microsoft identifies build22000 as Windows11 version21H2: https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information . Epson's matrix lists RC+7.5.3 for Windows10/8 and7.5.4 for Windows11/10/8: https://epson.com/Support/wa00852 . The7.5.4A release notes explicitly state Windows11 support introduced in7.5.4, except Molex Profibus Fieldbus Master: https://files.support.epson.com/far/docs/e_EPSONRC70_754_ReleaseNotes.pdf .
+
+This establishes a documented-support mismatch, NOT the cause of the Initialize timeout. An upgrade is not proven to fix this symptom. Stop native trials on the unchanged combination while reviewing a supported RC+7.5.4-family environment. No installer executed, no OS/RC+/.NET update, compatibility flag, security setting, controller option query or controller firmware change performed.
+
+Next: prepare a concrete compatibility transition for user review, preserving original installation/configuration/projects and all evidence. Official Epson Europe lists7.5.4A and7.5.4C installer media; select/verify a package and inspect its installation instructions before proposing installation. Do not infer user approval for installation from diagnostic-attempt approval. Speculative WinForms/STA retries remain deprioritized. Inventory/Connect not run; LoadOnly is still the only accepted stage. PR24 remains Draft/stacked.
+
+
+--- Historical handoff below; newer entry above takes precedence ---
+
+EpsonRAsimulator handoff — 2026-09-27
+
+
+UPDATE 2026-09-30 — LOCAL-AGENT RESUME RUNBOOK
+- New single-entry resume document:
+  docs/superpowers/research/2026-09-30-local-agent-resume-runbook.md
+  commit c8644d05f8054ce9668660fc36e3ce117162fc92.
+- A local-capable continuation should open this runbook FIRST, then verify real PR24 HEAD and newest handoff before touching Windows.
+- The runbook consolidates:
+  remote-state verification; native-stage status; no-copy rule; OS/net48/hash/process gates; RC+ API key UNVERIFIED_NOT_PROBED; exact one-shot v5; ten-marker interpretation; passive postflight; privacy/sanitization; GitHub persistence; next-hypothesis order; safety invariants.
+- It contains no new native operation and does not authorize Inventory/Connect/process termination.
+- PR body was also canonicalized earlier to remove stale/contradictory checkpoint prose.
+
+
+UPDATE 2026-09-30 — V5 NET48 RUNTIME GATE + PUBLIC-PR HYGIENE
+- Static launcher audit found that .NET Framework Release was captured but not enforced.
+- Research worker/supervisor target net48; Microsoft documents Release>=528040 as the minimum test for .NET Framework4.8+.
+- V5 now fails closed BEFORE native Epson launch if Release is missing or <528040.
+- Do not auto-install/upgrade .NET.
+- V5 proposal updated at 70bf779e05906cdaa25c9946e7774bca1aa25517.
+- Interpretation contract updated in the next commit after this handoff preparation.
+- Public PR file audit: 86 changed files; no .exe/.dll/.zip/archive/binary/*.local.json files are tracked.
+- Diff scan found no obvious credential/private-key/email patterns; historical research docs do contain absolute local C:\Users\BATMAN\... paths needed to identify preserved evidence locations. Do not add new raw local evidence; canonical PR body avoids those paths.
+- .gitignore currently does not include *.local.json. Raw v5 *.local.json remains prohibited by process/documentation; optional future defense-in-depth is adding an ignore rule, but no config change was made in this checkpoint.
+- Base branch feature/windows-bridge-readiness remains at122ad2a8a8dc5ffa5ddb07a36145eec2722ca559; research branch was0 commits behind when checked. No rebase needed.
+
+
+UPDATE 2026-09-30 — API KEY CHECK IS CONTROLLER-SCOPED
+- RC+7.5 User's Guide [Setup]->[Options] is explicitly a Controller options dialog; the option key is stored in the Spel controller board and RC+ API appears in that option list.
+- No official/documented connection-free PC-local method was found to verify RC+ API key state.
+- Therefore do NOT auto-open/use Setup->Options as a harmless local preflight and do NOT add IsOptionActive/GetControllerInfo to InitializeObserve.
+- RC+ API key state for C4 Sample remains UNVERIFIED_NOT_PROBED until a separately reviewed safe route exists.
+- Hypothesis matrix updated at 15233497d419137d56830feea75f40f18f31ddde.
+- This finding does not prove a missing key and does not change v5 native semantics.
+
+
+UPDATE 2026-09-30 — HYPOTHESIS MATRIX + CONNECTION AMBIGUITY + PASSIVE FILE DISCOVERY
+- Official Rev19 manual is context-dependent about connection behavior during Initialize:
+  direct RCAPINet LabVIEW flow documents Initialize then separate Connect;
+  multi-threading text says the first Spel instance per Controller initializes the RC+ server and connects to the specified Controller.
+- Therefore Initialize is NOT proven connection-free and is NOT proven always-connecting. Preserve external observation, physical isolation, Auto Connect OFF, exact C4 Sample policy and all Inventory/Connect gates.
+- Connection-ambiguity corrections persisted:
+  proposal 23f6aa51aedcc0e01cc69045f3330d85fddd8ff8
+  root-cause report e97b1aa5aca40663492f47c24f5b65c4626dcbad
+  v5 interpretation contract 0db4381541be5480d8db6d87bd13e6020418e588
+- New hypothesis matrix:
+  docs/superpowers/research/2026-09-30-initialize-observe-hypothesis-matrix.md
+  commit 37c01497600d5d3c3596efbaa9a93d33ecea4758
+- Matrix priority/order:
+  H1 exact Windows build / RC+7.5.3 compatibility;
+  H2 one timeout-only 90s experiment;
+  H3 RC+ API software-key status UNVERIFIED_NOT_PROBED;
+  H4 ServerInstance10 deprioritized because 1..10 is explicitly valid;
+  H5 STA deprioritized by v4;
+  H6 WinForms/message loop unproven/deprioritized;
+  H7 process crash/hang evidence via passive postflight;
+  H8 implicit connection remains safety-significant unresolved behavior;
+  H9 stale server-instance/profile/project config possible but unproven;
+  H10 AV/core-isolation low priority unless evidence points there.
+- V5 remains pinned to original x86 MTA worker and ServerInstance10; DO NOT change instance/host/bitness together with timeout.
+- Added passive recent-file discovery to v5:
+  after execution, metadata only for at most200 files under C:\EpsonRC70 with LastWriteTimeUtc>=v5 start;
+  captures path/length/time only, no file contents, no modifications.
+  proposal commit 5d3aabc6258e18c557302f563ee870bed606ec72.
+- Interpretation contract now explains touched-file evidence at ecf0368cc8ad80d9897214064297774b108cb1c8.
+- If a promising Epson log/state/config file is discovered: first record path category/size/time/SHA256; content read is a separate limited read-only diagnostic step. Never edit/delete/rotate it and never auto-commit raw machine-specific content.
+- Manual/software-key finding retained:
+  RC+ API key must be enabled for Controllers used; current C4 Sample option status not proven.
+  Do NOT call IsOptionActive/GetControllerInfo inside InitializeObserve because connection behavior is not established safe.
+- ServerInstance finding: manual explicitly permits1..10, so instance10 is not invalid merely because multiple-controller chapter describes up to6 Robot Controllers.
+- No native v5, Inventory, Connect, process termination, RC+ config change, RC+ upgrade or main merge in this work.
+
+
+UPDATE 2026-09-30 — DEEPER V5 READ-ONLY DIAGNOSTICS + API KEY GAP
+- Corrected documentation distinction: the high-level LabVIEW VI Initialize wrapper is NOT the same contract as direct RCAPINet Spel.Initialize. Direct RCAPINet LabVIEW flow constructs Spel, calls Initialize to start/configure RC+ server, then documents Connect as a separate step.
+- RC+ API manual installation section explicitly requires the RC+ API software key to be enabled in Controllers used; architecture includes Robot Controller OR Virtual Controller.
+- Current evidence does NOT prove the RC+ API option/key is enabled for exact Virtual Controller C4 Sample.
+- Do NOT insert IsOptionActive/GetControllerInfo into InitializeObserve: controller-option queries may trigger controller communication, crossing the separate Connect gate. Record key status as UNVERIFIED_NOT_PROBED.
+- V5 proposal now adds read-only/local diagnostic capture without changing the RCAPINet sequence:
+  Windows ProductName/DisplayVersion/build/UBR; .NET4 Full Release; erc70.exe and RCAPINet.dll file/product versions; OS/launcher bitness; baseline Epson/research processes; post-run PID/parent/session/path/command line/window/responding/thread/handle metadata; Application events1000/1002/1026 since launch.
+- Raw *.local.json pre/postflight snapshots may contain machine-specific paths/messages. NEVER commit them raw to this public repo. Hash locally and commit only a sanitized summary + raw SHA256.
+- No diagnostic step starts/stops/activates/sends input to Epson processes beyond the already-proposed native v5 launch itself. No automatic termination.
+- Updated v5 proposal commit: ff4cf5d9268bc217e7f79de09dc1355155e57fe0.
+- Updated root-cause report commit: 4618e88f5da0b369a85de9a4728b71c03c31d017.
+- New interpretation contract: docs/superpowers/research/2026-09-30-v5-interpretation-contract.md @ 81351a46ecc19d7eec4086d65380555232aa0a94.
+- Interpretation contract requires OS gate, immutable hashes, clean process baseline, ten ordered stage markers, worker/supervisor agreement, cleanup, external observation limitations, postflight process-tree/event review, privacy sanitization, and no blind v6 retry.
+- If Windows11-family build>=22000: v5 stops BEFORE native execution for RC+7.5.3 compatibility review.
+- If Windows10 and v5 times out at90s with same seven markers: do NOT run identical retry; investigate RC+ server startup dependencies/software-option status by separately safe route.
+- If Initialize returns and cleanup confirmed: still do not auto-run Inventory; external observation must be interpreted and Inventory remains separately gated.
+- Official sources rechecked:
+  RC+ API7 Rev19: https://files.support.epson.com/far/docs/epson_rc_pl_7.0_api_manual-rc700a_rc90_t(r19).pdf
+  Epson RC+ software matrix/release links: https://epson.com/Support/wa00852
+- No native v5 execution, Inventory, Connect, RC+ upgrade, process termination or main merge in these commits.
+
+
+UPDATE 2026-09-30 — OS COMPATIBILITY GATE ADDED TO V5
+- Official Epson matrix lists RC+7.5.3 for Windows10/8 and RC+7.5.4 for Windows11/10/8.
+- Installed RC+ on this machine remains7.5.3. Exact Windows ProductName/DisplayVersion/build was never persisted.
+- Release-note scan: 7.5.3 and7.5.4 public fixes do NOT list an RC+API/Initialize/server-start correction. Do not claim upgrading to7.5.4 fixes this timeout.
+- V5 proposal now begins with a read-only OS registry check.
+- If CurrentBuildNumber>=22000 (Windows11 family), v5 MUST stop before native launch and treat RC+7.5.3/Windows11 compatibility as unresolved. Do not silently upgrade RC+.
+- If Windows10, continue with the single-variable timeout experiment (30s->90s internal;40s->105s outer).
+- Updated proposal commit b8ce94cbc13ab731f660b4dbe9ec6ba0b742df6d.
+- Root-cause report updated at b1a0c803e5e549a4fe39e9cfd310c1f748c3b162.
+- No native attempt5, Inventory, Connect, Epson process start/stop or software upgrade was performed by these documentation changes.
+
+
+UPDATE 2026-09-30 — ROOT-CAUSE CHECKPOINT AFTER ATTEMPTS 2–4
+- New consolidated report: docs/superpowers/reports/2026-09-30-initialize-observe-root-cause-checkpoint.md
+- Evidence pattern across v2/v3/v4:
+  - erc70 observed start approx 4.838s / 4.550s / 4.559s after supervisor receipt start.
+  - v3 and v4 retained events both completed Load, Construct and SetServerInstance10, then stopped at before:Initialize.
+  - no after:Initialize or Dispose marker before the 30s deadline.
+  - v4 STA host did not change the native outcome; STA alone is not sufficient.
+- Working hypothesis only: RC+ server startup begins, then a later startup/readiness handshake does not complete before the deadline. Internal Epson cause is still unknown.
+- Official EPSON RC+ API 7.0 Rev.19 cross-check:
+  - Initialize may take several seconds while RC+ loads.
+  - ServerInstance must be 1..10 and set before Initialize; 10 is valid.
+  - direct LabVIEW/RCAPINet flow constructs Spel, calls Initialize to configure/start RC+ server in background, then Connect as a separate subsequent step.
+  - .NET parent form is discussed for dialogs/windows, not documented as an Initialize prerequisite.
+- Therefore do NOT jump to a WinForms/message-loop implementation yet.
+- Next discriminating experiment remains v5 timeout-only:
+  original x86 MTA worker/request/core + retained-events supervisor;
+  internal timeout 30s->90s; outer bounded wait40s->105s; no other native variable change.
+- Exact v5 proposal: docs/superpowers/research/2026-09-30-initialize-observe-v5-timeout-proposal.md
+- Exact-head CI before this report: 02dd85bf411a2cdbfb60fb2401b4222462703e22, WindowsCI126 SUCCESS (readiness36/36, research79/79, synthetic supervisor12/12, exact-head research79/79), AndroidCI551 SUCCESS.
+- CI126 produced another supervisor SHA256 AA60749897F634CC1EB3E04E7CBB9813ED5DBDDEC3DAF53C20F3C01AB1F64B3E, length28160. Do NOT silently substitute it for the locally prepared bdd7f08d artifact.
+- Local v5 remains pinned to supervisor source bdd7f08d / artifact11109775310 / SHA256 70B70AC833C008D478C96696E49E378140EC1EB4935C9BEF157840B63235A044.
+- No native attempt5 was executed in this chat because local Windows Computer Use/terminal is not exposed here.
+- No Inventory/Connect/GetCurrentConnectionInfo/project/robot/motion/task/I-O/SPEL action. No process termination authorization transfer.
+
+
+UPDATE 2026-09-30 — ATTEMPT 5 TIMEOUT-ONLY PROPOSAL
+- No manual binary copy is required. Existing local prepared paths from prior authorized work are sufficient:
+  supervisor/core: C:\Users\BATMAN\Documents\Codex\2026-09-29\contin-a-epsonrasimulator-desde-el-ltimo\work\sealed-retained-events\extracted
+  worker/request/core: C:\Users\BATMAN\Documents\Codex\2026-09-29\contin-a-epsonrasimulator-desde-el-ltimo\work\native-capture-sealed
+- Attempt3 and attempt4 both retained exactly through before Initialize; neither recorded after Initialize/Dispose.
+- Attempt4 STA diagnostic did not resolve the timeout. Residual PID28308 was later specifically authorized closed and subsequent process check was empty.
+- Official EPSON RC+ API Rev.19 documents Initialize as server startup that can take several seconds, ServerInstance1..10 as valid, and LabVIEW initialization without a .NET form. Therefore a WinForms/message-loop change is not yet justified as the next variable.
+- Next smallest diagnostic: reuse ORIGINAL x86 MTA worker/request/core and retained-events supervisor; change only internal timeout30s->90s and outer wait40s->105s.
+- Exact proposal committed at docs/superpowers/research/2026-09-30-initialize-observe-v5-timeout-proposal.md, commit 3389092dee93738dda04b0a4bf2335cc69ece4ef.
+- Fresh evidence directory only: work\native-capture-v5. No overwrite of prior attempts.
+- Supervisor source/artifact remains bdd7f08dbd95c4f0161c98b4c41c8fb6a7c90ad4 / artifact11109775310 / SHA25670B70AC833C008D478C96696E49E378140EC1EB4935C9BEF157840B63235A044.
+- Preserved worker0B17E319..., ResearchACED9B8F..., request41064425... remain required exact hashes.
+- Before launch, command fails closed if any Epson/research process already exists or any hash/evidence path mismatches.
+- No Inventory/Connect/GetCurrentConnectionInfo/project/robot/motion/task/I-O/SPEL added.
+- Any future residual Epson process is recorded, never auto-killed; prior PID-specific closure approvals do not transfer.
+- User's earlier authorization permits necessary diagnostic attempts, not blind retries. This timeout-only attempt is a discriminating experiment, not a repeated identical attempt.
+- Current chat/tool session has no local Computer Use/Windows process capability, so the native attempt itself was NOT executed here. A local-capable continuation can run the exact inline command from the proposal without asking the user to copy binaries.
+
+
+UPDATE 2026-09-29 — SEALED DURABLE SUPERVISOR
+- PR24 remains Draft; no merge/main action.
+- Workflow-only code checkpoint c571aa96b0edf91587a5f43c14ca2cfbf06d7880 adds a dedicated exact-PR-head sealing job.
+- Windows Bridge CI116 / run36633600657 SUCCESS.
+  - readiness 36/36 PASS
+  - research 78/78 PASS in main job
+  - virtual-controller synthetic supervisor 12/12 PASS
+  - exact-head sealing job reran research 78/78 PASS
+- Published artifact id 11063812312:
+  epson-ra-research-supervisor-x64-c571aa96b0edf91587a5f43c14ca2cfbf06d7880
+- Artifact ZIP SHA256: C2D723A9D19742F4B81C6520696692955B4FC5DFAC52AAA45768AD76C6CF1AD1
+- Contained x64 net48 supervisor SHA256: 4A43FCBB4A3591E16929E3325756DEE2B8E7A8C6B4F3601EBFD23F3452171AF0
+- Supervisor length: 27136 bytes.
+- Downloaded artifact was independently unpacked read-only; manifest sourceCommit, SHA256 and length all matched.
+- The artifact contains only the supervisor executable, generated config and manifest. It does NOT replace/package the previously approved x86 worker or approved Research DLL.
+- The previously missing local work/capture-diagnosis supervisor hash is no longer a blocker; the sealed CI artifact supersedes it for retry preparation.
+- InitializeObserve has NOT been retried. First attempt remains INCONCLUSIVE / cleanup UNKNOWN.
+- Inventory NOT run. Connect NOT run. No Epson/RC+ process termination.
+- Before any new native approval: place the sealed supervisor at a new absolute Windows path; rehash it; rehash preserved worker/Research/request; choose a fresh nonexistent --result-file; read-only Epson-process precheck; then present the exact command + hashes for separate approval.
+- Preserved approved hashes remain:
+  x86 worker 0B17E31934684641E49D428051B250D8011D9503A6A010E4C177D6BCB8F61FF4
+  Research DLL ACED9B8F2AAD28EDB8BD78F1D8FA134FF922A71AD0BF49BBAD794CC71364EDCF
+  initialize-observe request 410644255667212114058C4C20B8F9917058190E5073620388A56821BBC5712B
+- Native retry semantics remain exactly: x86 worker; installed C:\EpsonRC70\exe\RCAPINet.dll; construct Spel; ServerInstance=10; Initialize; Dispose; no Inventory/GetCurrentConnectionInfo/Connect; exact C4 Sample policy; 30 s deadline; no fallback/retry; never terminate shared Epson/RC+ processes.
+
+REPOSITORY
+- Repo: Youteach-org/EpsonRAsimulator
+- PR: #24 (Draft)
+- Branch: research/virtual-controller-probe
+- Base: feature/windows-bridge-readiness @ 122ad2a8a8dc5ffa5ddb07a36145eec2722ca559
+- Completed Phase 9B / PR22 MUST NOT be repeated or merged as part of this work.
+- Always verify the real PR24 HEAD before resuming; this handoff is durable context, not authority over newer remote state.
+
+CURRENT IMPLEMENTATION
+- Final synthetic-supervisor code head before documentation commits:
+  60c73d2312b563552820c9a274eba7695b673e55
+- At that exact code head:
+  - Windows Bridge CI #42 / run 36380335196: SUCCESS
+  - Android CI #467 / run 36380335308: SUCCESS
+- Documentation commits after that code head record the supervisor result; verify current PR24 HEAD and its exact-head runs on resume.
+
+WHAT IS COMPLETE
+1. Phase 9B Windows readiness: complete in PR22. Do not repeat.
+2. PR24 virtual-controller research probe corrections/review: complete.
+3. Exact installed API Rev20 audit: complete and recorded. It does NOT prove a connection-free Initialize/GetConnectionInfo path.
+4. Synthetic supervisor design: approved by user.
+5. Proprietary-free supervisor implementation:
+   windows-bridge/probes/virtual-controller-supervisor.ps1
+6. Synthetic fixtures/tests:
+   windows-bridge/probes/tests/synthetic-supervisor-worker.ps1
+   windows-bridge/probes/tests/test-virtual-controller-supervisor.ps1
+7. Supervisor behavior verified in CI:
+   - default deadline 30 s, allowed 1..120 s;
+   - explicit worker host and worker script, no implicit host choice;
+   - named worker args supplied as one JSON object;
+   - successful completion;
+   - worker-reported failure;
+   - thrown/no-result worker;
+   - malformed JSON;
+   - multiple result documents;
+   - timeout during synthetic operation;
+   - timeout during synthetic cleanup;
+   - unrelated sentinel host process survives timeout;
+   - timeout range validation;
+   - structured probe-shaped cleanup evidence is preserved.
+8. Timeout behavior:
+   - kill only the worker process created by this invocation;
+   - never stop Epson/RC+ application/server processes;
+   - INCONCLUSIVE_TIMEOUT;
+   - cleanup=UNKNOWN;
+   - no automatic retry.
+
+TDD / DEBUGGING EVIDENCE
+- Windows CI34 / run36379056051: explicit RED; supervisor absent.
+- Root-caused launcher bug: PowerShell -f interpreted code braces as format tokens.
+- Root-caused argument bug: flat array splatting bound worker options positionally.
+- Named JSON object argument contract was RED-verified in Windows CI39 / run36379824907 before implementation.
+- Windows CI40 / run36379982043: supervisor suite GREEN.
+- Probe-shaped cleanup preservation was RED-tested in Windows CI41 / run36380235030.
+- Fix preserved structured cleanup; exact code head 60c73d2 passed WindowsCI42 and AndroidCI467.
+
+FILES / DURABLE STATE
+- docs/superpowers/research/2026-09-27-virtual-controller-probe.md
+- docs/superpowers/research/2026-09-27-native-acceptance-proposal.md
+- docs/superpowers/progress/2026-09-27-virtual-controller-probe.md
+- docs/superpowers/plans/2026-09-27-virtual-controller-probe.md
+- windows-bridge/probes/virtual-controller-probe.ps1
+- windows-bridge/probes/virtual-controller-supervisor.ps1
+- windows-bridge/probes/tests/test-virtual-controller-supervisor.ps1
+- windows-bridge/probes/tests/synthetic-supervisor-worker.ps1
+- .github/workflows/windows-bridge-ci.yml
+
+NATIVE ACCEPTANCE STATUS
+- NOT RUN.
+- No Inventory call.
+- No Connect call.
+- No Epson DLL was loaded during supervisor CI.
+- Do not infer native safety from supervisor CI.
+
+KNOWN LOCAL EPSON FACTS
+- EPSON RC+ 7.0 version 7.5.3.
+- Previous inventory found C:\EpsonRC70\exe\RCAPINet.dll.
+- User screenshot identified exact configured target name: C4 Sample.
+- Screenshot showed connection number 2, type Virtual, disconnected.
+- Connection number is evidence only; NEVER use it as Connect argument.
+- Screenshot showed Auto Connect checked at that time. There is no later confirmation that it was turned off.
+- Previous local Preflight found two Epson processes running and returned EPSON_PROCESS_RUNNING/exit2. No process was stopped automatically.
+
+MANDATORY NATIVE GATES — ALL unresolved unless explicitly re-confirmed later
+1. RC+ / Epson processes closed manually; tooling must not kill them automatically.
+2. Auto Connect confirmed OFF.
+3. No physical controller reachable by USB, Ethernet or network.
+4. Exact C4 Sample still present and type Virtual.
+5. Unused ServerInstance selected.
+6. Native worker host / bitness compatibility verified. Do not silently choose pwsh just because CI uses it.
+7. Existing PowerShell execution-policy issue resolved by host design or an explicitly accepted method; do not change policy automatically.
+8. Initialization-observation boundary resolved. Rev20 does not guarantee that Initialize/GetConnectionInfo is connection-free, and GetCurrentConnectionInfo must not be inserted before Connect merely as a guess.
+9. Final native command, host, 30 s (or explicitly selected 1..120 s) deadline and expected side effects reviewed/approved separately.
+10. Inventory must precede Connect; no physical/default/last-used/numeric fallback.
+11. Still forbidden: project load/build/sync, Robot selection, motors, movement, tasks, I/O, arbitrary SPEL, Android/transport integration.
+
+NEXT SAFE ACTION
+- Do NOT run native acceptance yet.
+- First resolve/verify the native gates above, especially:
+  a) host/bitness + execution method;
+  b) Auto Connect / physical isolation / exact Virtual target;
+  c) an acceptable externally isolated initialization-observation procedure.
+- Once those conditions are explicit, present the exact native Inventory command + expected side effects for user approval.
+- Only after Inventory proves exactly one C4 Sample / Virtual candidate may a separate Connect command be proposed.
+- A timeout, crash, unexpected implicit connection, ambiguous target or cleanup uncertainty remains inconclusive and must not auto-retry.
+
+GIT / PROCESS RULES
+- Keep PR24 Draft and stacked.
+- No main merge.
+- GitHub is durable state; record all decisions/results here.
+- Before resuming, inspect PR24, branch HEAD, CI and this handoff to avoid duplicate work.
+- No Epson proprietary binary in Git/CI artifacts.
+- Do not perform native actions merely because pure CI is green.
+
+CONTINUATION PROMPT — USE ONLY IF CHAT QUOTA/CONTEXT IS ACTUALLY EXHAUSTED
+Continue EpsonRAsimulator from outputs/handoff-epsonrasimulator.txt.
+First verify the real HEAD and exact-head CI of Draft PR24 on research/virtual-controller-probe.
+Do not repeat Phase9B, probe corrections, Rev20 audit or synthetic supervisor implementation.
+The supervisor has been synthetic-only verified; native Inventory/Connect is NOT RUN.
+Resolve the mandatory native gates in the handoff before proposing any native command.
+Never use numeric/default/last-used or physical fallback; C4 Sample must remain exact Virtual by name.
+Keep PR24 Draft/stacked, persist new evidence/decisions to GitHub, and do not merge main.
+
+
+UPDATE2026-09-28: supervisor first independent review completed0Critical/2Important/1Minor; bothImportant fixed in one localRED/GREENwave (worker nonterminating error false success; failed cleanup false success). Supervisor12/12, probe7selftests/6arguments/1errornormalizationPASS. New CI pending. MinorM1null/singletonarrayJSONclassificationdeferred. Do not redo supervisor or prior9B/probereviews. Host effectiveRestricted, PS5.1x64; EpsonRC+/server stillopen; no native/policy changes. Next: verify newCI then resolve mandatorynativegates, not assume screenshot/continue authorizesnative. Currentlocalworktree work/EpsonRAsimulator-phase6d is materializedsnapshot; nevergitpush. Use explicitGitHubfiles commit/ref forcefalse onrealHEAD.
+
+
+UPDATE 2026-09-28 — current environment + host/init research
+- User now explicitly confirms: no Epson physical controller connected/reachable, Auto Connect OFF, RC+ closed.
+- Subsequent local Preflight reported exit0 with zero Epson processes.
+- Do NOT ask for those same preparation steps again unless the environment changes.
+- Starting PR24 head for this research: 076bac4e4ad921eb19798fbc8cd08e15a3af7696; WindowsCI47/run36386662292 SUCCESS; AndroidCI472/run36386662287 SUCCESS.
+- Research-only commit a19b07827bf1c3ddfb9fdd0a42fbaee4d78661c9 adds docs/superpowers/research/2026-09-28-native-host-init-observation.md. No Epson API load/native call was performed by this work.
+- Restricted finding: effective Windows PowerShell Restricted permits commands but blocks .ps1 script files. Project rule remains no execution-policy change/bypass. Therefore the reviewed PowerShell probe/supervisor cannot be the final local native host as-is.
+- Recommended native adaptation: compiled .NET Framework supervisor + compiled x86/x64 worker, preserving the existing one-worker/deadline/JSON/Virtual-only contracts rather than redoing Phase9B or the completed supervisor design.
+- Host compatibility must be staged: raw PE/CLR MetadataOnly first (no assembly load), then separately approved LoadOnly in matching-bitness disposable process, then separately approved InitializeObserve.
+- Epson documentation supports .NET Framework 4.5+ for RC+7.5-era .NET apps and says RCAPINet may be 32- or 64-bit. Installed Epson VS2019 C# sample targets x86, which is evidence but not proof of installed DLL bitness. Do not hardcode x86/x64 before reading raw PE metadata.
+- Initialization observation conclusion: no RCAPINet method can prove pre-first-access state without crossing the boundary. Solve observation externally with parent process/network baseline + worker stage markers. InitializeObserve must not call Inventory/GetCurrentConnectionInfo/Connect/project/robot/motion/task/I-O/SPEL.
+- Exact target remains C4 Sample by ordinal name only; connection number 2 remains evidence only, never an argument/fallback.
+- Native acceptance remains NOT RUN. No API load, Inventory or Connect until the exact command is presented and the user approves it.
+- Next design gate: user approval of the compiled-host adaptation (compiled supervisor + dual-bitness worker + MetadataOnly/LoadOnly/InitializeObserve gates). Only after that implement with TDD/synthetic CI. PR24 stays Draft; no merge.
+
+
+LATEST2026-09-28: actual remote baseline8b5349cbdf4bd283b378a65020555cdc481438fb contains compiledhost/initresearch. LocalrawPEread completed(noDLLload):RCAPINetMachine0x14c/CorFlags0x9/ILONLY/32BITREQUIREDfalse/32BITPREFERREDfalse =>AnyCPUmetadata. SHA2562fbabbb87d1d1473ef5bc268bdf81f17a25c91862a4d2b00f097a8ad2d18e924. Prepared docs/superpowers/plans/2026-09-28-compiled-native-research-host.md,3tasks metadata/policy,compiledsupervisor,stagedworker+externalobservation. Plan awaits userreview; preserve multiagentpreference. Noimplementation/nativeexecutionyet. Do not repeat userprep or priorreviews. Restricted solution usescompilednet48,notpolicybypass. NextreviewplanthenimplementwithTDD; exactLoadOnlycommand approvalONLYafterartifactsexist. Network/processsamplingispartial,nosafetyproof.
+
+
+AUTHORITATIVE RESUME UPDATE: User approved compiled plan and multiagent execution; do NOT ask plan approval again. Controller started Task1 RED85b2b1e CI52 confirmed missingtypes, localproductioncompile reported. Agent hit quota before officialGREEN/review. Before publication remote had concurrently advanced to b1ded812 (fix staged result contract), so localWIP was NOT published over remoteimplementation. Report preserved at docs/superpowers/reports/2026-09-28-compiled-host-task1.md in12ad6596. FIRST inspect actualremoteHEAD, latestcompiledprogress/code/CI, reconcile rather than replay Task1. Local isolatedsnapshot2a71110 contains historicalWIP; NEVERpush ancestry or blindly overwrite remote. Userenvironmentconfirmations persist; nativeNOTRUN and exactnativecommand approval separate. All new decisions/results must be documented inGitHub. Supervisor/9Bcompleted reviews not repeated.
+
+
+## Compiled supervisor protocol and event reconciliation (2026-09-28)
+
+Remote baseline7bbede773f8cac87fb50e172252f8144b5abfa02 had WindowsCI73/run36508211455 failing CS1503: StageEvent callbacks were passed to the old string marker helper. Updated the helper and cleanup regression to the typed monotonic event contract. Local cleanup regressions5/5 PASS.
+
+Supervisor request path was never forwarded; it instead passed an undocumented result-file argument. RED normal subprocess test reproduced this; corrected to --request/--events and final JSON on stdout. Read raw chunks with1MiB limit per stream (including newline-free output), bounded asynchronous pipe draining, timeout encompassing inherited pipes, owned-worker-only termination, strict JSON field types, status/cleanup consistency and stderr failure. Arbitrary worker error strings are not echoed.
+
+Local Roslyn C#7.3 standalone protocol regression14/14 PASS (normal, flood, contradiction, absent, nonzero, malformed, null, array, multiple, failed cleanup, stderr, wrong schema, timeout, inherited stdout). Updated MSTest fixture to the real protocol. Old-supervisor replay reproduced4 failures; previously accepted rejection paths alone were not proof of correct execution. Full CI pending this publication.
+
+Ruling: a flood fails immediately with OutputLimit/exit3 instead of waiting for exit124 — cap violations are known protocol failures, not elapsed deadlines — cost: callers distinguish these categories.
+
+Incident: an earlier local experimental test recursively launched itself on unknown arguments and temporarily exhausted Windows process/memory resources. No Epson code ran. Confirmed zero remaining test processes before resuming. Fixed harness rejects unknown arguments; inherited-pipe fixture is a finite leaf with no spawn path. The unsafe experimental version is not published.
+
+Remaining: synthetic sentinel-ownership regression, worker strict CLI/reflection adapter, real external process/TCP sampling and event correlation, observation-gap semantics, dual-bitness builds/output gates and independent compiled-adaptation review. Native acceptance NOT RUN; do not infer completion from synthetic success. No need to repeat user environmental confirmations; exact native command approval remains separate.
+
+Handoff prompt: Continue PR24 on research/virtual-controller-probe from verified actual remote HEAD. Read the newest ledger section first. Preserve materialized local ancestry; publish only intended files with real remote parent. Check exact-head CI before claiming GREEN. Finish remaining compiled-host tasks without native activation. Keep Draft and document every result in GitHub.
+
+
+## Verified supervisor checkpoint and handoff
+
+Code266c46af2c04c4da3e2f3c979cb98a206dc9e05e: WindowsCI74/run36512873197 SUCCESS; AndroidCI499/run36512873406 SUCCESS. Follow-up adds sentinel-survival regression and a final output-cap recheck after asynchronous reader completion (prevents a cap flag race), plus valid-JSON-prefix/oversized-whitespace fixture. Local standalone suite16/16 PASS and cleanup suite5/5 PASS. Full CI for this follow-up must be checked by exact remote HEAD. git diff --check exit0; only line-ending conversion warnings.
+
+Account check at handoff:94% of five-hour window used,72% weekly; not an exhausted quota claim. No reset credit was used. Preserve this checkpoint before continuing.
+
+Next concrete work: verify latest CI; inspect approved compiled plan against current code; implement strict worker CLI, installed stage-restricted reflection adapter and real external process/TCP/event observation; resolve observation gaps and rename misleading type Ordinal fields; build x86/x64 outputs with proprietary-free gate; fresh compiled-adaptation review. Do not repeat completed PowerShell/9B reviews. Native adapter and CLI remain intentionally disabled until implementation/tests complete. No Epson native execution has occurred or is authorized by this checkpoint.
+
+Resume prompt: Continue EpsonRAsimulator in Youteach-org/EpsonRAsimulator, PR24 Draft, research/virtual-controller-probe stacked on PR22. Verify actual remote HEAD and CI first. Read newest sections of docs/superpowers/progress/2026-09-27-virtual-controller-probe.md and outputs/handoff-epsonrasimulator.txt, then execute the remaining approved compiled-native-host plan inline. Publish explicit files with real remote parent, never push materialized local ancestry. Preserve exact C4 Sample name, no numeric/default fallback. User already confirmed Auto Connect OFF, RC+ closed and no physical controller; do not ask again without changed evidence. Exact native LoadOnly command needs separate approval after synthetic completion. Document changes, tests, rulings and handoff in GitHub. Monitor actual quota; a subagent error alone does not mean global quota exhaustion.
+
+
+## Connection identity contract correction — 2026-09-28
+
+- RED `d6bd5e5582e009343ab99b49e56ec73fd3f6ee37` proved the staged worker still conflated connection number with controller type through the misleading `Ordinal=3` field.
+- Rev20 distinguishes `ConnectionNumber` from `ConnectionType`; Virtual eligibility is type number 3. Connection number is diagnostic evidence only and is never a selection/Connect argument.
+- GREEN changed the contract to `ConnectionNumber`, `TypeNumber`, `TypeName`, `EligibleConnectionNumber`, `EligibleTypeNumber`, and `PriorEligibleTypeNumber`. Connect eligibility now requires exact name `C4 Sample` plus type number 3, never a numeric connection selector.
+- Existing cleanup regressions were migrated without relaxing their assertions.
+- Verified at `0e33dd76371343d24e1334ae9b7d9997591cd3c3`: Windows Bridge CI 78 SUCCESS; Android CI 503 SUCCESS.
+- Ruling: connection number is evidence only; Virtual type number 3 is the eligibility discriminator. Cost if wrong: descriptor mapping would fail closed rather than permit a numeric/default fallback.
+- Native acceptance remains NOT RUN. No Epson assembly load, Initialize, Inventory or Connect occurred in this checkpoint.
+
+
+## Strict compiled worker + reflection adapter GREEN — 2026-09-28
+
+- RED behavior was verified in Windows Bridge CI 81 at `eb0e43dd5eb07f3f6df869f493dd1f9250300379`: 53 existing research tests passed and exactly 5 new worker/adapter tests failed because the compiled worker CLI still returned exit64 and `InstalledApiAdapter` was intentionally closed.
+- GREEN `9addd6944c4003e38fa900093756ee8eb3a95cf1` enables only the planned compiled interface: exact `--request <absolute-json> --events <absolute-private-file>`, strict request schema/types, one structured stdout result, private monotonic event JSONL, and a reflection adapter with no RCAPINet build reference.
+- Adapter reflection is restricted to installed `exe\\RCAPINet.dll`, exact type `RCAPINet.Spel`, writable int `ServerInstance`, and exact overloads `Initialize()`, `GetConnectionInfo()`, `Connect(string)`, `GetCurrentConnectionInfo()`, `Disconnect()`, `Dispose()`. `Connect(int)` and arbitrary methods/properties are not exposed.
+- CI 82 showed 57/58 passing; the sole failure occurred after successful adapter assertions because `Assembly.LoadFrom` keeps the synthetic fixture DLL locked in the MSTest AppDomain. Test cleanup was changed to best-effort only at `55ea9088208b05be82cb3977d2273b110bc8ce9b`; production behavior and assertions were unchanged.
+- Exact-head verification: Windows Bridge CI 83 SUCCESS; Android CI 508 SUCCESS.
+- All native-path tests use the repository's synthetic RCAPINet fixture. No Epson binary was loaded or copied into Git/CI output and no Epson native stage was executed.
+- Next: external process/TCP/event observation integration, then dual-bitness builds/output gates and final compiled-adaptation review.
+
+
+## Authoritative reconciliation before quota handoff
+
+Latest inspected remote449853479d7357676fc80584d95f06f1821cc68a is14commits beyond52e09cfc. WindowsCI88/run36521631745 and AndroidCI513/run36521631750 SUCCESS. It now contains strict worker CLI/reflection adapter, connection-number/type separation, ExternalObservation.cs and supervisor integration. Earlier statements that adapter/CLI are disabled are superseded. Do not repeat that implementation.
+
+Local observation follow-up was NOT published over these changes. Standalone tests reproduced4 failures against the older ObservationEvaluator (null sample fabricates delta; negative counts/reversed ticks accepted; Conclusive ambiguously suggests polling proves absence). Local candidate produced4/4PASS by nullable deltas and always-false Conclusive. But the new external observer ANDs Conclusive with event completeness and the supervisor consumes that contract; integrating the candidate without reviewing these consumers would change all native observation outcomes. Preserve as local WIP, not as completed remote correction.
+
+Review focus for next continuation: define separate usable sampled evidence versus proof of continuous absence; reject missing/negative/reversed samples without fabricated counts; examine event timestamps against baseline/sample range; process-path access failures and IPv6 coverage; observer sampling must not invalidate the supervisor deadline. Inspect actual new code/tests before choosing the contract and write integration RED/GREEN tests. Then dual-bitness builds/output gates and one independent compiled-adaptation review remain. Native execution still NOT RUN and separate exact-command approval required.
+
+Resume prompt: Continue Youteach-org/EpsonRAsimulator PR24 Draft on research/virtual-controller-probe. Verify actual HEAD/CI; read latest ledger and this handoff first. Latest inspected4498534 has WindowsCI88/AndroidCI513 GREEN and already implements worker/adapter/external observation. Reconcile local observation WIP against those new consumers before publishing it. Preserve real remote ancestry; never push local materialized history. Finish observation semantics/integration tests, x86/x64 build and proprietary-free output gates, then compiled-adaptation review. Do not redo9B/PowerShell reviews. No native Epson stage is authorized yet; no repeated environment questions without changed evidence. Document everything in GitHub and check real quota before stopping.
+
+
+## 2026-09-29 — Compiled host synthetic/build completion and final review
+
+- External observation integration checkpoint `449853479d7357676fc80584d95f06f1821cc68a` verified GREEN: Windows Bridge CI 88 SUCCESS and Android CI 513 SUCCESS.
+- Dual-bitness output gate followed TDD. RED `fe3ad9a6d3982d6ca821c78f9e748839ea001f4f` / Windows CI 91 passed the 62 research tests and then failed exactly with `Missing compiled worker output: x86`. GREEN added separate `PlatformTarget=x86` and `PlatformTarget=x64` builds into separate output folders. Windows CI 92 and Android CI 517 succeeded; the output gate rejected any RCAPINet.dll, SEIKO EPSON assembly or reference-assembly package.
+- Final compiled-adaptation review was a self-review because no general-purpose/subagent reviewer tool is available in this session. Review scope was only the compiled adaptation from baseline `500b584c`; earlier Phase9B and PowerShell reviews were not repeated.
+- Final review found three Important gaps:
+  1. `MetadataOnly` returned success without actually inspecting the installed PE/CLR image.
+  2. The parent normalized away the worker's detached metadata and Inventory eligibility fields.
+  3. Process-path access failures and missing IPv6 TCP coverage could be represented as complete observation.
+- One fix wave only, under TDD: RED `65557fefa54e461f18f2b06702959a833ed87ed7` / Windows CI 95 failed on the new evidence/coverage contracts. GREEN through `3977fb3e4f59d3b75e589035d15588c30ecaedcc` implements detached `PeImageInspector` execution in MetadataOnly with no assembly load; preserves normalized machine/corFlags/architecture and eligible name/connection-number/type-number through the supervisor; records process access gaps; samples both IPv4 and IPv6 owner tables; and makes those gaps non-conclusive.
+- Fresh verification at `3977fb3e4f59d3b75e589035d15588c30ecaedcc`: Windows Bridge CI 102 SUCCESS, Android CI 527 SUCCESS, readiness 36/36 PASS, research 65/65 PASS, x86 build PASS, x64 build PASS, proprietary-free output gate PASS, legacy probe/supervisor regression steps PASS.
+- CI 102 executable evidence for that exact code checkpoint:
+  - x86 worker SHA-256: `c9619842bd4ab4d028097b2ca1544a5e967832e5da280e753cd3ce7cc098395a`
+  - x64 worker SHA-256: `816df08b91699aa7aa13654051443a4a47c137533c68f912d876868f6101c31e`
+  - compiled supervisor SHA-256: `033c91d3bd7b8834081c567c529c4dfa620f4dfcd6a2f849a28e16585f56c677`
+  These hashes identify the CI 102 binaries from code checkpoint `3977fb3e`; a later docs-only commit may change SourceRevisionId/informational-version bytes, so the exact local binaries must be re-hashed immediately before a native run.
+- Ruling retained: connection number is diagnostic evidence only. Virtual eligibility is exact name `C4 Sample` plus connection type number 3. Never use connection number/default/last-used/physical fallback.
+- Ruling retained: process/TCP observation is partial evidence. It cannot prove absence of short-lived traffic or USB communication; any access/sampling/ownership/event gap remains `INCONCLUSIVE`.
+- Minor deferred: MSTest emits MSTEST0044 deprecation warnings for existing `DataTestMethod` usage in two synthetic test classes. No native or runtime behavior depends on this test-framework warning.
+
+### Proposed first native boundary — NOT EXECUTED
+
+Selected first compatibility experiment: x86 worker, because raw installed RCAPINet metadata is AnyCPU and Epson's installed C# sample targets x86. This is evidence, not proof; there is no automatic x64 retry.
+
+Proposed request body (not committed as an executable approval file):
+`{"stage":"LoadOnly","installRoot":"C:\\EpsonRC70","target":null,"serverInstance":null,"approved":true}`
+
+Proposed parent command after building the current reviewed sources locally:
+`windows-bridge\src\EpsonRa.Bridge.Research.Supervisor\bin\Release\net48\EpsonRa.Bridge.Research.Supervisor.exe --worker "windows-bridge\artifacts\compiled-worker\x86\EpsonRa.Bridge.Research.Worker.exe" --request "<absolute-path-to-reviewed-loadonly-request.json>" --timeout-seconds 30`
+
+Expected side effects of LoadOnly: create one disposable x86 worker, load the installed `C:\EpsonRC70\exe\RCAPINet.dll` (and resolve the exact RCAPINet.Spel type contract), emit normalized result, and exit. It must not construct Spel, set ServerInstance, Initialize, Inventory, Connect, select a project/robot, run motion/task/I-O/SPEL, or terminate shared Epson/RC+ processes. Timeout kills only the created worker and remains inconclusive with no automatic retry.
+
+Native status remains NOT RUN. No real Epson DLL load, InitializeObserve, Inventory or Connect was executed by this plan. The next action is an explicit user approval/rejection of this exact LoadOnly boundary; later InitializeObserve, Inventory and Connect each require separate approval.
+
+
+## Final independent-review verification and native-command gate
+
+Code986d7804d3a4472513068bab811bb17240501aec verified: WindowsCI105/run36532571730 SUCCESS, AndroidCI530/run36532571640 SUCCESS. Readiness36/36 and research77/77 PASS; both worker architectures build; proprietary/reference output gate PASS; legacy7self-tests,6argument regressions, native-error normalization and12PowerShell supervisor cases PASS.
+
+Fresh independent compiled review:0Critical,6Important,0newMinor; all6fixed in one observed RED/GREEN wave. Report: docs/superpowers/reports/2026-09-29-compiled-host-independent-review.md. No second review. Earlier self-review remains historical. Prior local always-false Conclusive candidate is superseded by the integrated compatibility contract and nullable invalid deltas.
+
+Local deterministic Roslyn builds also succeeded, with separate local hashes recorded in docs/superpowers/research/2026-09-29-loadonly-command.md. MetadataOnly ran through local compiled supervisor/x86 worker against installed bytes: exit0, machine332, corFlags9,AnyCpu; no assembly load. Output gate PASS; zero erc70/erc70PServer observed. The shell's first combined command ended1 only because its final Get-Process found no matches; the explicit MetadataOnly exit check passed, and a subsequent zero-process check exited0.
+
+Next action requires separate exact LoadOnly approval, not more implementation or repeated environment confirmations. Prepared local request outputs/compiled-reviewed/load-only.proposed.json and exact absolute-path command/hashes are in the command proposal. Do not execute until user approves that command/boundary. No real Epson DLL has been loaded. Keep PR24 Draft, stacked on PR22; no merge.
+
+Resume prompt: Read latest PR24 HEAD/CI, this handoff and docs/superpowers/research/2026-09-29-loadonly-command.md. Synthetic compiled host implementation/review/fixes are complete at986d7804 (Windows105/Android530GREEN). LoadOnly command is prepared but NOT executed; obtain or honor explicit approval for that exact boundary, recheck binary/request hashes before execution, no automatic retry. InitializeObserve/Inventory/Connect remain later separate approvals. Preserve all user environment confirmations and document results in GitHub. Never push materialized local ancestry.
+
+
+## 2026-09-29 — Approved LoadOnly executed once
+
+This update supersedes earlier NOT RUN / awaiting LoadOnly approval statements. The user approved the exact prepared command with “si”. Hashes of the reviewed binaries and request matched immediately before execution.
+
+At 19:20:38.9535806Z the x64 supervisor launched the approved x86 LoadOnly worker with a 30-second deadline. Completed in 893 ms, exit 0, worker exit 0, cleanup CONFIRMED, stderr 0 bytes. Before/after process checks found zero erc70/erc70PServer processes. No retry or x64 fallback occurred.
+
+Only installed assembly loading and RCAPINet.Spel type resolution were exercised. No Spel construction, ServerInstance assignment, Initialize, Inventory, Connect, project/robot/motion/task/I-O/SPEL operation was called. InitializeObserve, Inventory and Connect remain NOT EXECUTED and separately gated.
+
+Observation remains INCONCLUSIVE: before:Load and after:Load markers exist, EventTraceComplete=false, sample deltas=null. LoadOnly does not activate the full process/TCP observer. This is a narrow load-compatibility result, not proof of absent network/USB activity, implicit effects, initialization safety or Virtual connectivity. Cleanup CONFIRMED is the worker protocol result; no Spel instance required disposal.
+
+Report and normalized evidence: docs/superpowers/reports/2026-09-29-loadonly-result.md and docs/superpowers/research/evidence/2026-09-29-loadonly-{result,execution}.json.
+Implementation remains 986d7804; Windows CI105 / Android CI530 results apply to that implementation, not this documentation-only checkpoint.
+
+Next: prepare the exact InitializeObserve request/command and explicit unused ServerInstance selection under the approved plan; obtain its separate approval before execution. Do not repeat LoadOnly or existing environmental questions without changed evidence.
+
+Resume prompt: Continue Youteach-org/EpsonRAsimulator Draft PR24, research/virtual-controller-probe, stacked on PR22. Verify actual remote HEAD first and read the newest handoff entry. Compiled implementation/review is complete; approved native LoadOnly executed once successfully on 2026-09-29 (893 ms, exit 0), with INCONCLUSIVE external observation. Do not rerun it. Prepare the next InitializeObserve boundary and explicit unused ServerInstance; no later stage is approved. Preserve user confirmations and real remote ancestry, publish explicit files only, document results in GitHub, no main merge or proprietary binaries.
+
+
+## 2026-09-29 — Next native boundary prepared; progress accounting
+
+InitializeObserve request/command prepared, NOT EXECUTED: docs/superpowers/research/2026-09-29-initialize-observe-command.md. Proposes ServerInstance10, requiring confirmation it is unused/reserved by no other application and separate exact-command approval. Zero Epson processes observed at19:26:01Z; binary hashes unchanged. No repeat LoadOnly.
+
+Progress: compiled host implementation/review tasks3/3 complete (100% of that bounded implementation plan). Native acceptance1/4 stages complete (25% by equal stage count only); InitializeObserve, Inventory and Connect remain. These stages have unequal effort and unknown native compatibility outcomes; neither percentage measures total simulator completion or remaining time.
+
+Overall release percentage/ETA is not defensible from current documentation: ROADMAP mixes legacy product phases with shared-runtime phases and still names Phase8 as next while phase8 and9 ledgers record later implementation. Existing foundations cover runtime, source-preserving editor, simulated tasks/I-O/workcell, RC+ windows, shared VisualLab, persistence and bridge contracts/readiness. Remaining release work includes source-to-task execution mapping, native bridge/telemetry/product integration, Android device/provider acceptance, integration/regression validation and any chosen advanced tools/learning scope. No estimate in hours/days promised before that release scope is reconciled.
+
+Resume: verify actual PR24 HEAD, read latest handoff and InitializeObserve proposal. Honor explicit user approval only for its exact boundary and unused instance10; otherwise keep execution pending. Preserve current evidence and do not rerun completed implementation/reviews/LoadOnly.
+
+
+## 2026-09-29 — InitializeObserve approved, attempted once, INCONCLUSIVE
+
+User explicitly approved the exact InitializeObserve command and ServerInstance10/unused-instance question. All five binary/request SHA256 checks matched; immediate precheck found zero erc70/erc70PServer. Started the approved x64 supervisor/x86 worker once with timeout30 seconds at approximately19:29:16Z. No retry or Inventory/Connect.
+
+At19:31:02.8849535Z the launching shell session92996 was still pending, stdout/stderr files were zero bytes, no matching EpsonRa supervisor/worker appeared in Get-Process, and erc70 PID19444 remained (start19:29:20Z). No native exit code or normalized supervisor result has been captured. These observations do NOT prove the internal timeout succeeded or that Initialize/Dispose returned. CleanupUNKNOWN; stage acceptanceINCONCLUSIVE. Do not mark2/4 native stages complete: only LoadOnly is accepted.
+
+Requested user to close RC+ manually and notify us; never terminate the shared Epson process automatically. A read-only Win32_Process CIM query was denied; no escalation or endpoint data collection occurred. Capture/inherited-handle behavior is only a hypothesis, not a diagnosed cause. Next: after manual RC+ closure, poll existing session92996 and inspect existing result/execution files. Preserve whatever it returns; do not relaunch. If JSON remains absent, investigate supervisor/outer-shell capture with synthetic tests before proposing another separately approved native attempt.
+
+Local evidence root: work/EpsonRAsimulator-phase6d/outputs/compiled-reviewed; initialize-observe.pending.json is a timestamped observation, not worker output. initialize-observe.execution.json does not yet exist. Exact prepared command/hashes are in docs/superpowers/research/2026-09-29-initialize-observe-command.md.
+
+Quota checked: five-hour56% used, weekly98% used; ordinaryUsageAllowed=true. No reset credit used. Handoff is precautionary, not a claim that quota is exhausted.
+
+HANDOFF PROMPT:
+Continue EpsonRAsimulator, Youteach-org/EpsonRAsimulator Draft PR24 on research/virtual-controller-probe, stacked on PR22. Verify actual remote HEAD and read newest ledger/handoff first. Compiled host implementation/review is complete at986d7804; LoadOnly passed once. User approved InitializeObserve with instance10; it was attempted ONCE and is currently INCONCLUSIVE, not permission to retry. Shell session92996 is awaiting capture; at19:31Z erc70 PID19444 remained, supervisor/worker not visible, output empty. User was asked to close RC+ manually. First check that response, then poll the existing session/read existing evidence; never automatically kill Epson processes. Do not run Inventory/Connect. Diagnose any remaining capture failure using synthetic tests. Preserve user environmental confirmations and all evidence, document in GitHub using fresh remote parent/forcefalse, never push local materialized history or merge main. Weekly quota98% used at last check; preserve handoff before exhaustion.
+
+
+## 2026-09-29 19:40Z — User correction and read-only follow-up
+
+User states: "nunca estuvo abierto. cerrado." Preserve this confirmation: the earlier assertion that an RC+ window was open was unsupported; process presence alone does not prove an open UI. At 19:40:13Z Get-Process observed erc70 PID19444, started 19:29:20Z, Responding=true, MainWindowHandle=0 and MainWindowTitle empty. No EpsonRa supervisor/worker matched. This distinguishes a remaining process from a visible application window; it does not establish its role or ownership.
+
+Existing result JSON and stderr remain zero bytes, unchanged since 19:29:16Z; execution JSON is absent. Polling original session92996 from the continuation chat returned Unknown process id92996, so its completion/exit cannot be recovered through that session handle here. Do not claim it is still waiting based on an inaccessible handle. Native result remains INCONCLUSIVE; cleanup UNKNOWN. No native retry, Inventory, Connect or process termination occurred.
+
+Manual UI closure is no longer an outstanding user confirmation. Do not repeatedly ask the user to close a window they report was never open. Next investigation concerns existing evidence and synthetic supervisor/outer-capture behavior only. Inherited handles remain a hypothesis, not a diagnosed root cause. Preserve original empty evidence; do not manufacture a worker result or native exit code. PR24 remains Draft/stacked; no merge.
+
+
+## 2026-09-29 — Durable capture correction, synthetic-only
+
+Confirmed an outer PowerShell capture weakness using finite synthetic descendants: inherited case took5268ms despite timeout2; normal287ms, simple timeout2124ms. Native cause remains unproven. Added optional CreateNew --result-file plus tested hidden ShellExecute/finite WaitForExit launch; local durable4/4, protocol16/16, observer deadline4/4 PASS. Focused independent review0Critical/0Important. Full CI pending. See docs/superpowers/reports/2026-09-29-durable-capture.md. Original Epson binaries/evidence remain unchanged; no retry/Inventory/Connect or process termination. Manual UI closure is already confirmed. Do not stop at asking to close RC+ again, and do not treat synthetic success as native acceptance. User currently prohibits another native run. Keep Draft/stacked, no merge.
+
+
+## Verified checkpoint
+
+Implementation commit3571ed6e3555c0d8b4be59fe96f40b3e7ec3aa72: Windows Bridge CI111/run36625112194 SUCCESS and Android CI536/run36625112183 SUCCESS. Windows logs confirm readiness36/36, research78/78 (including durable capture), both worker architectures and output gates. Existing MSTEST0044 warnings remain; no new native stage was run.
+
+Read-only check at2026-09-29T20:16:22.8671738Z found zero erc70/erc70PServer/EpsonRa processes. Original native result and stderr still0bytes, execution file absent. No claim about how the prior erc70 process exited; no agent termination occurred. Application error events1000/1001/1026 in19:28:30–19:32:30Z contained no matching EpsonRa/erc70/RCAPINet entry. Absence of matching events is not proof of absence of a crash. The original native result remains unrecoverable/inconclusive, cleanupUNKNOWN. Follow-up evidence: docs/superpowers/research/evidence/2026-09-29-initialize-observe-followup.json.
+
+Next: capture correction complete and exact-code CI green. No authorized native execution remains: user prohibits retry/Inventory/Connect. Do not ask to close RC+ again; no processes detected at last check. Any further native attempt requires a newly authorized boundary and separately reviewed command/hashes; existing original binaries remain untouched. Never treat the synthetic capture correction as native acceptance or claim2/4 native stages complete.
+
+
+## 2026-09-29 — Durable InitializeObserve retry preparation, NOT EXECUTED
+
+Prepared docs/superpowers/research/2026-09-29-initialize-observe-retry-preparation.md at commit cee171daea7e87d829b6be696fa09196877fd475.
+
+Direct compare 986d7804d3a4472513068bab811bb17240501aec..3571ed6e3555c0d8b4be59fe96f40b3e7ec3aa72 confirms the native worker and EpsonRa.Bridge.Research library source did not change during the durable-capture correction. Preserve the originally approved local x86 worker SHA256 0B17E31934684641E49D428051B250D8011D9503A6A010E4C177D6BCB8F61FF4, Research DLL SHA256 ACED9B8F2AAD28EDB8BD78F1D8FA134FF922A71AD0BF49BBAD794CC71364EDCF, and InitializeObserve request SHA256 410644255667212114058C4C20B8F9917058190E5073620388A56821BBC5712B. The old supervisor SHA256 FAE1DDEBB4725FEBDCB940A3DC40A9F95DB6A29646B251B79F1018D4C650337A must NOT be reused for another attempt because it predates --result-file.
+
+Current exact-head verification before this docs checkpoint: Windows Bridge CI112/run36625487642 SUCCESS (readiness36/36, research78/78) and Android CI537/run36625487500 SUCCESS. CI artifact hashes are reference evidence only. CI105 produced hashes that did not match the locally approved binaries, so never substitute CI hashes for local native-approval hashes.
+
+Remaining blocker before proposing another exact native command: recover the locally rebuilt durable supervisor from the continuation workspace's work/capture-diagnosis area and record its absolute path, SHA256, file length, and last-write timestamp. If that file cannot be recovered, build a fresh supervisor from reviewed source and treat it as a new artifact with a new hash/review. This chat runtime cannot access that Windows workspace and must not fabricate the hash.
+
+No native retry, Inventory, Connect, Epson-process termination, or merge was executed or authorized by this preparation. The first InitializeObserve result remains INCONCLUSIVE with cleanup UNKNOWN. Original evidence stays immutable. Any future retry must use a new result path, the same InitializeObserve native semantics, and the durable ShellExecute/finite-wait capture path; separate exact-command user approval is still required.
+
+
+## Sealed supervisor placed locally; native command ready but NOT AUTHORIZED
+
+Downloaded artifact11063812312; ZIP C2D723A9... and supervisor4A43FCBB... verified. New absolute local root C:\Users\BATMAN\Documents\Codex\2026-09-29\contin-a-epsonrasimulator-desde-el-ltimo\work\native-capture-sealed. Preserved worker0B17E319..., Research DLLACED9B8F... in both x86/x64 directories, original request41064425..., sealed .config05109998.... No original binary or evidence replacement.
+
+Preparation incident: first synthetic run omitted the Research DLL in x64, exceeded outer wait; user screenshot showed supervisor exception0xe0434352. After placing the preserved DLL next to the supervisor, durable synthetic4/4PASS (normal244ms,inherited2122ms,timeout2125ms,evidence-preservation). Final exact outer command tested with only synthetic worker/path/request substitutions at2026-09-30T01:06:24Z: exit0,378byteJSON and durable receipt. No native run or Epson-process termination. Screenshot alone does not identify missing DLL; record incident honestly.
+
+Exact proposal with hashes, request, hidden independent launch, receipt-before-start and30s/40s bounds: docs/superpowers/research/2026-09-29-initialize-observe-v2-proposal.md. Status: explicit approval for ONE second InitializeObserve attempt is still required because user earlier prohibited any repetition. A general sigue has not been treated as revoking it. Inventory/Connect remain prohibited. Do not repeat preparation, LoadOnly, environment questions or ask to close RC+ again. Native attempt1 remains INCONCLUSIVE/cleanupUNKNOWN. Keep Draft/stacked/no merge.
+
+
+## 2026-09-30 UTC — Authorized second InitializeObserve executed once, TIMEOUT
+
+User explicitly approved ONE second attempt with si. Exact sealed command and all6hash/preprocess gates passed; start04:58:45.5893900Z, supervisorPID26056. Durable result181bytes captured at04:59:15.7886424Z; observed supervisor exit124, INCONCLUSIVE_TIMEOUT, WorkerExitCode=-1, WorkerResult=null, CleanupUNKNOWN, Observation=null. Outer wait completed; wrapper exit0 is not native success. Capture fixed, initialization not accepted. No third attempt authorized.
+
+At04:59:34Z erc70PID9880 remained (start04:58:50Z, window handle657884, empty title); no matching research supervisor/worker. No shared Epson process terminated. Do not infer visible UI from handle/process alone or repeat the native test to obtain missing markers. Original attempt evidence preserved. Inventory/ConnectNOTRUN. Only LoadOnly accepted. Next safe work: source/synthetic investigation of stage-evidence loss on timeout; further native progression is stopped. Report docs/superpowers/reports/2026-09-30-initialize-observe-v2-result.md and raw evidence in docs/superpowers/research/evidence/2026-09-30-initialize-observe-v2*.json. Keep Draft/stacked/no merge.
+
+
+## Post-timeout stage-evidence retention fix — synthetic only
+
+Diagnosed why attempt2 has no per-stage trace: supervisor finally deletes its temporary events even on timeout. Added durable .events.jsonl sidecar in --result-file mode, optional fully-qualified/nonexisting EventsPath, and result StageEventsPath. Existing worker CreateNew unchanged; no post-deadline read/copy and no promotion of partial evidence to success/cleanup/observation. Default stdout/temp behavior unchanged. Local retained-events4/4, durable4/4, protocol16/16, deadline4/4PASS; focused review no blocking issues. FullCI pending. Report docs/superpowers/reports/2026-09-30-retained-stage-evidence.md. No third native execution or Inventory/Connect; prior approval consumed. erc70PID9880 last observed, not killed. Preserve both attempts and sealed binaries; no merge.
+
+
+## Verified exact-code checkpoint and sealed artifact
+
+Code bdd7f08dbd95c4f0161c98b4c41c8fb6a7c90ad4: Windows Bridge CI121/run36738644757 SUCCESS; Android CI546/run36738644672 SUCCESS. Readiness36/36, research79/79 in main job, research79/79 again on exact PR head in sealing job; both worker architectures, output gates and legacy regressions passed.
+
+Sealed artifact11109775310, ZIP SHA2563071CA8FC6D4A42DD11CFAC62BCF048465CA6B10BAD9222F5E5A92D8209C762B. Manifest sourceCommit verified against bdd7f08d; supervisor SHA25670B70AC833C008D478C96696E49E378140EC1EB4935C9BEF157840B63235A044, length28160bytes. Downloaded and verified independently. Local path C:\Users\BATMAN\Documents\Codex\2026-09-29\contin-a-epsonrasimulator-desde-el-ltimo\work\sealed-retained-events\extracted. Added only preserved reviewed Research DLLACED9B8F... beside this supervisor before testing; no missing-dependency launch. This artifact itself passed retained-events4/4 and durable-capture4/4 against the synthetic fixture. No native worker launch and no replacement of earlier attempt artifacts.
+
+Read-only process check at2026-09-30T15:46:17Z still found erc70PID9880, empty title. It was not terminated. This is a process observation, not proof of visible RC+ UI. No third InitializeObserve/Inventory/Connect authorized or executed. Before another proposed native attempt, residual process state must be resolved without automatic shared-process termination and a new exact command/approval prepared. Do not reuse old approval or claim the native timeout's cause is fixed. Only the evidence-retention defect is corrected.
+
+
+## Latest authorized third attempt
+
+# InitializeObserve attempt 3 — retained stage trace
+
+User expanded authorization: “pues si se necesitan esos intentos hazlos”. Separately approved closing only residual erc70 PID9880 with exact start 2026-09-30T04:58:50.4271745Z. Identity was verified and that process terminated; immediate process precheck was empty. This permission does not authorize termination of future/shared Epson processes.
+
+One diagnostic attempt started 2026-09-30T18:22:31.0884575Z, supervisor PID19020, instance10, original x86 worker/request/core preserved. Only supervisor changed to sealed SHA25670B70AC833C008D478C96696E49E378140EC1EB4935C9BEF157840B63235A044 (bdd7f08d, Windows121/Android546 verified). All six hashes matched. Hidden ShellExecute, no redirected streams; internal30s and outer40s; CreateNew execution receipt before launch. New isolated work/native-capture-v3 directory; previous evidence unchanged.
+
+Observed exit124, INCONCLUSIVE_TIMEOUT, CleanupUNKNOWN, WorkerResult=null, Observation=null. Result364bytes. Seven complete JSONL records: before/after Load, before/after Construct, before/after SetServerInstance, before Initialize. No after Initialize or Dispose marker. This localizes the last observed operation to Initialize; it does not prove its internal cause, lack of implicit connections, or successful cleanup. No Inventory or Connect or project/robot/motion/task/I-O/SPEL call.
+
+Residual erc70 PID29976 started2026-09-30T18:22:35.6388045Z; not terminated. Empty window title does not establish a visible UI. Application event query around the attempt returned no matching Epson crash record; absence is not proof of no crash.
+
+Installed Epson C# WinForms sample uses STAThread and calls Initialize during Form_Load; current console worker does not set STA. This is a host difference, not an established requirement or diagnosed cause. Rev20 Initialize documentation says loading may take several seconds and starts a server according to ServerInstance. Reviewed threading examples do not establish STA as mandatory. Do not change apartment and timeout simultaneously or run the installed sample (it loads projects).
+
+Evidence SHA256:
+- result:05DFB1962818B2C887E9BF1FFC4D34222C407AD151E400CD6034C6B051A6417E
+- execution:D6FC481EF4E9BDBD6888D1DE5443804F5DE519D638AEF9B118DAAD5688ED861B
+- events:8E116949467A79E3DC9610F52160B1E7012CCF308BF9E55456EFC8B49C93725E
+
+Only LoadOnly remains accepted. Keep PR24 Draft/stacked, no merge. Next work: inspect host/startup requirements and residual process state before selecting another discriminating experiment. User authorization permits necessary diagnostic attempts, not blind retries; Inventory/Connect remain gated. Process closure approval covered PID9880 only.
+
+
+Follow-up: user explicitly approved closure of residual PID29976 only. Exact name/start identity verified before Stop-Process; subsequent process precheck found zero Epson/research processes. Both closures were specifically authorized. No fourth attempt executed.
+
+
+## Latest: STA-host diagnostic did not resolve Initialize
+
+# InitializeObserve attempt4: STA diagnostic host
+
+## Hypothesis and bounded experiment
+The installed Epson VS2019 C# sample uses STAThread and WinForms. Original console worker uses MTA. Test whether STA host is sufficient to avoid the observed Initialize timeout; this is not a claimed fix. User authorized necessary diagnostic attempts. Previous residual PID29976 was specifically authorized closed; zero Epson/research processes before this launch.
+
+Added a diagnostic x86 StaHost that synchronously reflection-invokes the original worker entrypoint. Worker0B17E319..., coreACED9B8F..., request41064425..., sealed supervisor70B70AC8... remain unchanged. HostSHA25614F37B280B20BEA4D1E72729495BBB80252A4CE8443DC7BA3612F1A7DE7A07D9. Native semantics remain Load/Construct/ServerInstance10/Initialize/Dispose. Supervisor owns the host PID; no nested worker process. Fresh native-sta-v4 directory, CreateNew receipt/result,30s/40s deadlines, no output redirection in outer launch.
+
+## Synthetic characterization and review
+Proprietary-free fake API requires STA/x86/instance10. Original worker failed exit3 and recorded Initialize:MTA:32, then Dispose. Through StaHost it passed exit0 with Initialize:STA:32 and Dispose. Original invalid arguments still return64. Full supervisor launch of the synthetic request returned workerSuccess=true, CleanupCONFIRMED, ten stage markers; overall INCONCLUSIVE_OBSERVATION/3 because external observation was inconclusive. Do not report this as overall supervisor acceptance. Focused independent review found no important/critical blockers. Limitation: host also changes process/entry assembly identity; this is not a pure isolated apartment-state proof, and no WinForms message loop is introduced.
+
+## Native result
+One native attempt started2026-09-30T18:45:55.9099966Z; supervisorPID26640, hostPID15640. Supervisor exited124 with INCONCLUSIVE_TIMEOUT, WorkerResult=null, CleanupUNKNOWN, Observation=null. Seven retained markers: before/after Load, Construct, SetServerInstance; before Initialize only. STA host did not resolve the timeout. Do not promote this diagnostic host into production as a fix.
+
+Residual erc70PID28308 started2026-09-30T18:46:00.4685341Z. Computer Use list_windows returned no targetable Epson window; no window activated, no app launched or input sent. This does not prove no hidden window/dialog. Closure approval requested specifically for this residual; pending at report preparation.
+
+Local raw SHA256:
+- result D8FBB8DF2F70A562D9BEA290FB30DF78B27C8B61FAAC83D90D5F93AF1262DBEB
+- receipt06AF0AC91D000CE86D69FCF1CE3E3452FB113A73F6826DE5ECAED186F191C227
+- events81753B9F1EB0F421AC006AC5B4834E30E41BE6E52F0913468FAD7965CF7FE2DA
+GitHub text copies normalize terminal whitespace; these hashes refer to preserved local raw artifacts.
+
+No Inventory/Connect/project/robot/motion/task/I-O/SPEL operations. No fifth attempt. Only LoadOnly accepted. PR remains Draft/stacked, no merge. Next hypothesis to evaluate is native host startup/message-loop context, not further identical STA retries. Native root cause still unknown.
+
+Follow-up: user explicitly authorized closing PID28308 only. Verified exact process name/start; terminated that residual. Immediate process check found no Epson/research process. Do not reuse this approval for future processes.
