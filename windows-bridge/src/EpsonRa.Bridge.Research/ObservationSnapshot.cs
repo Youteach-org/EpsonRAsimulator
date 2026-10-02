@@ -25,6 +25,7 @@ namespace EpsonRa.Bridge.Research
         public int? UnrelatedTcpDelta { get; set; }
         public string EndpointDetails { get; set; }
         public string Limitation { get; set; }
+        public string[] InconclusiveReasons { get; set; }
         public bool EventTraceComplete { get; set; }
         public int EventCount { get; set; }
         public string[] StageEvents { get; set; }
@@ -43,19 +44,20 @@ namespace EpsonRa.Bridge.Research
 
         public static ObservationAssessment Compare(ObservationSnapshot before, ObservationSnapshot after)
         {
-            var conclusive =
-                Valid(before) && Valid(after) &&
-                after.MonotonicTicks >= before.MonotonicTicks &&
-                before.ProcessSampleAvailable &&
-                after.ProcessSampleAvailable &&
-                before.TcpSampleAvailable &&
-                after.TcpSampleAvailable &&
-                before.TcpIpv6SampleAvailable &&
-                after.TcpIpv6SampleAvailable &&
-                before.ProcessAccessGapCount == 0 &&
-                after.ProcessAccessGapCount == 0 &&
-                before.OwnershipUnambiguous &&
-                after.OwnershipUnambiguous;
+            var reasons = new System.Collections.Generic.List<string>();
+            var beforeValid = Valid(before);
+            var afterValid = Valid(after);
+
+            if (!beforeValid) reasons.Add("BEFORE_SNAPSHOT_INVALID");
+            if (!afterValid) reasons.Add("AFTER_SNAPSHOT_INVALID");
+
+            if (beforeValid && afterValid && after.MonotonicTicks < before.MonotonicTicks)
+                reasons.Add("SNAPSHOT_WINDOW_INVALID");
+
+            AddSnapshotReasons(reasons, before, "BEFORE");
+            AddSnapshotReasons(reasons, after, "AFTER");
+
+            var conclusive = reasons.Count == 0;
 
             return new ObservationAssessment
             {
@@ -66,8 +68,29 @@ namespace EpsonRa.Bridge.Research
                 UnrelatedProcessDelta = conclusive ? (int?)(after.UnrelatedProcessCount - before.UnrelatedProcessCount) : null,
                 UnrelatedTcpDelta = conclusive ? (int?)(after.UnrelatedTcpCount - before.UnrelatedTcpCount) : null,
                 EndpointDetails = null,
-                Limitation = PollingLimitation
+                Limitation = PollingLimitation,
+                InconclusiveReasons = reasons.ToArray()
             };
+        }
+
+        private static void AddSnapshotReasons(
+            System.Collections.Generic.List<string> reasons,
+            ObservationSnapshot sample,
+            string prefix)
+        {
+            if (sample == null)
+                return;
+
+            if (!sample.ProcessSampleAvailable)
+                reasons.Add(prefix + "_PROCESS_SAMPLE_UNAVAILABLE");
+            if (!sample.TcpSampleAvailable)
+                reasons.Add(prefix + "_TCP_SAMPLE_UNAVAILABLE");
+            if (!sample.TcpIpv6SampleAvailable)
+                reasons.Add(prefix + "_TCP_IPV6_SAMPLE_UNAVAILABLE");
+            if (sample.ProcessAccessGapCount > 0)
+                reasons.Add(prefix + "_PROCESS_ACCESS_GAPS:" + sample.ProcessAccessGapCount);
+            if (!sample.OwnershipUnambiguous)
+                reasons.Add(prefix + "_OWNERSHIP_AMBIGUOUS");
         }
 
         private static bool Valid(ObservationSnapshot sample)

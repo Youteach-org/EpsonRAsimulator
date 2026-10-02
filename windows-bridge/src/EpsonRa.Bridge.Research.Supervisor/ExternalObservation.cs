@@ -61,6 +61,13 @@ namespace EpsonRa.Bridge.Research.Supervisor
             assessment.EventCount = events == null ? 0 : events.Count;
             assessment.StageEvents = events == null ? new string[0] : events.ConvertAll(x => x.Name).ToArray();
             assessment.EventTraceComplete = complete;
+            if (!complete)
+            {
+                var reasons = new List<string>(assessment.InconclusiveReasons ?? new string[0]);
+                if (!reasons.Contains("EVENT_TRACE_INCOMPLETE"))
+                    reasons.Add("EVENT_TRACE_INCOMPLETE");
+                assessment.InconclusiveReasons = reasons.ToArray();
+            }
             assessment.Conclusive = assessment.Conclusive && complete;
             assessment.Status = assessment.Conclusive ? "OBSERVED" : "INCONCLUSIVE";
             return assessment;
