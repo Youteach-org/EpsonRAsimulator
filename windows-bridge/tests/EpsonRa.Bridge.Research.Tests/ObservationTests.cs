@@ -113,6 +113,25 @@ namespace EpsonRa.Bridge.Research.Tests
         }
 
         [TestMethod]
+        public void ProcessAccessGapReasonsExposePrivacyPreservingFailureCategories()
+        {
+            var before = Snapshot(0, 0, 0, 0, true, true, true);
+            var after = Snapshot(0, 0, 0, 0, true, true, true);
+            before.ProcessAccessGapCount = 5;
+            before.ProcessAccessDeniedCount = 3;
+            before.ProcessExitedCount = 1;
+            before.ProcessUnsupportedCount = 1;
+
+            var result = ObservationEvaluator.Compare(before, after);
+
+            CollectionAssert.Contains(result.InconclusiveReasons, "BEFORE_PROCESS_ACCESS_GAPS:5");
+            CollectionAssert.Contains(result.InconclusiveReasons, "BEFORE_PROCESS_ACCESS_DENIED:3");
+            CollectionAssert.Contains(result.InconclusiveReasons, "BEFORE_PROCESS_EXITED:1");
+            CollectionAssert.Contains(result.InconclusiveReasons, "BEFORE_PROCESS_UNSUPPORTED:1");
+            Assert.IsFalse(result.Conclusive);
+        }
+
+        [TestMethod]
         public void ObservedAssessmentHasNoInconclusiveReasons()
         {
             var result = ObservationEvaluator.Compare(
