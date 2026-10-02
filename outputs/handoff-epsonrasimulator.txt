@@ -1,3 +1,9 @@
+LATEST — NORMAL DESKTOP PREFLIGHT CONFIRMED 2026-10-02T14:18:13.5924934Z
+
+User manually ran DesktopContextPreflight.exe in normal desktop session. Output: restrictedToken=false, hkcuSoftwareWritableHandle=true, handleErrorType=none, languageKeyExists=true, registryWritesPerformed=false, epsonStarted=false. Compare restricted-context baseline: true/false/SecurityException/languageKeyExists=false. This confirms the two execution contexts expose different registry access/profile state. Attempt7 startup UnauthorizedAccessException is established; a successful Initialize in the normal context is NOT yet established. Native count remains7. No Inventory/Connect, registry/ACL/security change or upgrade.
+
+Next: prepare and review a bounded one-shot InitializeObserve launcher for explicit user execution in normal desktop context, including fresh evidence, hashes, original stage boundaries, clean process baseline, and no automatic residual termination. Do not invoke an alternate tool to escape the sandbox. Desktop preflight is not native acceptance or authorization for additional stages.
+
 LATEST VERIFIED — REGISTRY STARTUP FAILURE FOUND
 
 # Confirmed startup failure: registry access denied during language preferences
