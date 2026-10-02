@@ -1,3 +1,15 @@
+LATEST — PROCESS-PATH ACCESS GAPS NOW CLASSIFIED
+
+Checkpoint2026-10-02. No Epson native execution occurred; native count remains8. V8 Initialize/Dispose remains COMPLETED with Cleanup CONFIRMED. External observation remains unaccepted; Inventory/Connect remain unexecuted.
+
+Test checkpoint30d1d92aef89a757e20ca211b20a6732254d1cfa requires privacy-preserving process-gap categories. GREEN154379ac5ec17db1d295a66a279b1f0303554c8b classifies existing Process.MainModule failures as access-denied, exited/unavailable, unsupported, module-unavailable or other and surfaces aggregate counts through InconclusiveReasons. It does not record process IDs/paths/endpoints and does not use QueryFullProcessImageName as an acceptance fallback.
+
+Important stricter correction: Process.MainModule returning null/empty is now a process-access gap (PROCESS_MODULE_UNAVAILABLE) instead of being treated as a successfully readable non-Epson process. This is fail-closed and may increase gaps; it does not relax the zero-gap gate.
+
+Verification: Windows Bridge CI199/run37023748932 SUCCESS including exact-head sealing; Android CI624/run37023749082 SUCCESS. PR24 remains Draft/stacked and unmerged.
+
+No repeated desktop/native diagnostic is justified merely to populate the new categories. The implementation is ready for a future already-justified observation, but it is not authorization for attempt9, Inventory or Connect. Any observation-scope/acceptance change still requires a separate design.
+
 LATEST — EXPLICIT OBSERVATION FAILURE REASONS IMPLEMENTED
 
 Checkpoint2026-10-02 after normal-desktop observer/process-access diagnosis. No additional Epson native execution occurred. Native count remains8. V8 Initialize/Dispose remains COMPLETED with Cleanup CONFIRMED; overall observation gate remains UNACCEPTED. Inventory/Connect remain unexecuted.
