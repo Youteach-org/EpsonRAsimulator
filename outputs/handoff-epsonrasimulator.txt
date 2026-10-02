@@ -1,3 +1,14 @@
+LATEST — OBSERVATION-ONLY DIAGNOSTIC PREPARED; NO NINTH NATIVE ATTEMPT
+
+V8 evidence cannot identify the particular observation gate because raw before/after flags were not serialized. Current source comparison requires both snapshots valid, ordered ticks, process/TCP/IPv6 flags true, unambiguous ownership and zero process path access gaps. Its generic polling limitation appears regardless of which prerequisite failed. Do not infer v8's exact gap from earlier runs.
+
+Prepared DesktopObservationOnly.exe under local work/observer-diagnosis/sealed, SHA2561C12FDA0D3F60809CCBD210735B5548321BE0D336458DFC5043B8A2E54BE39C1. Verifies exact sealed supervisor763458C8/coreACED hashes, uses public monitor factory and registers only its own PID as synthetic worker identity. Three polls plus disposal, aggregate flags/counts and Compare output saved to timestamped outputs/observer-only-*.json. No Epson API loaded or process launched, no connection/controller calls, no writes except local report. Source committed with this checkpoint; do not relocate exe away from its sealed dependencies.
+
+Actual restricted-context validation completed in20279ms: process/TCP/IPv6/ownership flags true; ProcessAccessGapCount before251/after252; owned baseline0/0; comparison INCONCLUSIVE. No Epson/research process afterward. This identifies the gate for this separate diagnostic only. EventTraceComplete=false/count0 here is expected because no native stage ran; do not treat it as v8 marker loss. V8 still has all ten markers, native success and confirmed cleanup.
+
+Next user action: run DesktopObservationOnly.exe manually once from normal non-admin desktop, wait about20–30seconds for console closure and say listo. The agent then reads aggregate output and diagnoses the normal-desktop observer separately. Do not repeat DesktopInitializeOnce, change permissions or relax observation policy. Native count8, Inventory/Connect not executed.
+
+
 LATEST VERIFIED — V8 NATIVE INITIALIZATION COMPLETED
 
 # V8: Initialize and Dispose completed; external observation inconclusive
