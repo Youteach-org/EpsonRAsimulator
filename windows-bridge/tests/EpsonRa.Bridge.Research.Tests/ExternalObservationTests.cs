@@ -70,6 +70,21 @@ namespace EpsonRa.Bridge.Research.Tests
         }
 
         [TestMethod]
+        public void IncompleteEventTraceAddsExplicitReason()
+        {
+            var missing = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".jsonl");
+            var result = ExternalObservation.Evaluate(
+                Snapshot(0, 0, 0, 0, true, true, true),
+                Snapshot(0, 0, 0, 0, true, true, true),
+                missing,
+                Stage.InitializeObserve);
+
+            Assert.AreEqual("INCONCLUSIVE", result.Status);
+            Assert.IsFalse(result.Conclusive);
+            CollectionAssert.Contains(result.InconclusiveReasons, "EVENT_TRACE_INCOMPLETE");
+        }
+
+        [TestMethod]
         public void SamplingGapOverridesCompleteEventTrace()
         {
             var events = TempEvents(ValidInitializeEvents());
