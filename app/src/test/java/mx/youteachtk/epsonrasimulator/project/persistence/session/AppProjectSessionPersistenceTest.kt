@@ -29,6 +29,20 @@ import org.junit.Test
 class AppProjectSessionPersistenceTest {
     private val codec = ProjectSessionCodec()
 
+    @Test fun captureRestoresFrameAndPreferredJointsIntoFreshRuntime() {
+        val first = harness()
+        first.bundle.runtime.dispatch(RuntimeCommand.SetJointValue(0, 45.0))
+        mx.youteachtk.epsonrasimulator.ui.visual.VisualLabPointController(first.bundle.runtime).captureCurrent("P1")
+        val points = first.bundle.runtime.state.teachPoints
+        val snapshot = projectSnapshot(name = "Captured", sidecar = first.persistence.capture(), resources = emptyMap())
+        val fresh = harness()
+        fresh.persistence.prepareRestore(snapshot).apply()
+        assertEquals(points, fresh.bundle.runtime.state.teachPoints)
+        assertFalse(fresh.bundle.runtime.state.clockState.running)
+        assertTrue(fresh.bundle.runtime.state.taskState.tasks.isEmpty())
+    }
+
+
     @Test fun captureIncludesEveryPhase8CV1Field() {
         val h = harness()
         h.bundle.projectRuntime.loadProject(

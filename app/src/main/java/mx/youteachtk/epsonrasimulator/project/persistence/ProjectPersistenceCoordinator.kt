@@ -59,6 +59,7 @@ interface ProjectPersistenceController {
 
     fun start()
     fun requestImport(selection: DocumentTreeSelection)
+    fun requestCreateLocal(name: String)
     fun resolveReplacement(decision: ProjectReplacementDecision)
     fun saveNow()
     fun exportTo(selection: DocumentTreeSelection)
@@ -96,7 +97,7 @@ class ProjectPersistenceCoordinator(
 
     private val listeners =
         linkedSetOf<(ProjectPersistenceState) -> Unit>()
-    private val importLock = Any()
+    private val openLock = Any()
 
     override var state: ProjectPersistenceState = ProjectPersistenceState()
         private set
@@ -116,15 +117,15 @@ class ProjectPersistenceCoordinator(
     private var debounce: PersistenceCancellation? = null
     private var saveInFlight = false
     private var activeRecordPublished = false
-    private var pendingImport: DocumentTreeSelection? = null
-    private var importAfterSave = false
-    private var queuedImportAfterPublication: DocumentTreeSelection? = null
-    private var importPublicationRequestId: Long? = null
-    private var importPublicationInvalidatedByEdit = false
-    private var importPublicationSuperseded = false
+    private var pendingOpen: ProjectOpenRequest? = null
+    private var openAfterSave = false
+    private var queuedOpenAfterPublication: ProjectOpenRequest? = null
+    private var openPublicationRequestId: Long? = null
+    private var openPublicationInvalidatedByEdit = false
+    private var openPublicationSuperseded = false
 
     @Volatile
-    private var importGeneration = 0L
+    private var openGeneration = 0L
 
     override fun attachSessionPersistence(
         port: ProjectSessionPersistencePort
@@ -156,40 +157,54 @@ class ProjectPersistenceCoordinator(
             publish(state.copy(message = "Selected folder is not readable"))
             return
         }
+        requestOpen(ProjectOpenRequest.Import(selection))
+    }
+
+    override fun requestCreateLocal(name: String) {
+        if (closed) return
+        val normalized = name.trim()
+        try {
+            validateMetadata(normalized, PersistenceLimits().maxNameBytes)
+        } catch (_: PersistenceException) {
+            publish(state.copy(message = "Project name is invalid or too long"))
+            return
+        }
+        requestOpen(ProjectOpenRequest.Local(normalized))
+    }
+
+    private fun requestOpen(request: ProjectOpenRequest) {
         if (state.startup != PersistenceStartupStatus.READY) {
             publish(state.copy(message = "Project storage is not ready"))
             return
         }
-        val queuedBehindPublishedImport = synchronized(importLock) {
-            if (importPublicationRequestId != null) {
-                queuedImportAfterPublication = selection
-                importPublicationSuperseded = true
+        val queuedBehindPublication = synchronized(openLock) {
+            if (openPublicationRequestId != null) {
+                queuedOpenAfterPublication = request
+                openPublicationSuperseded = true
                 true
             } else {
+                // A newer request supersedes unpublished work even while awaiting consent.
+                openGeneration += 1
                 false
             }
         }
-        if (queuedBehindPublishedImport) return
-        if (hasUnsavedWork()) {
-            pendingImport = selection
-            publish(
-                state.copy(
-                    replacementDecisionRequired = true,
-                    message = null
-                )
-            )
+        if (queuedBehindPublication) return
+        openAfterSave = false
+        if (hasUnsavedWork() && state.projectId != null) {
+            pendingOpen = request
+            publish(state.copy(replacementDecisionRequired = true, message = null))
             return
         }
-        beginImport(selection)
+        beginOpen(request)
     }
 
     override fun resolveReplacement(decision: ProjectReplacementDecision) {
         if (closed || !state.replacementDecisionRequired) return
         when (decision) {
             ProjectReplacementDecision.CANCEL -> {
-                pendingImport = null
-                importAfterSave = false
-                cancelImportRequests()
+                pendingOpen = null
+                openAfterSave = false
+                cancelOpenRequests()
                 publish(
                     state.copy(
                         replacementDecisionRequired = false,
@@ -199,26 +214,26 @@ class ProjectPersistenceCoordinator(
             }
 
             ProjectReplacementDecision.DISCARD -> {
-                val selection = pendingImport ?: return
+                val selection = pendingOpen ?: return
                 publish(state.copy(replacementDecisionRequired = false))
                 debounce?.cancel()
                 debounce = null
                 if (saveInFlight) {
-                    importAfterSave = true
+                    openAfterSave = true
                 } else {
-                    pendingImport = null
-                    beginImport(selection)
+                    pendingOpen = null
+                    beginOpen(selection)
                 }
             }
 
             ProjectReplacementDecision.SAVE -> {
-                importAfterSave = true
+                openAfterSave = true
                 publish(state.copy(replacementDecisionRequired = false))
                 if (pendingSnapshot == null && !saveInFlight) {
-                    val selection = pendingImport
-                    pendingImport = null
-                    importAfterSave = false
-                    if (selection != null) beginImport(selection)
+                    val selection = pendingOpen
+                    pendingOpen = null
+                    openAfterSave = false
+                    if (selection != null) beginOpen(selection)
                 } else {
                     saveNow()
                 }
@@ -242,11 +257,11 @@ class ProjectPersistenceCoordinator(
         val snapshot = pendingSnapshot
         if (snapshot == null) {
             publish(state.copy(message = "Project is already saved"))
-            if (importAfterSave) {
-                val selection = pendingImport
-                pendingImport = null
-                importAfterSave = false
-                if (selection != null) beginImport(selection)
+            if (openAfterSave) {
+                val selection = pendingOpen
+                pendingOpen = null
+                openAfterSave = false
+                if (selection != null) beginOpen(selection)
             }
             return
         }
@@ -350,13 +365,13 @@ class ProjectPersistenceCoordinator(
         projectSubscription = null
         sessionSubscription?.cancel()
         sessionSubscription = null
-        synchronized(importLock) {
-            importGeneration++
-            importPublicationRequestId = null
-            importPublicationInvalidatedByEdit = false
-            importPublicationSuperseded = false
+        synchronized(openLock) {
+            openGeneration++
+            openPublicationRequestId = null
+            openPublicationInvalidatedByEdit = false
+            openPublicationSuperseded = false
         }
-        queuedImportAfterPublication = null
+        queuedOpenAfterPublication = null
         listeners.clear()
         execution.close()
     }
@@ -503,7 +518,14 @@ class ProjectPersistenceCoordinator(
     }
 
     private fun onDurableStateChanged(next: ProjectRuntimeState) {
-        val projectName = next.projectName ?: return
+        if (next.projectName == null) {
+            currentRevision += 1
+            synchronized(openLock) {
+                if (openPublicationRequestId != null) openPublicationInvalidatedByEdit = true
+            }
+            return
+        }
+        val projectName = next.projectName
         var projectId = state.projectId
         if (projectId == null) {
             projectId = idGenerator()
@@ -514,9 +536,9 @@ class ProjectPersistenceCoordinator(
         }
 
         currentRevision += 1
-        synchronized(importLock) {
-            if (importPublicationRequestId != null) {
-                importPublicationInvalidatedByEdit = true
+        synchronized(openLock) {
+            if (openPublicationRequestId != null) {
+                openPublicationInvalidatedByEdit = true
             }
         }
         val snapshot = captureSnapshot(projectId, projectName, currentRevision)
@@ -629,7 +651,7 @@ class ProjectPersistenceCoordinator(
                             message = null
                         )
                     )
-                    continuePendingImportAfterSave()
+                    continuePendingOpenAfterSave()
                 } else {
                     publish(
                         state.copy(
@@ -637,7 +659,7 @@ class ProjectPersistenceCoordinator(
                             message = null
                         )
                     )
-                    if (importAfterSave) {
+                    if (openAfterSave) {
                         saveNow()
                     } else {
                         scheduleAutosave()
@@ -657,7 +679,7 @@ class ProjectPersistenceCoordinator(
             }
 
             SaveResult.Conflict -> {
-                importAfterSave = false
+                openAfterSave = false
                 publish(
                     state.copy(
                         saveStatus = PersistenceSaveStatus.CONFLICT,
@@ -667,7 +689,7 @@ class ProjectPersistenceCoordinator(
             }
 
             is SaveResult.Rejected -> {
-                importAfterSave = false
+                openAfterSave = false
                 publish(
                     state.copy(
                         saveStatus = PersistenceSaveStatus.ERROR,
@@ -678,20 +700,20 @@ class ProjectPersistenceCoordinator(
         }
     }
 
-    private fun continuePendingImportAfterSave() {
-        if (!importAfterSave) return
-        val selection = pendingImport
-        pendingImport = null
-        importAfterSave = false
-        if (selection != null) beginImport(selection)
+    private fun continuePendingOpenAfterSave() {
+        if (!openAfterSave) return
+        val selection = pendingOpen
+        pendingOpen = null
+        openAfterSave = false
+        if (selection != null) beginOpen(selection)
     }
 
-    private fun beginImport(selection: DocumentTreeSelection) {
+    private fun beginOpen(request: ProjectOpenRequest) {
         debounce?.cancel()
         debounce = null
-        val requestId = synchronized(importLock) {
-            importGeneration += 1
-            importGeneration
+        val requestId = synchronized(openLock) {
+            openGeneration += 1
+            openGeneration
         }
         val newProjectId = idGenerator()
         validateCanonicalProjectId(newProjectId)
@@ -708,22 +730,35 @@ class ProjectPersistenceCoordinator(
                 null
             }
 
+        // Read live session only on the UI thread. First creation adopts anonymous work.
+        val localSidecar = try {
+            if (request is ProjectOpenRequest.Local && state.projectId == null)
+                sessionPort?.capture() ?: byteArrayOf() else byteArrayOf()
+        } catch (_: Exception) {
+            publish(state.copy(message = "Cannot create project: current session could not be saved. Check point names and session data, then retry."))
+            return
+        }
+
         execution.execute {
-            if (!isCurrentImport(requestId)) return@execute
+            if (!isCurrentOpen(requestId)) return@execute
             val result = try {
-                val source =
-                    DocumentTreeProjectSource(selection, documentGateway)
-                val snapshot = folderTransfer.importProject(
-                    source = source,
-                    rootId = source.rootId,
-                    projectId = newProjectId,
-                    projectName = source.rootName,
-                    adapterId = adapterId,
-                    robotId = robotId,
-                    revision = 1,
-                    cancelled = { !isCurrentImport(requestId) }
-                )
-                if (!isCurrentImport(requestId))
+                val snapshot = when (request) {
+                    is ProjectOpenRequest.Import -> {
+                        val source = DocumentTreeProjectSource(request.selection, documentGateway)
+                        folderTransfer.importProject(
+                            source = source, rootId = source.rootId,
+                            projectId = newProjectId, projectName = source.rootName,
+                            adapterId = adapterId, robotId = robotId, revision = 1,
+                            cancelled = { !isCurrentOpen(requestId) }
+                        )
+                    }
+                    is ProjectOpenRequest.Local -> ProjectSnapshot(
+                        projectId = newProjectId, projectName = request.name,
+                        adapterId = adapterId, robotId = robotId, revision = 1,
+                        resources = emptyMap(), sidecar = localSidecar
+                    )
+                }
+                if (!isCurrentOpen(requestId))
                     return@execute
 
                 val restorePlan =
@@ -742,20 +777,20 @@ class ProjectPersistenceCoordinator(
                     is StoreSave.Rejected ->
                         throw PersistenceException(
                             save.reason,
-                            "Cannot save imported project"
+                            "Cannot save new project"
                         )
                 }
 
-                if (!isCurrentImport(requestId))
+                if (!isCurrentOpen(requestId))
                     return@execute
 
-                val newOrigin = documentGateway.persist(selection)
+                val newOrigin = (request as? ProjectOpenRequest.Import)?.let { documentGateway.persist(it.selection) }
                 var needsDecision = false
                 try {
-                    synchronized(importLock) {
-                        if (requestId != importGeneration || closed) {
+                    synchronized(openLock) {
+                        if (requestId != openGeneration || closed) {
                             try {
-                                documentGateway.release(newOrigin)
+                                if (newOrigin != null) documentGateway.release(newOrigin)
                             } catch (_: Exception) {
                             }
                             return@execute
@@ -763,17 +798,19 @@ class ProjectPersistenceCoordinator(
                         if (currentRevision != authorizedRevision) {
                             needsDecision = true
                         } else {
-                            importPublicationRequestId = requestId
-                            importPublicationInvalidatedByEdit = false
-                            importPublicationSuperseded = false
+                            // Failed durable publication must not leave an in-flight
+                            // marker that queues every subsequent request forever.
                             activeRecordStore.write(
                                 ActiveProjectRecord(newProjectId, newOrigin)
                             )
+                            openPublicationRequestId = requestId
+                            openPublicationInvalidatedByEdit = false
+                            openPublicationSuperseded = false
                         }
                     }
                 } catch (e: Exception) {
                     try {
-                        documentGateway.release(newOrigin)
+                        if (newOrigin != null) documentGateway.release(newOrigin)
                     } catch (_: Exception) {
                     }
                     throw e
@@ -781,17 +818,17 @@ class ProjectPersistenceCoordinator(
 
                 if (needsDecision) {
                     try {
-                        documentGateway.release(newOrigin)
+                        if (newOrigin != null) documentGateway.release(newOrigin)
                     } catch (_: Exception) {
                     }
-                    ImportResult.NeedsDecision(
+                    OpenResult.NeedsDecision(
                         requestId = requestId,
-                        selection = selection
+                        request = request
                     )
                 } else {
-                    ImportResult.Success(
+                    OpenResult.Success(
                         requestId = requestId,
-                        selection = selection,
+                        request = request,
                         snapshot = snapshot,
                         token = saved.token,
                         origin = newOrigin,
@@ -800,53 +837,53 @@ class ProjectPersistenceCoordinator(
                     )
                 }
             } catch (e: PersistenceException) {
-                ImportResult.Failed(
+                OpenResult.Failed(
                     requestId,
                     e.reason,
-                    "Import failed: ${e.reason}"
+                    "Opening project failed: ${e.reason}"
                 )
             } catch (_: IOException) {
-                ImportResult.Failed(
+                OpenResult.Failed(
                     requestId,
                     PersistenceFailure.IO,
-                    "Import failed: IO"
+                    "Opening project failed: IO"
                 )
             } catch (_: SecurityException) {
-                ImportResult.Failed(
+                OpenResult.Failed(
                     requestId,
                     PersistenceFailure.IO,
-                    "Import failed: IO"
+                    "Opening project failed: IO"
                 )
             }
 
             execution.dispatchUi {
-                handleImportResult(result)
+                handleOpenResult(result)
             }
         }
     }
 
-    private fun handleImportResult(result: ImportResult) {
+    private fun handleOpenResult(result: OpenResult) {
         if (closed) return
         when (result) {
-            is ImportResult.Success -> {
-                if (!isCurrentImport(result.requestId)) return
+            is OpenResult.Success -> {
+                if (!isCurrentOpen(result.requestId)) return
 
-                val invalidation = synchronized(importLock) {
+                val invalidation = synchronized(openLock) {
                     val ownsPublication =
-                        importPublicationRequestId == result.requestId
+                        openPublicationRequestId == result.requestId
                     if (!ownsPublication) {
-                        ImportInvalidation.SUPERSEDED
-                    } else if (importPublicationInvalidatedByEdit) {
-                        ImportInvalidation.EDIT
-                    } else if (importPublicationSuperseded) {
-                        ImportInvalidation.SUPERSEDED
+                        OpenInvalidation.SUPERSEDED
+                    } else if (openPublicationInvalidatedByEdit) {
+                        OpenInvalidation.EDIT
+                    } else if (openPublicationSuperseded) {
+                        OpenInvalidation.SUPERSEDED
                     } else {
-                        ImportInvalidation.NONE
+                        OpenInvalidation.NONE
                     }
                 }
 
-                if (invalidation != ImportInvalidation.NONE) {
-                    rollbackPublishedImport(result, invalidation)
+                if (invalidation != OpenInvalidation.NONE) {
+                    rollbackPublishedOpen(result, invalidation)
                     return
                 }
 
@@ -860,11 +897,11 @@ class ProjectPersistenceCoordinator(
                 } finally {
                     applyingOwnedProject = false
                 }
-                synchronized(importLock) {
-                    if (importPublicationRequestId == result.requestId) {
-                        importPublicationRequestId = null
-                        importPublicationInvalidatedByEdit = false
-                        importPublicationSuperseded = false
+                synchronized(openLock) {
+                    if (openPublicationRequestId == result.requestId) {
+                        openPublicationRequestId = null
+                        openPublicationInvalidatedByEdit = false
+                        openPublicationSuperseded = false
                     }
                 }
                 currentToken = result.token
@@ -872,8 +909,8 @@ class ProjectPersistenceCoordinator(
                 pendingSnapshot = null
                 saveInFlight = false
                 activeRecordPublished = true
-                pendingImport = null
-                importAfterSave = false
+                pendingOpen = null
+                openAfterSave = false
                 publish(
                     state.copy(
                         projectId = result.snapshot.projectId,
@@ -890,13 +927,13 @@ class ProjectPersistenceCoordinator(
                     previous = result.previousRecord?.origin,
                     current = result.origin
                 )
-                continueQueuedImportAfterPublication()
+                continueQueuedOpenAfterPublication()
             }
 
-            is ImportResult.NeedsDecision -> {
-                if (!isCurrentImport(result.requestId)) return
-                pendingImport = result.selection
-                importAfterSave = false
+            is OpenResult.NeedsDecision -> {
+                if (!isCurrentOpen(result.requestId)) return
+                pendingOpen = result.request
+                openAfterSave = false
                 publish(
                     state.copy(
                         replacementDecisionRequired = true,
@@ -905,10 +942,10 @@ class ProjectPersistenceCoordinator(
                 )
             }
 
-            is ImportResult.Failed -> {
-                if (!isCurrentImport(result.requestId)) return
-                pendingImport = null
-                importAfterSave = false
+            is OpenResult.Failed -> {
+                if (!isCurrentOpen(result.requestId)) return
+                pendingOpen = null
+                openAfterSave = false
                 val hasCurrent = state.projectId != null
                 publish(
                     state.copy(
@@ -932,9 +969,9 @@ class ProjectPersistenceCoordinator(
         }
     }
 
-    private fun rollbackPublishedImport(
-        result: ImportResult.Success,
-        invalidation: ImportInvalidation
+    private fun rollbackPublishedOpen(
+        result: OpenResult.Success,
+        invalidation: OpenInvalidation
     ) {
         execution.execute {
             val rollbackFailure = try {
@@ -944,7 +981,7 @@ class ProjectPersistenceCoordinator(
                     activeRecordStore.write(result.previousRecord)
                 }
                 try {
-                    documentGateway.release(result.origin)
+                    if (result.origin != null) documentGateway.release(result.origin)
                 } catch (_: Exception) {
                 }
                 null
@@ -954,11 +991,11 @@ class ProjectPersistenceCoordinator(
 
             execution.dispatchUi {
                 if (closed) return@dispatchUi
-                synchronized(importLock) {
-                    if (importPublicationRequestId == result.requestId) {
-                        importPublicationRequestId = null
-                        importPublicationInvalidatedByEdit = false
-                        importPublicationSuperseded = false
+                synchronized(openLock) {
+                    if (openPublicationRequestId == result.requestId) {
+                        openPublicationRequestId = null
+                        openPublicationInvalidatedByEdit = false
+                        openPublicationSuperseded = false
                     }
                 }
                 if (rollbackFailure != null) {
@@ -973,12 +1010,12 @@ class ProjectPersistenceCoordinator(
                 }
 
                 when (invalidation) {
-                    ImportInvalidation.EDIT -> {
+                    OpenInvalidation.EDIT -> {
                         val replacement =
-                            queuedImportAfterPublication ?: result.selection
-                        queuedImportAfterPublication = null
-                        pendingImport = replacement
-                        importAfterSave = false
+                            queuedOpenAfterPublication ?: result.request
+                        queuedOpenAfterPublication = null
+                        pendingOpen = replacement
+                        openAfterSave = false
                         publish(
                             state.copy(
                                 replacementDecisionRequired = true,
@@ -987,33 +1024,33 @@ class ProjectPersistenceCoordinator(
                         )
                     }
 
-                    ImportInvalidation.SUPERSEDED -> {
-                        val replacement = queuedImportAfterPublication
-                        queuedImportAfterPublication = null
+                    OpenInvalidation.SUPERSEDED -> {
+                        val replacement = queuedOpenAfterPublication
+                        queuedOpenAfterPublication = null
                         if (replacement != null) {
-                            beginImport(replacement)
+                            beginOpen(replacement)
                         }
                     }
 
-                    ImportInvalidation.NONE -> Unit
+                    OpenInvalidation.NONE -> Unit
                 }
             }
         }
     }
 
-    private fun continueQueuedImportAfterPublication() {
-        val queued = queuedImportAfterPublication
-        queuedImportAfterPublication = null
+    private fun continueQueuedOpenAfterPublication() {
+        val queued = queuedOpenAfterPublication
+        queuedOpenAfterPublication = null
         if (queued != null) {
-            requestImport(queued)
+            requestOpen(queued)
         }
     }
 
     private fun releasePreviousOriginAsync(
         previous: DocumentTreeOrigin?,
-        current: DocumentTreeOrigin
+        current: DocumentTreeOrigin?
     ) {
-        if (previous == null || previous.uri == current.uri) return
+        if (previous == null || previous.uri == current?.uri) return
         execution.execute {
             try {
                 documentGateway.release(previous)
@@ -1055,14 +1092,14 @@ class ProjectPersistenceCoordinator(
             PersistenceSaveStatus.CONFLICT
         )
 
-    private fun isCurrentImport(requestId: Long): Boolean =
-        synchronized(importLock) {
-            requestId == importGeneration && !closed
+    private fun isCurrentOpen(requestId: Long): Boolean =
+        synchronized(openLock) {
+            requestId == openGeneration && !closed
         }
 
-    private fun cancelImportRequests() {
-        synchronized(importLock) {
-            importGeneration += 1
+    private fun cancelOpenRequests() {
+        synchronized(openLock) {
+            openGeneration += 1
         }
     }
 
@@ -1108,34 +1145,34 @@ class ProjectPersistenceCoordinator(
         data class Rejected(val reason: PersistenceFailure) : SaveResult
     }
 
-    private enum class ImportInvalidation {
+    private enum class OpenInvalidation {
         NONE,
         EDIT,
         SUPERSEDED
     }
 
-    private sealed interface ImportResult {
+    private sealed interface OpenResult {
         val requestId: Long
 
         data class Success(
             override val requestId: Long,
-            val selection: DocumentTreeSelection,
+            val request: ProjectOpenRequest,
             val snapshot: ProjectSnapshot,
             val token: SnapshotToken,
-            val origin: DocumentTreeOrigin,
+            val origin: DocumentTreeOrigin?,
             val previousRecord: ActiveProjectRecord?,
             val restorePlan: ProjectSessionRestorePlan?
-        ) : ImportResult
+        ) : OpenResult
 
         data class NeedsDecision(
             override val requestId: Long,
-            val selection: DocumentTreeSelection
-        ) : ImportResult
+            val request: ProjectOpenRequest
+        ) : OpenResult
 
         data class Failed(
             override val requestId: Long,
             val reason: PersistenceFailure,
             val message: String
-        ) : ImportResult
+        ) : OpenResult
     }
 }

@@ -124,6 +124,8 @@ class AppSessionViewModel(
         persistence?.exportTo(selection)
     }
 
+    fun createLocalProject(name: String) { persistence?.requestCreateLocal(name) }
+
     fun saveProject() { persistence?.saveNow() }
 
     fun resolveProjectReplacement(decision: ProjectReplacementDecision) {

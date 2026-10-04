@@ -8,7 +8,8 @@ enum class PersistedExperience {
 data class PersistedTeachPoint(
     val name: String,
     val pose: List<Double>,
-    val preferredJointValues: List<Double>?
+    val preferredJointValues: List<Double>?,
+    val frame: String = "UNSPECIFIED"
 )
 
 data class PersistedWindow(

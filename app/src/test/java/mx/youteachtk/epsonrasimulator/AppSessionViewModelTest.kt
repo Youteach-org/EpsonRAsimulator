@@ -41,6 +41,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppSessionViewModelTest {
+    @Test fun createProjectIntentReachesPersistence() {
+        val persistence = FakePersistence()
+        val session = AppSessionViewModel(initialBundle = AppRuntimeFactory.createDefault(), persistence = persistence)
+        session.createLocalProject("My cell")
+        assertEquals("My cell", persistence.lastCreatedName)
+    }
     @Test
     fun appSessionKeepsOneRuntimeAndWorkspaceAcrossExperienceSwitches() {
         val bundle = AppRuntimeFactory.createDefault()
@@ -411,6 +417,7 @@ class AppSessionViewModelTest {
         var semanticChanges = 0
         var saves = 0
         var imports = 0
+        var lastCreatedName: String? = null
         var exports = 0
         var dismisses = 0
         var closes = 0
@@ -433,6 +440,10 @@ class AppSessionViewModelTest {
             sessionSubscription = attachedSessionPort?.subscribe {
                 semanticChanges++
             }
+        }
+
+        override fun requestCreateLocal(name: String) {
+            lastCreatedName = name
         }
 
         override fun requestImport(selection: DocumentTreeSelection) {

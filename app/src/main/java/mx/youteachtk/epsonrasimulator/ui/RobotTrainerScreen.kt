@@ -191,7 +191,6 @@ fun RobotTrainerScreen(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = {}, enabled = false) { Text("TOUCH") }
-                    Button(onClick = {}, enabled = false) { Text("SAVE P1") }
                 }
                 Spacer(Modifier.height(16.dp))
                 VisualLabPointsPanel(runtimeState, pointController)
