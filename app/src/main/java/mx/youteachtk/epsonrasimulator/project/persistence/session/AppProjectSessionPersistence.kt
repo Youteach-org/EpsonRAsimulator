@@ -3,6 +3,7 @@ package mx.youteachtk.epsonrasimulator.project.persistence.session
 import mx.youteachtk.epsonrasimulator.adapters.SimulatorAdapterId
 import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import mx.youteachtk.epsonrasimulator.domain.JointState
+import mx.youteachtk.epsonrasimulator.domain.TeachPointFrame
 import mx.youteachtk.epsonrasimulator.domain.TeachPoint
 import mx.youteachtk.epsonrasimulator.project.ProjectRuntime
 import mx.youteachtk.epsonrasimulator.project.ProjectRuntimeState
@@ -60,7 +61,8 @@ class AppProjectSessionPersistence(
                             point.pose.rz
                         ),
                         preferredJointValues =
-                            point.preferredJointState?.values?.toList()
+                            point.preferredJointState?.values?.toList(),
+                        frame = point.frame.name
                     )
                 },
                 windows = workspace.windows.values.map { window ->
@@ -127,7 +129,8 @@ class AppProjectSessionPersistence(
                         rz = point.pose[5]
                     ),
                     preferredJointState =
-                        preferred?.let { JointState(it.toList()) }
+                        preferred?.let { JointState(it.toList()) },
+                    frame = TeachPointFrame.valueOf(point.frame)
                 )
             }
         }

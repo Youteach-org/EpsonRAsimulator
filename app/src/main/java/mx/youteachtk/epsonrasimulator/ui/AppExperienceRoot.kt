@@ -40,6 +40,7 @@ fun AppExperienceRoot(
             available = session.persistence != null,
             onImport = { importLauncher.launch(Unit) },
             onSave = session::saveProject,
+            onCreateLocal = session::createLocalProject,
             onExport = { exportLauncher.launch(Unit) },
             onDismissMessage = session::dismissPersistenceMessage,
             onReplacement = session::resolveProjectReplacement

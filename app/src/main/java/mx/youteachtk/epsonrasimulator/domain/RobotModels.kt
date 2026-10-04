@@ -67,8 +67,11 @@ data class CartesianPose(
     val rz: Double = 0.0
 )
 
+enum class TeachPointFrame { UNSPECIFIED, SIMULATION_Z_UP }
+
 data class TeachPoint(
     val name: String,
     val pose: CartesianPose,
-    val preferredJointState: JointState? = null
+    val preferredJointState: JointState? = null,
+    val frame: TeachPointFrame = TeachPointFrame.UNSPECIFIED
 )

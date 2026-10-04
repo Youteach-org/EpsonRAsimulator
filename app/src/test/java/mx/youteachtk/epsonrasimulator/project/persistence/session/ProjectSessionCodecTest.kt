@@ -76,7 +76,7 @@ class ProjectSessionCodecTest {
             this[8] = 0
             this[9] = 0
             this[10] = 0
-            this[11] = 2
+            this[11] = 99
         }
         assertThrows(UnsupportedSnapshotVersion::class.java) {
             codec.decodeOrDefault(future)
@@ -292,6 +292,30 @@ class ProjectSessionCodecTest {
         }
     }
 
+    @Test fun readsV2PointsAndWritesV2WithoutChangingPoseOrPreferredJoints() {
+        val restored = codec.decodeOrDefault(rawPayload(schema = 2))
+        assertEquals(listOf("P1", "P2"), restored.teachPoints.map { it.name })
+        assertEquals(List(6) { it.toDouble() }, restored.teachPoints.first().pose)
+        assertEquals(List(4) { it.toDouble() }, restored.teachPoints.first().preferredJointValues)
+        assertEquals("SIMULATION_Z_UP", restored.teachPoints.first().frame)
+        assertEquals(2, codec.encode(restored)[11].toInt())
+        assertEquals(restored, codec.decodeOrDefault(codec.encode(restored)))
+    }
+
+    @Test fun invalidV2FrameIsCorrupt() {
+        rejects(PersistenceFailure.CORRUPT) {
+            codec.decodeOrDefault(rawPayload(schema = 2, frameMarker = 99))
+        }
+    }
+
+    @Test fun v1PointsRemainUnspecified() {
+        val restored = codec.decodeOrDefault(java.util.Base64.getDecoder().decode(
+            "RVBTU0VTMDEAAAABAAAAAAFAKAAAAAAAAAAAAAEAAAACUDE/8AAAAAAAAEAAAAAAAAAAQAgAAAAAAABAEAAAAAAAAEAUAAAAAAAAQBgAAAAAAAAAAAAAAAAAAAAAAAAAP/AAAAAAAAA="))
+        assertEquals(listOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0), restored.teachPoints.single().pose)
+        assertTrue(restored.teachPoints.all { it.frame == "UNSPECIFIED" })
+        assertEquals(restored, codec.decodeOrDefault(codec.encode(restored)))
+    }
+
     private fun richSnapshot(
         activeExperience: PersistedExperience? = PersistedExperience.VISUAL_LAB,
         jointValues: List<Double> = listOf(1.0, -2.0, 3.0, -4.0),
@@ -341,6 +365,8 @@ class ProjectSessionCodecTest {
     }
 
     private fun rawPayload(
+        schema: Int = 1,
+        frameMarker: Int = 1,
         experienceMarker: Int = 1,
         windowMode: Int = 0,
         robotManagerPage: Int = 0,
@@ -352,14 +378,16 @@ class ProjectSessionCodecTest {
         val out = ByteArrayOutputStream()
         DataOutputStream(out).use { data ->
             data.write("EPSSES01".toByteArray(Charsets.US_ASCII))
-            data.writeInt(1)
+            data.writeInt(schema)
             data.writeByte(experienceMarker)
             data.writeInt(4)
             listOf(0.0, 0.0, 0.0, 0.0).forEach(data::writeDouble)
 
             data.writeInt(2)
             writePoint(data, "P1")
+            if (schema >= 2) data.writeByte(frameMarker)
             writePoint(data, if (duplicateTeachPoint) "P1" else "P2")
+            if (schema >= 2) data.writeByte(frameMarker)
 
             data.writeInt(2)
             writeWindow(data, "w1", "tool-a", windowMode)

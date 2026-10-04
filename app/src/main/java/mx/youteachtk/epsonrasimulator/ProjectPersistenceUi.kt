@@ -12,6 +12,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -33,12 +34,16 @@ fun ProjectPersistenceBar(
     state: ProjectPersistenceState,
     available: Boolean,
     onImport: () -> Unit,
+    onCreateLocal: (String) -> Unit,
     onSave: () -> Unit,
     onExport: () -> Unit,
     onDismissMessage: () -> Unit,
     onReplacement: (ProjectReplacementDecision) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var creating by remember { mutableStateOf(false) }
+    var projectName by remember { mutableStateOf("") }
+    var createSubmitted by remember { mutableStateOf(false) }
     var exportDetails by remember { mutableStateOf(false) }
     val ready = available && state.startup == PersistenceStartupStatus.READY
     Surface(modifier = modifier.fillMaxWidth(), tonalElevation = 2.dp) {
@@ -54,6 +59,8 @@ fun ProjectPersistenceBar(
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                OutlinedButton(onClick = { projectName = ""; createSubmitted = false; creating = true },
+                    enabled = ready && !state.replacementDecisionRequired) { Text("New project") }
                 OutlinedButton(onClick = onImport, enabled = ready && !state.replacementDecisionRequired) {
                     Text("Import folder")
                 }
@@ -76,11 +83,30 @@ fun ProjectPersistenceBar(
         }
     }
 
+    if (creating) {
+        AlertDialog(
+            onDismissRequest = { creating = false },
+            title = { Text("New local project") },
+            text = { OutlinedTextField(projectName, { projectName = it },
+                label = { Text("Project name") }, singleLine = true) },
+            confirmButton = { TextButton(
+                enabled = ready && !state.replacementDecisionRequired && projectName.isNotBlank() && !createSubmitted,
+                onClick = {
+                    if (!createSubmitted) {
+                        createSubmitted = true
+                        creating = false
+                        onCreateLocal(projectName)
+                    }
+                }) { Text("Create") } },
+            dismissButton = { TextButton(onClick = { creating = false }) { Text("Cancel") } }
+        )
+    }
+
     if (state.replacementDecisionRequired) {
         AlertDialog(
             onDismissRequest = { onReplacement(ProjectReplacementDecision.CANCEL) },
             title = { Text("Replace the current project?") },
-            text = { Text("The current project has unsaved changes. Save them before importing the selected folder, discard them, or cancel.") },
+            text = { Text("The current project has unsaved changes. Save them before replacing this project, discard them, or cancel.") },
             confirmButton = {
                 TextButton(onClick = { onReplacement(ProjectReplacementDecision.SAVE) }) { Text("Save") }
             },
