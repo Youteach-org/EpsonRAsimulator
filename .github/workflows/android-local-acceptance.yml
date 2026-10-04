@@ -5,6 +5,7 @@ on:
       - 'app/**'
       - '*.gradle.kts'
       - '.github/workflows/android-local-acceptance.yml'
+      - '.github/scripts/android-local-acceptance.sh'
   workflow_dispatch:
 permissions:
   contents: read
@@ -38,7 +39,7 @@ jobs:
           disable-animations: true
           # Explicit software GLES; avoid the failing gfxstream/Vulkan path in headless CI.
           emulator-options: -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: gradle connectedDebugAndroidTest --stacktrace
+          script: bash .github/scripts/android-local-acceptance.sh
       - name: Upload acceptance results
         if: always()
         uses: actions/upload-artifact@v4
@@ -47,4 +48,5 @@ jobs:
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
+            app/build/acceptance-diagnostics/
           if-no-files-found: warn
