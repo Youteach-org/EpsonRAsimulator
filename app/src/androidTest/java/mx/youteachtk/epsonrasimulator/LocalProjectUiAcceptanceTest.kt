@@ -19,6 +19,11 @@ class LocalProjectUiAcceptanceTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
     private fun session() = ViewModelProvider(compose.activity)[AppSessionViewModel::class.java]
 
+    private fun frame() {
+        compose.mainClock.advanceTimeBy(100)
+        compose.waitForIdle()
+    }
+
     @Test fun createCaptureReplaceCancelSaveAndRecreate() {
         compose.waitUntil(30_000) { session().persistenceState.startup == PersistenceStartupStatus.READY }
         compose.onNodeWithText("New project").performClick()
@@ -30,26 +35,38 @@ class LocalProjectUiAcceptanceTest {
         compose.onNodeWithText("Project name").performTextInput("Acceptance cell")
         compose.onNodeWithText("Create").performClick()
         compose.waitUntil(30_000) { session().persistenceState.projectName == "Acceptance cell" }
+        // SceneView has a continuous withFrameNanos loop. Drive frames explicitly
+        // instead of asking Espresso to wait for a permanently idle 3D scene.
+        compose.mainClock.autoAdvance = false
         compose.onNodeWithText("Visual Lab").performClick()
-        compose.onNodeWithText("Name").performScrollTo().performTextInput("P1")
-        compose.onNodeWithText("Capture current posture").performScrollTo().performClick()
+        frame()
+        compose.onNodeWithText("Name").performScrollTo().also { frame() }.performTextInput("P1")
+        frame()
+        compose.onNodeWithText("Capture current posture").performScrollTo().also { frame() }.performClick()
+        frame()
         var p1: TeachPoint? = null
         compose.runOnIdle {
             p1 = session().bundle.runtime.state.teachPoints.getValue("P1")
             assertEquals(TeachPointFrame.SIMULATION_Z_UP, p1!!.frame)
         }
-        compose.onNodeWithText("RC+ TEST POSE").performScrollTo().performClick()
-        compose.onNodeWithText("Capture current posture").performScrollTo().performClick()
+        compose.onNodeWithText("RC+ TEST POSE").performScrollTo().also { frame() }.performClick()
+        frame()
+        compose.onNodeWithText("Capture current posture").performScrollTo().also { frame() }.performClick()
+        frame()
         compose.onNodeWithText("Cancel").performClick()
+        frame()
         compose.runOnIdle { assertEquals(p1, session().bundle.runtime.state.teachPoints["P1"]) }
-        compose.onNodeWithText("Name").performScrollTo().performTextReplacement("P2")
-        compose.onNodeWithText("Capture current posture").performScrollTo().performClick()
+        compose.onNodeWithText("Name").performScrollTo().also { frame() }.performTextReplacement("P2")
+        frame()
+        compose.onNodeWithText("Capture current posture").performScrollTo().also { frame() }.performClick()
+        frame()
         compose.onNodeWithText("Save", useUnmergedTree = false).performClick()
+        frame()
         compose.waitUntil(30_000) { session().persistenceState.saveStatus == PersistenceSaveStatus.SAVED }
         var points: Map<String, TeachPoint> = emptyMap()
         compose.runOnIdle { points = session().bundle.runtime.state.teachPoints.toMap() }
         compose.activityRule.scenario.recreate()
-        compose.waitForIdle()
+        frame()
         compose.runOnIdle {
             assertEquals(setOf("P1", "P2"), session().bundle.runtime.state.teachPoints.keys)
             assertEquals(points, session().bundle.runtime.state.teachPoints)
