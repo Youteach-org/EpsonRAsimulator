@@ -41,6 +41,14 @@ class C4PositionIkTest {
         assertSolution(tcp(seed.values, identityTool) + Vector3(8.0, -7.0, 5.0), seed)
     }
 
+    @Test fun solvesRepeatedAcceptanceDragFromNeutral() {
+        var seed = robot.zeroState()
+        repeat(2) {
+            val target = SimulationFrames.cadToSimulation(tcp(seed.values, identityTool)) + Vector3(50.0, 20.0, 0.0)
+            seed = assertSolution(SimulationFrames.simulationToCad(target), seed).joints
+        }
+    }
+
     @Test fun solvesRotatedFlangeWithOffsetTool() {
         val tool = CartesianPose(35.0, -20.0, 95.0, 20.0, -35.0, 70.0)
         assertSolution(tcp(C4Kinematics.calibrationPoseDegrees, tool), robot.zeroState(), tool)

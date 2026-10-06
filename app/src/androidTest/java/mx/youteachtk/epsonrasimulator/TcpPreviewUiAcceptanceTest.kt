@@ -90,6 +90,7 @@ class TcpPreviewUiAcceptanceTest {
         val applied = session().bundle.runtime.state.jointState
         reveal("Target Z (mm)").performTextReplacement("10000")
         frame(); reveal("Set Z").performClick(); frame()
+        compose.onNodeWithText("Target Z (mm)").assertIsNotFocused()
         compose.waitUntil(30_000) {
             frame()
             compose.onAllNodesWithText("No solution found. Try a closer target.").fetchSemanticsNodes().isNotEmpty()

@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.util.Locale
@@ -18,6 +19,7 @@ fun TcpTargetPanel(
     plane: TcpPlane,
     onPlane: (TcpPlane) -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
     Text("TCP target", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
     Text("Simulation Z-up · mm · position only", style = MaterialTheme.typography.bodySmall)
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -41,6 +43,7 @@ fun TcpTargetPanel(
             OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text("Target $axis (mm)") },
                 singleLine = true, isError = parsed == null, modifier = Modifier.fillMaxWidth())
             OutlinedButton(onClick = {
+                focusManager.clearFocus()
                 parsed?.let { TcpTargetGesture.thirdAxis(target, plane, it) }?.let(controller::setTargetSimulationMm)
             }, enabled = parsed != null) { Text("Set $axis") }
         }
@@ -52,8 +55,8 @@ fun TcpTargetPanel(
             TcpPreviewStatus.INVALID -> state.message ?: "Invalid target"
         }, modifier = Modifier.testTag("tcp-status"), style = MaterialTheme.typography.bodySmall)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { controller.apply() }, enabled = state.status == TcpPreviewStatus.READY) { Text("Apply TCP") }
-            OutlinedButton(onClick = controller::cancel) { Text("Cancel TCP") }
+            Button(onClick = { focusManager.clearFocus(); controller.apply() }, enabled = state.status == TcpPreviewStatus.READY) { Text("Apply TCP") }
+            OutlinedButton(onClick = { focusManager.clearFocus(); controller.cancel() }) { Text("Cancel TCP") }
         }
     }
 }
