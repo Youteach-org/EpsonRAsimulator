@@ -54,6 +54,7 @@ class LocalProjectUiAcceptanceTest {
         val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
         val directory = File(instrumentation.targetContext.getExternalFilesDir(null), "acceptance")
         directory.mkdirs()
+        File(directory, "producer-pid.txt").writeText(android.os.Process.myPid().toString())
         File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
     }

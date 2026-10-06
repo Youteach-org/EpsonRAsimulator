@@ -15,8 +15,16 @@ log_pid=$!
   done
 ) &
 screen_pid=$!
-gradle connectedDebugAndroidTest --stacktrace
+gradle connectedDebugAndroidTest --stacktrace -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true -Pandroid.testInstrumentationRunnerArguments.class=mx.youteachtk.epsonrasimulator.LocalProjectUiAcceptanceTest
 result=$?
+if [ "$result" -eq 0 ]; then
+  adb shell am force-stop mx.youteachtk.epsonrasimulator
+  adb shell am instrument -w -e class mx.youteachtk.epsonrasimulator.LocalProjectProcessRestoreTest mx.youteachtk.epsonrasimulator.test/androidx.test.runner.AndroidJUnitRunner > app/build/acceptance-diagnostics/process-restore.txt 2>&1
+  if ! grep -q 'OK (1 test)' app/build/acceptance-diagnostics/process-restore.txt; then
+    cat app/build/acceptance-diagnostics/process-restore.txt
+    result=1
+  fi
+fi
 adb pull /sdcard/Android/data/mx.youteachtk.epsonrasimulator/files/acceptance app/build/acceptance-diagnostics/steps >/dev/null 2>&1 || true
 kill "$log_pid" "$screen_pid" 2>/dev/null || true
 wait "$log_pid" "$screen_pid" 2>/dev/null || true
