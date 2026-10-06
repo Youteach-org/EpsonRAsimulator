@@ -12,6 +12,7 @@ import mx.youteachtk.epsonrasimulator.kinematics.C4Kinematics
 import mx.youteachtk.epsonrasimulator.kinematics.C4PointCapture
 import mx.youteachtk.epsonrasimulator.project.persistence.PersistenceStartupStatus
 import org.junit.Assert.*
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -19,6 +20,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class LocalProjectProcessRestoreTest {
     @Test(timeout = 60_000) fun savedPointsRestoreInNewProcess() {
+        assumeTrue("Requires the separate process-restart CI invocation",
+            InstrumentationRegistry.getArguments().getString("verifyProcessRestore") == "true")
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val producerPid = File(context.getExternalFilesDir(null), "acceptance/producer-pid.txt").readText().trim().toInt()
         assertNotEquals("A fresh process is required", producerPid, Process.myPid())
@@ -44,5 +47,8 @@ class LocalProjectProcessRestoreTest {
                 assertTrue(state.taskState.tasks.isEmpty())
             }
         }
+        InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply {
+            putString("stream", "\nPROCESS_RESTORE_VERIFIED\n")
+        })
     }
 }

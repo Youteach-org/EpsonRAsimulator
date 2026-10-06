@@ -76,6 +76,15 @@ class LocalProjectUiAcceptanceTest {
         compose.onNodeWithText("Visual Lab").performClick()
         frame()
         screenshot("visual-lab")
+        compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.SetProgress))[0].performSemanticsAction(SemanticsActions.SetProgress) { it(20f) }
+        frame()
+        compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.SetProgress))[1].performSemanticsAction(SemanticsActions.SetProgress) { it(-20f) }
+        frame()
+        compose.runOnIdle {
+            assertEquals(20.0, session().bundle.runtime.state.jointState.values[0], 0.001)
+            assertEquals(-20.0, session().bundle.runtime.state.jointState.values[1], 0.001)
+        }
+        screenshot("joint-jog")
         reveal("Name").performTextInput("P1")
         frame()
         reveal("Capture current posture").performClick()
@@ -107,6 +116,19 @@ class LocalProjectUiAcceptanceTest {
         frame()
         reveal("Capture current posture").performClick()
         frame()
+        compose.onNodeWithText("New project").performClick()
+        frame()
+        compose.onNodeWithText("Project name").performTextInput("Replacement cancelled")
+        frame()
+        compose.onNodeWithText("Create").performClick()
+        frame()
+        compose.onNodeWithText("Replace the current project?").assertIsDisplayed()
+        compose.onNodeWithText("Cancel").performClick()
+        frame()
+        compose.runOnIdle {
+            assertEquals("Acceptance cell", session().persistenceState.projectName)
+            assertEquals(setOf("P1", "P2"), session().bundle.runtime.state.teachPoints.keys)
+        }
         compose.onNodeWithText("Save", useUnmergedTree = false).performClick()
         frame()
         compose.waitUntil(30_000) { session().persistenceState.saveStatus == PersistenceSaveStatus.SAVED }
@@ -121,5 +143,15 @@ class LocalProjectUiAcceptanceTest {
             assertFalse(session().bundle.runtime.state.clockState.running)
             assertTrue(session().bundle.runtime.state.taskState.tasks.isEmpty())
         }
+        compose.activityRule.scenario.onActivity {
+            it.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        }
+        compose.waitUntil(10_000) {
+            frame()
+            compose.activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        }
+        frame()
+        screenshot("landscape-restored")
+        compose.runOnIdle { assertEquals(points, session().bundle.runtime.state.teachPoints) }
     }
 }

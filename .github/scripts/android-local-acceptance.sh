@@ -19,8 +19,8 @@ gradle connectedDebugAndroidTest --stacktrace -Pandroid.injected.androidTest.lea
 result=$?
 if [ "$result" -eq 0 ]; then
   adb shell am force-stop mx.youteachtk.epsonrasimulator
-  adb shell am instrument -w -e class mx.youteachtk.epsonrasimulator.LocalProjectProcessRestoreTest mx.youteachtk.epsonrasimulator.test/androidx.test.runner.AndroidJUnitRunner > app/build/acceptance-diagnostics/process-restore.txt 2>&1
-  if ! grep -q 'OK (1 test)' app/build/acceptance-diagnostics/process-restore.txt; then
+  adb shell am instrument -w -e verifyProcessRestore true -e class mx.youteachtk.epsonrasimulator.LocalProjectProcessRestoreTest mx.youteachtk.epsonrasimulator.test/androidx.test.runner.AndroidJUnitRunner > app/build/acceptance-diagnostics/process-restore.txt 2>&1
+  if ! grep -q 'OK (1 test)' app/build/acceptance-diagnostics/process-restore.txt || ! grep -q 'PROCESS_RESTORE_VERIFIED' app/build/acceptance-diagnostics/process-restore.txt; then
     cat app/build/acceptance-diagnostics/process-restore.txt
     result=1
   fi
