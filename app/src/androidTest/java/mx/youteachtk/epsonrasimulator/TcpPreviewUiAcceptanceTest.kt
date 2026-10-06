@@ -66,7 +66,14 @@ class TcpPreviewUiAcceptanceTest {
     @Test(timeout = 300_000) fun dragPreviewCancelApplyRejectAndInvalidate() {
         compose.waitUntil(30_000) { session().persistenceState.startup == PersistenceStartupStatus.READY }
         compose.mainClock.autoAdvance = false
-        compose.onNodeWithText("Visual Lab").performClick(); frame()
+        frame()
+        // The preceding process-restore test can leave Visual Lab selected durably.
+        if (session().activeExperience != AppExperience.VISUAL_LAB) {
+            if (session().activeExperience != null) {
+                compose.onNodeWithText("Back").performClick(); frame()
+            }
+            compose.onNodeWithText("Visual Lab").performClick(); frame()
+        }
         screenshot("tcp-camera-before")
         val original = session().bundle.runtime.state.jointState
         reveal("Move TCP").performClick(); frame()
