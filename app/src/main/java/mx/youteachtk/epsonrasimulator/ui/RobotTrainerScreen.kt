@@ -3,6 +3,7 @@ package mx.youteachtk.epsonrasimulator.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -30,6 +30,7 @@ import mx.youteachtk.epsonrasimulator.ui.visual.VisualLabPointController
 import mx.youteachtk.epsonrasimulator.ui.visual.VisualLabPointsPanel
 import mx.youteachtk.epsonrasimulator.ui.visual.programming.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
@@ -65,65 +66,51 @@ fun RobotTrainerScreen(
         jointValues.map(Float::toDouble)
     )
 
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
-        Column(
+    val sceneContent: @Composable () -> Unit = {
+        Header(robot = robot)
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Box(
             modifier = Modifier
-                .weight(1.7f)
-                .fillMaxHeight()
+                .fillMaxSize()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            Header(robot = robot)
+            C4RobotScene(
+                jointValues = jointValues,
+                modifier = Modifier.fillMaxSize(),
+                workcellBoxes = workcellBoxes
+            )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Box(
+            Surface(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .align(Alignment.BottomStart)
+                    .padding(12.dp),
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 4.dp
             ) {
-                C4RobotScene(
-                    jointValues = jointValues,
-                    modifier = Modifier.fillMaxSize(),
-                    workcellBoxes = workcellBoxes
-                )
-
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(12.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    tonalElevation = 4.dp
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                        Text(
-                            text = "C4-A601S • Official Epson CAD",
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            text = "Drag: orbit camera • Pinch: zoom",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    Text(
+                        text = "C4-A601S • Official Epson CAD",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = "Drag: orbit camera • Pinch: zoom",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Card(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight()
-        ) {
+    }
+    val controlsContent: @Composable () -> Unit = {
+        Card(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .padding(16.dp)
                     .verticalScroll(rememberScrollState())
+                    .testTag("visual-controls")
             ) {
                 Text(
                     text = "Joint Jog",
@@ -199,6 +186,19 @@ fun RobotTrainerScreen(
             }
         }
     }
+    BoxWithConstraints(Modifier.fillMaxSize().padding(16.dp)) {
+        if (maxWidth < 600.dp) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.fillMaxWidth().weight(1f)) { sceneContent() }
+                Box(Modifier.fillMaxWidth().weight(1f)) { controlsContent() }
+            }
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Column(Modifier.weight(1.7f).fillMaxHeight()) { sceneContent() }
+                Box(Modifier.weight(1f).fillMaxHeight()) { controlsContent() }
+            }
+        }
+    }
 }
 
 @Composable
@@ -260,7 +260,7 @@ private fun Header(robot: RobotDefinition) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(Modifier.weight(1f)) {
             Text(
                 text = "EPSON RA SIMULATOR",
                 style = MaterialTheme.typography.headlineSmall,

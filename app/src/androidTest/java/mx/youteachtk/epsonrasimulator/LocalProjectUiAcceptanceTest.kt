@@ -1,7 +1,11 @@
 package mx.youteachtk.epsonrasimulator
 
 import androidx.compose.ui.test.*
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import android.graphics.Bitmap
+import androidx.test.platform.app.InstrumentationRegistry
+import java.io.File
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import mx.youteachtk.epsonrasimulator.domain.TeachPoint
@@ -24,7 +28,37 @@ class LocalProjectUiAcceptanceTest {
         compose.waitForIdle()
     }
 
-    @Test fun createCaptureReplaceCancelSaveAndRecreate() {
+    // performScrollTo loops without advancing a manually controlled clock.
+    // Scroll through public semantics in bounded steps, pumping each animation.
+    private fun reveal(text: String): SemanticsNodeInteraction {
+        val target = compose.onNodeWithText(text)
+        val container = compose.onNodeWithTag("visual-controls")
+        repeat(30) {
+            val bounds = target.getUnclippedBoundsInRoot()
+            val viewport = container.getUnclippedBoundsInRoot()
+            val delta = when {
+                bounds.top < viewport.top -> bounds.top - viewport.top
+                bounds.bottom > viewport.bottom -> bounds.bottom - viewport.bottom
+                else -> return target.assertIsDisplayed()
+            }
+            val pixels = with(compose.density) { delta.toPx() }
+            container.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, pixels) }
+            compose.mainClock.advanceTimeBy(500)
+            compose.waitForIdle()
+        }
+        throw AssertionError("Could not reveal $text after 30 scrolls")
+    }
+
+    private fun screenshot(name: String) {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
+        val directory = File(instrumentation.targetContext.getExternalFilesDir(null), "acceptance")
+        directory.mkdirs()
+        File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        bitmap.recycle()
+    }
+
+    @Test(timeout = 180_000) fun createCaptureReplaceCancelSaveAndRecreate() {
         compose.waitUntil(30_000) { session().persistenceState.startup == PersistenceStartupStatus.READY }
         compose.onNodeWithText("New project").performClick()
         compose.onNodeWithText("Project name").performTextInput("Cancelled")
@@ -40,29 +74,42 @@ class LocalProjectUiAcceptanceTest {
         compose.mainClock.autoAdvance = false
         compose.onNodeWithText("Visual Lab").performClick()
         frame()
-        compose.onNodeWithText("Name").performScrollTo().also { frame() }.performTextInput("P1")
+        screenshot("visual-lab")
+        reveal("Name").performTextInput("P1")
         frame()
-        compose.onNodeWithText("Capture current posture").performScrollTo().also { frame() }.performClick()
+        reveal("Capture current posture").performClick()
         frame()
         var p1: TeachPoint? = null
         compose.runOnIdle {
             p1 = session().bundle.runtime.state.teachPoints.getValue("P1")
             assertEquals(TeachPointFrame.SIMULATION_Z_UP, p1!!.frame)
         }
-        compose.onNodeWithText("RC+ TEST POSE").performScrollTo().also { frame() }.performClick()
+        reveal("RC+ TEST POSE").performClick()
         frame()
-        compose.onNodeWithText("Capture current posture").performScrollTo().also { frame() }.performClick()
+        reveal("Capture current posture").performClick()
         frame()
         compose.onNodeWithText("Cancel").performClick()
         frame()
         compose.runOnIdle { assertEquals(p1, session().bundle.runtime.state.teachPoints["P1"]) }
-        compose.onNodeWithText("Name").performScrollTo().also { frame() }.performTextReplacement("P2")
+        reveal("Capture current posture").performClick()
         frame()
-        compose.onNodeWithText("Capture current posture").performScrollTo().also { frame() }.performClick()
+        compose.onNodeWithText("Replace").performClick()
+        frame()
+        compose.runOnIdle {
+            val replaced = session().bundle.runtime.state.teachPoints.getValue("P1")
+            assertNotEquals(p1!!.preferredJointState, replaced.preferredJointState)
+            assertEquals(session().bundle.runtime.state.jointState, replaced.preferredJointState)
+        }
+        reveal("ZERO JOINTS").performClick()
+        frame()
+        reveal("Name").performTextReplacement("P2")
+        frame()
+        reveal("Capture current posture").performClick()
         frame()
         compose.onNodeWithText("Save", useUnmergedTree = false).performClick()
         frame()
         compose.waitUntil(30_000) { session().persistenceState.saveStatus == PersistenceSaveStatus.SAVED }
+        screenshot("saved-points")
         var points: Map<String, TeachPoint> = emptyMap()
         compose.runOnIdle { points = session().bundle.runtime.state.teachPoints.toMap() }
         compose.activityRule.scenario.recreate()

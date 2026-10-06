@@ -16,6 +16,7 @@ log_pid=$!
 screen_pid=$!
 gradle connectedDebugAndroidTest --stacktrace
 result=$?
+adb pull /sdcard/Android/data/mx.youteachtk.epsonrasimulator/files/acceptance app/build/acceptance-diagnostics/steps >/dev/null 2>&1 || true
 kill "$log_pid" "$screen_pid" 2>/dev/null || true
 wait "$log_pid" "$screen_pid" 2>/dev/null || true
 free -m > app/build/acceptance-diagnostics/memory-after.txt
