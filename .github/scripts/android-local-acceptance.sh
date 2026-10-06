@@ -7,9 +7,10 @@ adb logcat -c
 adb logcat -v threadtime > app/build/acceptance-diagnostics/logcat.txt 2>&1 &
 log_pid=$!
 (
-  for frame in $(seq 1 40); do
+  for frame in $(seq 1 200); do
     if ! adb get-state >/dev/null 2>&1; then break; fi
     adb exec-out screencap -p > "app/build/acceptance-diagnostics/screen-${frame}.png" 2>/dev/null || break
+    adb pull /sdcard/Android/data/mx.youteachtk.epsonrasimulator/files/acceptance app/build/acceptance-diagnostics/steps >/dev/null 2>&1 || true
     sleep 3
   done
 ) &
