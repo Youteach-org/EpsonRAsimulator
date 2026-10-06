@@ -120,15 +120,24 @@ class LocalProjectUiAcceptanceTest {
         frame()
         compose.onNodeWithText("Project name").performTextInput("Replacement cancelled")
         frame()
-        compose.onNodeWithText("Create").performClick()
+        // Typing allows the real autosave debounce to finish. Establish dirty
+        // state and invoke Create in the same UI turn, before autosave can run.
+        compose.onNodeWithText("Create").performSemanticsAction(SemanticsActions.OnClick) { click ->
+            session().bundle.runtime.dispatch(mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand.SetJointValue(5, 1.0))
+            click()
+        }
         frame()
+        compose.runOnIdle { assertTrue(session().persistenceState.replacementDecisionRequired) }
         compose.onNodeWithText("Replace the current project?").assertIsDisplayed()
         compose.onNodeWithText("Cancel").performClick()
         frame()
         compose.runOnIdle {
             assertEquals("Acceptance cell", session().persistenceState.projectName)
             assertEquals(setOf("P1", "P2"), session().bundle.runtime.state.teachPoints.keys)
+            assertEquals(1.0, session().bundle.runtime.state.jointState.values[5], 0.0)
         }
+        reveal("ZERO JOINTS").performClick()
+        frame()
         compose.onNodeWithText("Save", useUnmergedTree = false).performClick()
         frame()
         compose.waitUntil(30_000) { session().persistenceState.saveStatus == PersistenceSaveStatus.SAVED }
