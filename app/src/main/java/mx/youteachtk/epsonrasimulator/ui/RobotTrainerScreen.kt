@@ -1,6 +1,7 @@
 package mx.youteachtk.epsonrasimulator.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,8 +23,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
+import androidx.compose.ui.input.pointer.pointerInput
+import mx.youteachtk.epsonrasimulator.ui.visual.tcp.*
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationFrames
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationPoseTransforms
+import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import mx.youteachtk.epsonrasimulator.project.ProjectRuntime
 import mx.youteachtk.epsonrasimulator.adapters.VisualProgrammingLanguageAdapter
 import mx.youteachtk.epsonrasimulator.ui.visual.VisualLabPointController
@@ -50,6 +55,15 @@ fun RobotTrainerScreen(
     visualProgrammingSession: VisualProgrammingSession
 ) {
     val pointController = remember(runtime) { VisualLabPointController(runtime) }
+    val scope = rememberCoroutineScope()
+    val tcpController = remember(runtime, scope) { TcpPreviewController(runtime, CoroutineTcpPreviewExecution(scope)) }
+    var tcpState by remember(tcpController) { mutableStateOf(tcpController.state) }
+    DisposableEffect(tcpController) {
+        val subscription = tcpController.subscribe { tcpState = it }
+        onDispose { subscription.cancel(); tcpController.close() }
+    }
+    var inputMode by remember { mutableStateOf(TcpInputMode.CAMERA) }
+    var tcpPlane by remember { mutableStateOf(TcpPlane.XY) }
     val programmingController = remember(projectRuntime, visualProgrammingAdapter, visualProgrammingSession) {
         VisualProgrammingController(projectRuntime, visualProgrammingAdapter, visualProgrammingSession)
     }
@@ -62,9 +76,10 @@ fun RobotTrainerScreen(
         runtimeState.toolState
     )
 
-    val tcpCandidate = C4Kinematics.tcpRcCandidateMm(
-        jointValues.map(Float::toDouble)
-    )
+    val toolTcp = runtimeState.toolState.activeToolId?.let { runtimeState.toolState.definitions.getValue(it).tool.tcp }
+        ?: CartesianPose(0.0, 0.0, 0.0)
+    val tcpCandidate = SimulationFrames.cadToSimulation((C4Kinematics.forward(runtimeState.jointState.values).baseToTcp *
+        SimulationPoseTransforms.fromPose(toolTcp)).translation)
 
     val sceneContent: @Composable () -> Unit = {
         Header(robot = robot)
@@ -80,25 +95,37 @@ fun RobotTrainerScreen(
             C4RobotScene(
                 jointValues = jointValues,
                 modifier = Modifier.fillMaxSize(),
-                workcellBoxes = workcellBoxes
+                workcellBoxes = workcellBoxes,
+                previewJoints = tcpState.candidate,
+                toolTcp = toolTcp,
+                targetCadMm = if (inputMode == TcpInputMode.TCP) tcpState.targetSimulationMm?.let(SimulationFrames::simulationToCad) else null,
+                cameraEnabled = inputMode == TcpInputMode.CAMERA
             )
+            if (inputMode == TcpInputMode.TCP) {
+                Box(Modifier.fillMaxSize().testTag("tcp-drag-surface").pointerInput(tcpController, tcpPlane) {
+                    detectDragGestures { change, drag ->
+                        change.consume()
+                        tcpController.state.targetSimulationMm?.let { TcpTargetGesture.drag(it, tcpPlane, TcpInputMode.TCP,
+                            drag.x.toDouble(), drag.y.toDouble(), 0.5) }?.let(tcpController::setTargetSimulationMm)
+                    }
+                })
+            }
+            if (tcpState.candidate != null) {
+                Text("Cyan preview", modifier = Modifier.align(Alignment.BottomEnd).testTag("tcp-ghost")
+                    .background(MaterialTheme.colorScheme.surface).padding(4.dp), style = MaterialTheme.typography.labelSmall)
+            }
 
             Surface(
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(12.dp),
+                    .align(Alignment.TopStart)
+                    .padding(6.dp),
                 shape = RoundedCornerShape(12.dp),
                 tonalElevation = 4.dp
             ) {
-                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)) {
                     Text(
-                        text = "C4-A601S • Official Epson CAD",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = "Drag: orbit camera • Pinch: zoom",
-                        style = MaterialTheme.typography.bodySmall
+                        text = if (inputMode == TcpInputMode.CAMERA) "Camera · drag to orbit · pinch to zoom" else "TCP ${tcpPlane.name} · 0.5 mm/px · Apply to move",
+                        style = MaterialTheme.typography.labelSmall
                     )
                 }
             }
@@ -176,9 +203,10 @@ fun RobotTrainerScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = {}, enabled = false) { Text("TOUCH") }
-                }
+                TcpTargetPanel(tcpState, tcpController, inputMode, { next ->
+                    inputMode = next
+                    if (next == TcpInputMode.CAMERA) tcpController.cancel()
+                }, tcpPlane, { tcpPlane = it })
                 Spacer(Modifier.height(16.dp))
                 VisualLabPointsPanel(runtimeState, pointController)
                 Spacer(Modifier.height(16.dp))
@@ -212,9 +240,9 @@ private fun TcpPanel(tcp: Vector3) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("TCP / FLANGE", fontWeight = FontWeight.Bold)
+                Text("CURRENT TCP", fontWeight = FontWeight.Bold)
                 Text(
-                    "CALIBRATION",
+                    "SIMULATION",
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.labelMedium
                 )
@@ -234,7 +262,7 @@ private fun TcpPanel(tcp: Vector3) {
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "mm • CAD-derived candidate frame. Compare with RC+ before treating as Epson coordinates.",
+                text = "mm · Simulation Z-up · selected tool included",
                 style = MaterialTheme.typography.labelSmall
             )
         }
@@ -262,16 +290,12 @@ private fun Header(robot: RobotDefinition) {
     ) {
         Column(Modifier.weight(1f)) {
             Text(
-                text = "EPSON RA SIMULATOR",
-                style = MaterialTheme.typography.headlineSmall,
+                text = robot.displayName,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                text = "${robot.displayName} • Simulation / Learning",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Text(
-                text = "Reach ${robot.reachMm?.toInt()} mm • Max payload ${robot.maxPayloadKg} kg",
+                text = "Local simulation · C4 joint limits",
                 style = MaterialTheme.typography.bodySmall
             )
         }

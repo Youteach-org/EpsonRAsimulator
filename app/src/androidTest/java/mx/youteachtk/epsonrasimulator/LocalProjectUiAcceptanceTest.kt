@@ -50,6 +50,10 @@ class LocalProjectUiAcceptanceTest {
     }
 
     private fun screenshot(name: String) {
+        compose.waitUntil(30_000) {
+            frame()
+            compose.onAllNodesWithTag("c4-scene-ready").fetchSemanticsNodes().isNotEmpty()
+        }
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
         val directory = File(instrumentation.targetContext.getExternalFilesDir(null), "acceptance")
@@ -59,7 +63,7 @@ class LocalProjectUiAcceptanceTest {
         bitmap.recycle()
     }
 
-    @Test(timeout = 180_000) fun createCaptureReplaceCancelSaveAndRecreate() {
+    @Test(timeout = 240_000) fun createCaptureReplaceCancelSaveAndRecreate() {
         compose.waitUntil(30_000) { session().persistenceState.startup == PersistenceStartupStatus.READY }
         compose.onNodeWithText("New project").performClick()
         compose.onNodeWithText("Project name").performTextInput("Cancelled")

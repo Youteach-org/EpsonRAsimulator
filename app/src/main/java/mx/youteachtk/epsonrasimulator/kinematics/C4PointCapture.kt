@@ -17,7 +17,7 @@ object C4PointCapture {
         }) { "C4 joints must be finite and within their limits" }
 
         // Same CAD-to-Z-up mapping as the existing coordinate display, not RC+ calibration.
-        val cadToSimulation = Matrix4.rotation(Vector3.X, 90.0)
+        val cadToSimulation = SimulationFrames.cadToSimulationTransform
         val transform = cadToSimulation * C4Kinematics.forward(values).baseToTcp * SimulationPoseTransforms.fromPose(toolTcp)
         return TeachPoint(normalizedName, SimulationPoseTransforms.toPose(transform), JointState(values),
             TeachPointFrame.SIMULATION_Z_UP)
