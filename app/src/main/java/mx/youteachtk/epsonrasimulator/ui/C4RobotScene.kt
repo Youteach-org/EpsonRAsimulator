@@ -45,7 +45,13 @@ fun C4RobotScene(
     val engine = rememberEngine()
     val modelLoader = rememberModelLoader(engine)
     val materialLoader = rememberMaterialLoader(engine)
-    val previewMaterial = remember(materialLoader) { materialLoader.createUnlitColorInstance(Color.Cyan) }
+    val previewMaterial = remember(materialLoader) {
+        materialLoader.createUnlitColorInstance(Color.Cyan).apply {
+            // Preview is an overlay: the current robot must not hide its skeleton.
+            setDepthCulling(false)
+            setDepthWrite(false)
+        }
+    }
     val targetMaterial = remember(materialLoader) { materialLoader.createUnlitColorInstance(Color(0xFFFFC107)) }
     val eye = Position(1.1f, 0.8f, 1.1f)
     val center = Position(0f, 0.3f, -0.15f)
@@ -182,7 +188,8 @@ fun C4RobotScene(
             ghostPoints.forEach { point ->
                 SphereNode(radius = 0.007f, stacks = 8, slices = 12,
                     position = Position((point.x / 1000).toFloat(), (point.y / 1000).toFloat(), (point.z / 1000).toFloat()),
-                    materialInstance = previewMaterial)
+                    materialInstance = previewMaterial,
+                    apply = { setPriority(7); isShadowCaster = false; isShadowReceiver = false })
             }
             targetCadMm?.takeIf { listOf(it.x, it.y, it.z).all { v -> v.isFinite() && kotlin.math.abs(v) <= 5000.0 } }?.let { point ->
                 SphereNode(radius = 0.014f, stacks = 12, slices = 16,

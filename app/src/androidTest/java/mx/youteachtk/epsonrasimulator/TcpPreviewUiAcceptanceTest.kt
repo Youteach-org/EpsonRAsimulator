@@ -54,6 +54,18 @@ class TcpPreviewUiAcceptanceTest {
         val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
         val folder = File(instrumentation.targetContext.getExternalFilesDir(null), "acceptance").apply { mkdirs() }
         File(folder, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        if (name.endsWith("-preview")) {
+            // A semantics label alone cannot prove that the 3D ghost was rendered.
+            val pixels = IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+            val cyanPixels = pixels.count {
+                val r = android.graphics.Color.red(it)
+                val g = android.graphics.Color.green(it)
+                val b = android.graphics.Color.blue(it)
+                g > 130 && b > 130 && r < g * 0.55 && r < b * 0.55
+            }
+            assertTrue("Preview must be visibly cyan, found $cyanPixels pixels", cyanPixels >= 100)
+        }
         bitmap.recycle()
     }
     private fun drag() {
