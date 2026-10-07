@@ -17,6 +17,7 @@ if [ "$result" -eq 0 ]; then
 fi
 if [ "$result" -eq 0 ]; then
   adb shell am instrument -w -e class mx.youteachtk.epsonrasimulator.LocalProjectUiAcceptanceTest mx.youteachtk.epsonrasimulator.test/androidx.test.runner.AndroidJUnitRunner > app/build/acceptance-diagnostics/core-ui.txt 2>&1
+  cat app/build/acceptance-diagnostics/core-ui.txt
   if ! grep -q 'OK (1 test)' app/build/acceptance-diagnostics/core-ui.txt || ! grep -q 'CORE_UI_VERIFIED' app/build/acceptance-diagnostics/core-ui.txt; then
     cat app/build/acceptance-diagnostics/core-ui.txt
     result=1
@@ -25,6 +26,7 @@ fi
 if [ "$result" -eq 0 ]; then
   adb shell am force-stop mx.youteachtk.epsonrasimulator
   adb shell am instrument -w -e verifyProcessRestore true -e class mx.youteachtk.epsonrasimulator.LocalProjectProcessRestoreTest mx.youteachtk.epsonrasimulator.test/androidx.test.runner.AndroidJUnitRunner > app/build/acceptance-diagnostics/process-restore.txt 2>&1
+  cat app/build/acceptance-diagnostics/process-restore.txt
   if ! grep -q 'OK (1 test)' app/build/acceptance-diagnostics/process-restore.txt || ! grep -q 'PROCESS_RESTORE_VERIFIED' app/build/acceptance-diagnostics/process-restore.txt; then
     cat app/build/acceptance-diagnostics/process-restore.txt
     result=1

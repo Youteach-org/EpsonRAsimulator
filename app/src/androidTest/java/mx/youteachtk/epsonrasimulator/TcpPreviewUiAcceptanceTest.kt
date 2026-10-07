@@ -64,6 +64,16 @@ class TcpPreviewUiAcceptanceTest {
                 val b = android.graphics.Color.blue(it)
                 g > 130 && b > 130 && r < g * 0.55 && r < b * 0.55
             }
+            if (cyanPixels < 100) {
+                // Preserve a small visual diagnostic in the job log even if artifact storage is full.
+                val thumbnail = Bitmap.createScaledBitmap(bitmap, 360, bitmap.height * 360 / bitmap.width, true)
+                val bytes = java.io.ByteArrayOutputStream().use { stream ->
+                    thumbnail.compress(Bitmap.CompressFormat.PNG, 100, stream)
+                    stream.toByteArray()
+                }
+                println("PREVIEW_DIAGNOSTIC_PNG=" + android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP))
+                thumbnail.recycle()
+            }
             assertTrue("Preview must be visibly cyan, found $cyanPixels pixels", cyanPixels >= 100)
         }
         bitmap.recycle()
