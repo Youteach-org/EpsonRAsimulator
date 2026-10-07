@@ -54,7 +54,7 @@ class TcpPreviewUiAcceptanceTest {
         val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
         val folder = File(instrumentation.targetContext.getExternalFilesDir(null), "acceptance").apply { mkdirs() }
         File(folder, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        if (name.endsWith("-preview")) {
+        if (name.endsWith("-preview") || name == "tcp-camera-before") {
             // A semantics label alone cannot prove that the 3D ghost was rendered.
             val pixels = IntArray(bitmap.width * bitmap.height)
             bitmap.getPixels(pixels, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
@@ -62,19 +62,27 @@ class TcpPreviewUiAcceptanceTest {
                 val r = android.graphics.Color.red(it)
                 val g = android.graphics.Color.green(it)
                 val b = android.graphics.Color.blue(it)
-                g > 130 && b > 130 && r < g * 0.55 && r < b * 0.55
+                // Filament tone mapping lifts red in cyan (observed around 156,234,232).
+                // Require a bright, balanced blue/green excess over red, not raw RGB(0,255,255).
+                g > 130 && b > 130 && minOf(g, b) - r >= 35 && kotlin.math.abs(g - b) <= 30
             }
-            if (cyanPixels < 100) {
+            if (name.endsWith("-preview") && cyanPixels < 100) {
                 // Preserve a small visual diagnostic in the job log even if artifact storage is full.
                 val thumbnail = Bitmap.createScaledBitmap(bitmap, 360, bitmap.height * 360 / bitmap.width, true)
                 val bytes = java.io.ByteArrayOutputStream().use { stream ->
                     thumbnail.compress(Bitmap.CompressFormat.PNG, 100, stream)
                     stream.toByteArray()
                 }
-                println("PREVIEW_DIAGNOSTIC_PNG=" + android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP))
+                instrumentation.sendStatus(0, Bundle().apply {
+                    putString("stream", "PREVIEW_DIAGNOSTIC_PNG=" + android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP) + "\n")
+                })
                 thumbnail.recycle()
             }
-            assertTrue("Preview must be visibly cyan, found $cyanPixels pixels", cyanPixels >= 100)
+            if (name.endsWith("-preview")) {
+                assertTrue("Preview must be visibly cyan, found $cyanPixels pixels", cyanPixels >= 100)
+            } else {
+                assertTrue("Baseline must not contain a cyan preview, found $cyanPixels pixels", cyanPixels < 100)
+            }
         }
         bitmap.recycle()
     }
