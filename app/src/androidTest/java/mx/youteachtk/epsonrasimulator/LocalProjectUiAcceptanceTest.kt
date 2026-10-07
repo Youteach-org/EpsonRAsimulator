@@ -166,5 +166,8 @@ class LocalProjectUiAcceptanceTest {
         frame()
         screenshot("landscape-restored")
         compose.runOnIdle { assertEquals(points, session().bundle.runtime.state.teachPoints) }
+        InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply {
+            putString("stream", "\nCORE_UI_VERIFIED\n")
+        })
     }
 }
