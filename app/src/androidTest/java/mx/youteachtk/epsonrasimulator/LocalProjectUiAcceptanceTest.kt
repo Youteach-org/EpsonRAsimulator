@@ -50,14 +50,23 @@ class LocalProjectUiAcceptanceTest {
     }
 
     private fun screenshot(name: String) {
-        compose.waitUntil(30_000) {
-            frame()
-            compose.onAllNodesWithTag("c4-scene-ready").fetchSemanticsNodes().isNotEmpty()
-        }
         val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
         val directory = File(instrumentation.targetContext.getExternalFilesDir(null), "acceptance")
         directory.mkdirs()
+        try {
+            compose.waitUntil(30_000) {
+                frame()
+                compose.onAllNodesWithTag("c4-scene-ready").fetchSemanticsNodes().isNotEmpty()
+            }
+        } catch (failure: ComposeTimeoutException) {
+            instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+                File(directory, "$name-timeout.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                bitmap.recycle()
+            }
+            File(directory, "$name-timeout-semantics.txt").writeText(compose.onRoot(useUnmergedTree = true).printToString())
+            throw failure
+        }
+        val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
         File(directory, "producer-pid.txt").writeText(android.os.Process.myPid().toString())
         File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
         bitmap.recycle()
