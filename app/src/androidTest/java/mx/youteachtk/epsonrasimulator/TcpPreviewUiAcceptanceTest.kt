@@ -84,6 +84,7 @@ class TcpPreviewUiAcceptanceTest {
                 assertTrue("Baseline must not contain a cyan preview, found $cyanPixels pixels", cyanPixels < 100)
             }
         }
+        streamAcceptanceScreenshot(name, bitmap)
         bitmap.recycle()
     }
     private fun drag() {

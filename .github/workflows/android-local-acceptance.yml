@@ -6,6 +6,7 @@ on:
       - '*.gradle.kts'
       - '.github/workflows/android-local-acceptance.yml'
       - '.github/scripts/android-local-acceptance.sh'
+      - '.github/scripts/decode-acceptance-evidence.py'
   workflow_dispatch:
 permissions:
   contents: read

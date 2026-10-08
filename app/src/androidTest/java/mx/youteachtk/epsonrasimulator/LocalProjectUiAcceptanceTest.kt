@@ -61,6 +61,7 @@ class LocalProjectUiAcceptanceTest {
         } catch (failure: ComposeTimeoutException) {
             instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
                 File(directory, "$name-timeout.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+                streamAcceptanceScreenshot("$name-timeout", bitmap)
                 bitmap.recycle()
             }
             File(directory, "$name-timeout-semantics.txt").writeText(compose.onRoot(useUnmergedTree = true).printToString())
@@ -69,6 +70,7 @@ class LocalProjectUiAcceptanceTest {
         val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
         File(directory, "producer-pid.txt").writeText(android.os.Process.myPid().toString())
         File(directory, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        streamAcceptanceScreenshot(name, bitmap)
         bitmap.recycle()
     }
 
