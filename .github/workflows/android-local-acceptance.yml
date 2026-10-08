@@ -14,6 +14,10 @@ concurrency:
   cancel-in-progress: true
 jobs:
   acceptance:
+    strategy:
+      fail-fast: false
+      matrix:
+        stage: [core, tcp]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -42,12 +46,12 @@ jobs:
           # SceneView preview CI documents first-Filament-viewport failure with SwiftShader GLES.
           # Use its working ANGLE-over-SwiftShader backend (sceneview/sceneview issue #3554).
           emulator-options: -no-window -gpu swangle_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: bash .github/scripts/android-local-acceptance.sh
+          script: bash .github/scripts/android-local-acceptance.sh ${{ matrix.stage }}
       - name: Upload acceptance results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: local-project-acceptance
+          name: local-project-acceptance-${{ matrix.stage }}
           path: |
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
