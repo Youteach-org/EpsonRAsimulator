@@ -128,6 +128,12 @@ class TcpPreviewUiAcceptanceTest {
         reveal("Apply TCP").assertIsNotEnabled()
         compose.runOnIdle { assertEquals(applied, session().bundle.runtime.state.jointState) }
         reveal("Cancel TCP").performClick(); frame()
+        // Losing focus is not proof that an asynchronous IME show has finished.
+        compose.waitUntil(15_000) {
+            frame()
+            !compose.activity.window.decorView.rootWindowInsets.isVisible(android.view.WindowInsets.Type.ime())
+        }
+        screenshot("tcp-after-invalid-cancel")
         drag()
         compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.SetProgress))[0]
             .performSemanticsAction(SemanticsActions.SetProgress) { it(10f) }
