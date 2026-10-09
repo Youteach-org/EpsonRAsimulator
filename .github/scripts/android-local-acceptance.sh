@@ -22,38 +22,7 @@ printf '%s\n' "$emulator_pids" > "$diagnostics/emulator-pids.txt"
   done
 ) > "$diagnostics/emulator-lifecycle.txt" 2>&1 &
 observer_pid=$!
-# Capture the host crash stack without changing Android or the renderer.
-debugger_pids=""
-if [ "$stage" = core ] && [ "${TRACE_EMULATOR:-0}" = 1 ]; then
-  for pid in $emulator_pids; do
-    timeout --signal=TERM --kill-after=5s 420s sudo -n gdb --batch --nx -p "$pid" \
-      -ex "set pagination off" -ex "set confirm off" \
-      -ex "set debuginfod enabled off" \
-      -ex "handle SIGPIPE nostop noprint pass" \
-      -ex "handle SIGSEGV stop print pass" \
-      -ex "shell touch $diagnostics/debugger-attached-$pid" \
-      -ex "continue" -ex "bt 40" -ex "thread apply all bt 20" -ex "detach" \
-      > "$diagnostics/emulator-backtrace-$pid.txt" 2>&1 &
-    debugger_pids="$debugger_pids $!"
-    for attempt in $(seq 1 15); do
-      [ -f "$diagnostics/debugger-attached-$pid" ] && break
-      sleep 1
-    done
-    if [ ! -f "$diagnostics/debugger-attached-$pid" ]; then
-      echo "Debugger failed to attach to emulator $pid"
-      cat "$diagnostics/emulator-backtrace-$pid.txt"
-    fi
-  done
-fi
-cleanup_observers() {
-  kill "$observer_pid" 2>/dev/null || true
-  wait "$observer_pid" 2>/dev/null || true
-  for debugger_pid in $debugger_pids; do
-    kill "$debugger_pid" 2>/dev/null || true
-    wait "$debugger_pid" 2>/dev/null || true
-  done
-}
-trap cleanup_observers EXIT
+trap 'kill "$observer_pid" 2>/dev/null || true; wait "$observer_pid" 2>/dev/null || true' EXIT
 boundary() {
   local label="$1" status="${2:-NA}" adb_status
   {
@@ -150,6 +119,17 @@ while IFS= read -r crash_file; do
   timeout 5s cp --parents -- "$crash_file" "$diagnostics/emulator-crashes/" || true
 done < "$diagnostics/crash-files.txt"
 timeout 10s coredumpctl --no-pager list > "$diagnostics/host-coredumps.txt" 2>&1 || true
+# Analyze preserved host dumps after the test, without attaching to a live VM.
+if [ "$stage" = core ] && [ "${TRACE_EMULATOR:-0}" = 1 ]; then
+  for pid in $emulator_pids; do
+    if timeout 15s sudo -n coredumpctl --no-pager info "$pid" > "$diagnostics/emulator-coredump-$pid.txt" 2>&1; then
+      timeout --kill-after=5s 120s sudo -n coredumpctl debug "$pid" \
+        --debugger-arguments="--batch --nx -iex 'set debuginfod enabled off' -ex 'set pagination off' -ex 'bt 40' -ex 'thread apply all bt 15'" \
+        > "$diagnostics/emulator-backtrace-$pid.txt" 2>&1 || true
+    fi
+    cat "$diagnostics/emulator-coredump-$pid.txt"
+  done
+fi
 boundary script-finished "$result"
 cat "$diagnostics/boundaries.txt"
 for trace in "$diagnostics"/emulator-backtrace-*.txt; do
