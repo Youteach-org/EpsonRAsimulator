@@ -22,7 +22,38 @@ printf '%s\n' "$emulator_pids" > "$diagnostics/emulator-pids.txt"
   done
 ) > "$diagnostics/emulator-lifecycle.txt" 2>&1 &
 observer_pid=$!
-trap 'kill "$observer_pid" 2>/dev/null || true; wait "$observer_pid" 2>/dev/null || true' EXIT
+# Capture the host crash stack without changing Android or the renderer.
+debugger_pids=""
+if [ "$stage" = core ] && [ "${TRACE_EMULATOR:-0}" = 1 ]; then
+  for pid in $emulator_pids; do
+    timeout --signal=TERM --kill-after=5s 420s sudo -n gdb --batch --nx -p "$pid" \
+      -ex "set pagination off" -ex "set confirm off" \
+      -ex "set debuginfod enabled off" \
+      -ex "handle SIGPIPE nostop noprint pass" \
+      -ex "handle SIGSEGV stop print pass" \
+      -ex "shell touch $diagnostics/debugger-attached-$pid" \
+      -ex "continue" -ex "thread apply all bt 20" -ex "detach" \
+      > "$diagnostics/emulator-backtrace-$pid.txt" 2>&1 &
+    debugger_pids="$debugger_pids $!"
+    for attempt in $(seq 1 15); do
+      [ -f "$diagnostics/debugger-attached-$pid" ] && break
+      sleep 1
+    done
+    if [ ! -f "$diagnostics/debugger-attached-$pid" ]; then
+      echo "Debugger failed to attach to emulator $pid"
+      cat "$diagnostics/emulator-backtrace-$pid.txt"
+    fi
+  done
+fi
+cleanup_observers() {
+  kill "$observer_pid" 2>/dev/null || true
+  wait "$observer_pid" 2>/dev/null || true
+  for debugger_pid in $debugger_pids; do
+    kill "$debugger_pid" 2>/dev/null || true
+    wait "$debugger_pid" 2>/dev/null || true
+  done
+}
+trap cleanup_observers EXIT
 boundary() {
   local label="$1" status="${2:-NA}" adb_status
   {
@@ -121,4 +152,13 @@ done < "$diagnostics/crash-files.txt"
 timeout 10s coredumpctl --no-pager list > "$diagnostics/host-coredumps.txt" 2>&1 || true
 boundary script-finished "$result"
 cat "$diagnostics/boundaries.txt"
+for trace in "$diagnostics"/emulator-backtrace-*.txt; do
+  [ -f "$trace" ] || continue
+  printf '\nHOST EMULATOR BACKTRACE: %s\n' "$trace"
+  tail -n 500 "$trace"
+done
+printf '\nHOST KERNEL CRASH EVIDENCE\n'
+grep -Ei "segfault|qemu|oom|killed process" "$diagnostics/kernel.txt" || true
+printf '\nHOST COREDUMP INVENTORY\n'
+cat "$diagnostics/host-coredumps.txt" "$diagnostics/crash-files.txt"
 exit "$result"
