@@ -32,7 +32,7 @@ if [ "$stage" = core ] && [ "${TRACE_EMULATOR:-0}" = 1 ]; then
       -ex "handle SIGPIPE nostop noprint pass" \
       -ex "handle SIGSEGV stop print pass" \
       -ex "shell touch $diagnostics/debugger-attached-$pid" \
-      -ex "continue" -ex "thread apply all bt 20" -ex "detach" \
+      -ex "continue" -ex "bt 40" -ex "thread apply all bt 20" -ex "detach" \
       > "$diagnostics/emulator-backtrace-$pid.txt" 2>&1 &
     debugger_pids="$debugger_pids $!"
     for attempt in $(seq 1 15); do
@@ -155,7 +155,7 @@ cat "$diagnostics/boundaries.txt"
 for trace in "$diagnostics"/emulator-backtrace-*.txt; do
   [ -f "$trace" ] || continue
   printf '\nHOST EMULATOR BACKTRACE: %s\n' "$trace"
-  tail -n 500 "$trace"
+  cat "$trace"
 done
 printf '\nHOST KERNEL CRASH EVIDENCE\n'
 grep -Ei "segfault|qemu|oom|killed process" "$diagnostics/kernel.txt" || true
