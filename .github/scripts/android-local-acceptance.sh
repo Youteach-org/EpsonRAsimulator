@@ -102,6 +102,11 @@ if [ "$result" -eq 0 ] && [ "$stage" = tcp ]; then
 fi
 # Reconstruct screenshots already delivered while the test process was alive.
 python3 .github/scripts/decode-acceptance-evidence.py app/build/acceptance-diagnostics || result=1
+# Preserve machine-readable visual evidence in downloadable job logs as well as
+# artifacts, so reviewers can inspect captures when ZIP extraction is unavailable.
+if [ "$stage" = tcp ]; then
+  sed -n '/EVIDENCE_PNG=/p' "$diagnostics/tcp-preview.txt"
+fi
 timeout 15s adb pull /sdcard/Android/data/mx.youteachtk.epsonrasimulator/files/acceptance app/build/acceptance-diagnostics/steps >/dev/null 2>&1 || true
 kill "$log_pid" 2>/dev/null || true
 wait "$log_pid" 2>/dev/null || true
