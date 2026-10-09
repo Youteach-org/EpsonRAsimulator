@@ -35,6 +35,8 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Check acceptance script syntax
+        run: bash -n .github/scripts/android-local-acceptance.sh
       - name: Build acceptance APKs before starting emulator
         run: gradle assembleDebug assembleDebugAndroidTest --stacktrace
       - name: Run UI acceptance on fresh emulator
