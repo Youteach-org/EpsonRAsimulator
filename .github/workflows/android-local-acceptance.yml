@@ -39,6 +39,10 @@ jobs:
         run: bash -n .github/scripts/android-local-acceptance.sh
       - name: Build acceptance APKs before starting emulator
         run: gradle assembleDebug assembleDebugAndroidTest --stacktrace
+      - name: Ensure host debugger is available
+        if: matrix.stage == 'core'
+        run: |
+          command -v gdb || { sudo apt-get update && sudo apt-get install -y gdb; }
       - name: Run UI acceptance on fresh emulator
         uses: reactivecircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808 # v2
         with:
@@ -46,10 +50,10 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          # swangle_indirect reproducibly SIGSEGVs after core instrumentation teardown.
-          # Exercise Android's supported software backend through the same restoration gate.
-          emulator-options: -no-window -gpu software -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: bash .github/scripts/android-local-acceptance.sh ${{ matrix.stage }}
+          # SceneView preview CI documents first-Filament-viewport failure with SwiftShader GLES.
+          # Use its working ANGLE-over-SwiftShader backend (sceneview/sceneview issue #3554).
+          emulator-options: -no-window -gpu swangle_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          script: TRACE_EMULATOR=1 bash .github/scripts/android-local-acceptance.sh ${{ matrix.stage }}
       - name: Upload acceptance results
         if: always()
         uses: actions/upload-artifact@v4
