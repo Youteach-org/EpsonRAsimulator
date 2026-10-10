@@ -135,6 +135,36 @@ class TcpPreviewUiAcceptanceTest {
             !compose.activity.window.decorView.rootWindowInsets.isVisible(android.view.WindowInsets.Type.ime())
         }
         screenshot("tcp-after-invalid-cancel")
+        // A ready semantics tag and hidden IME do not prove the resized surface
+        // contains the current robot. Allow presented frames to recover, bounded.
+        var robotPixels = 0
+        try {
+            compose.waitUntil(10_000) {
+                frame()
+                val bounds = compose.onNodeWithTag("c4-scene-ready").fetchSemanticsNode().boundsInWindow
+                val bitmap = requireNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
+                val left = (bounds.left + bounds.width * 0.15f).toInt().coerceIn(0, bitmap.width - 1)
+                val right = (bounds.right - bounds.width * 0.15f).toInt().coerceIn(left + 1, bitmap.width)
+                val top = (bounds.top + bounds.height * 0.25f).toInt().coerceIn(0, bitmap.height - 1)
+                val bottom = (bounds.bottom - bounds.height * 0.15f).toInt().coerceIn(top + 1, bitmap.height)
+                robotPixels = 0
+                for (y in top until bottom) for (x in left until right) {
+                    val pixel = bitmap.getPixel(x, y)
+                    val r = android.graphics.Color.red(pixel)
+                    val g = android.graphics.Color.green(pixel)
+                    val b = android.graphics.Color.blue(pixel)
+                    if (r > 100 && g > 100 && b > 100 &&
+                        maxOf(r, g, b) - minOf(r, g, b) < 20) robotPixels++
+                }
+                bitmap.recycle()
+                robotPixels >= 1000
+            }
+        } finally {
+            screenshot("tcp-after-cancel-render-check")
+            InstrumentationRegistry.getInstrumentation().sendStatus(0, Bundle().apply {
+                putString("stream", "\nROBOT_PIXELS_AFTER_CANCEL=$robotPixels\n")
+            })
+        }
         drag()
         compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.SetProgress))[0]
             .performSemanticsAction(SemanticsActions.SetProgress) { it(10f) }
