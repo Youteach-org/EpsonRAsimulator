@@ -43,6 +43,7 @@ class ProjectSessionCodec(
                     data.writeInt(preferred.size)
                     preferred.forEach(data::writeDouble)
                 }
+                data.writeByte(frameMarker(point.frame, decoding = false))
             }
 
             val windows = snapshot.windows.sortedBy { it.id }
@@ -91,7 +92,7 @@ class ProjectSessionCodec(
                 }
 
                 val schema = data.readInt()
-                if (schema != SCHEMA_VERSION) throw UnsupportedSnapshotVersion(schema)
+                if (schema !in 1..SCHEMA_VERSION) throw UnsupportedSnapshotVersion(schema)
 
                 val experience = when (data.readUnsignedByte()) {
                     0 -> null
@@ -115,7 +116,12 @@ class ProjectSessionCodec(
                             data.readDouble()
                         }
                     }
-                    PersistedTeachPoint(name, pose, preferred)
+                    val frame = if (schema == 1) "UNSPECIFIED" else when (data.readUnsignedByte()) {
+                        0 -> "UNSPECIFIED"
+                        1 -> "SIMULATION_Z_UP"
+                        else -> invalid(true, "Invalid teach-point frame")
+                    }
+                    PersistedTeachPoint(name, pose, preferred, frame)
                 }
 
                 val windows = List(data.count(limits.maxWindows)) {
@@ -187,6 +193,7 @@ class ProjectSessionCodec(
         val pointNames = mutableSetOf<String>()
         snapshot.teachPoints.forEach { point ->
             validateText(point.name, limits.maxNameBytes, decoding)
+            frameMarker(point.frame, decoding)
             if (!pointNames.add(point.name)) {
                 invalid(decoding, "Duplicate teach-point name")
             }
@@ -308,6 +315,12 @@ class ProjectSessionCodec(
         }
     }
 
+    private fun frameMarker(value: String, decoding: Boolean): Int = when (value) {
+        "UNSPECIFIED" -> 0
+        "SIMULATION_Z_UP" -> 1
+        else -> invalid(decoding, "Unknown teach-point frame")
+    }
+
     private fun windowModeMarker(
         value: String,
         decoding: Boolean
@@ -392,7 +405,7 @@ class ProjectSessionCodec(
 
     companion object {
         private val MAGIC = "EPSSES01".toByteArray(Charsets.US_ASCII)
-        private const val SCHEMA_VERSION = 1
+        private const val SCHEMA_VERSION = 2
         private val ROBOT_MANAGER_PAGES = listOf(
             "CONTROL_PANEL",
             "JOG_TEACH",

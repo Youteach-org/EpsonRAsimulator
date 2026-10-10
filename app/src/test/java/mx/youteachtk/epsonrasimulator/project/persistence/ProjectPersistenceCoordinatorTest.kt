@@ -77,6 +77,7 @@ class ProjectPersistenceCoordinatorTest {
         var captured: ByteArray = byteArrayOf(1)
     ) : ProjectSessionPersistencePort {
         var prepareFailure: PersistenceException? = null
+        var captureFailure: Exception? = null
         var captureCalls = 0
         var prepareCalls = 0
         var applyCalls = 0
@@ -89,6 +90,7 @@ class ProjectPersistenceCoordinatorTest {
         private var listener: (() -> Unit)? = null
 
         override fun capture(): ByteArray {
+            captureFailure?.let { throw it }
             captureCalls += 1
             return captured.copyOf()
         }
@@ -390,6 +392,194 @@ class ProjectPersistenceCoordinatorTest {
 
     private fun writeSelection(uri: String) =
         DocumentTreeSelection(uri, read = true, write = true, persistable = true)
+
+    @Test fun newPendingRequestSupersedesOlderOpenResult() {
+        listOf(false, true).forEach { failOld ->
+            val h = harness()
+            h.seed()
+            h.start()
+            h.gateway.trees["content://tree/old"] = Tree("Old request", linkedMapOf("Main.prg" to "Function main\nFend\n".toByteArray()))
+            h.gateway.failReads = failOld
+            h.coordinator.requestImport(readSelection("content://tree/old"))
+            h.execution.runWorkerAll()
+            h.project.replaceSource("Main.prg", "Function main\n  Speed 7\nFend\n")
+            h.coordinator.requestCreateLocal("Newest request")
+            h.execution.drain()
+            assertTrue(h.coordinator.state.replacementDecisionRequired)
+            h.coordinator.resolveReplacement(ProjectReplacementDecision.DISCARD)
+            h.execution.drain()
+            assertEquals("Newest request", h.coordinator.state.projectName)
+        }
+    }
+
+    @Test fun anonymousCaptureFailureKeepsSessionAndAllowsRetry() {
+        val h = harness()
+        val port = SessionPort()
+        h.coordinator.attachSessionPersistence(port)
+        h.start()
+        port.captureFailure = PersistenceException(PersistenceFailure.LIMIT_EXCEEDED, "long point name")
+        h.coordinator.requestCreateLocal("First")
+        h.execution.drain()
+        assertNull(h.coordinator.state.projectId)
+        assertNull(h.records.record)
+        assertNotNull(h.coordinator.state.message)
+        port.captureFailure = null
+        h.coordinator.requestCreateLocal("Retry")
+        h.execution.drain()
+        assertEquals("Retry", h.coordinator.state.projectName)
+    }
+
+    @Test fun createLocalWithoutProjectPersistsCurrentSessionWithoutGateway() {
+        val h = harness()
+        val port = SessionPort(byteArrayOf(8, 4, 2))
+        h.coordinator.attachSessionPersistence(port)
+        h.start()
+        h.gateway.failReads = true
+        createLocal(h, "  Mi celda  ")
+        h.execution.drain()
+        assertEquals("Mi celda", h.project.state.projectName)
+        assertEquals(PersistenceSaveStatus.SAVED, h.coordinator.state.saveStatus)
+        assertNull(h.coordinator.state.origin)
+        val snapshot = h.savedSnapshot(requireNotNull(h.coordinator.state.projectId))
+        assertTrue(snapshot.exportResources().isEmpty())
+        assertArrayEquals(byteArrayOf(8, 4, 2), snapshot.sidecarBytes())
+        assertArrayEquals(byteArrayOf(8, 4, 2), port.appliedSidecars.single())
+        assertTrue(h.gateway.released.isEmpty())
+    }
+
+    @Test fun invalidLocalNameDoesNotAllocateId() {
+        val ids = ArrayDeque(listOf("11111111-1111-4111-8111-111111111111"))
+        val h = harness(ids)
+        h.start()
+        for (name in listOf("  ", "x\u0000y", "Ã¡".repeat(513))) {
+            createLocal(h, name)
+            h.execution.drain()
+            assertNull(h.records.record)
+            assertNull(h.project.state.projectName)
+            assertNotNull(h.coordinator.state.message)
+            assertEquals(1, ids.size)
+        }
+    }
+
+    @Test fun createReplacementCancelKeepsCurrentProject() {
+        val h = harness()
+        h.seed()
+        h.start()
+        h.project.replaceSource("Main.prg", "Function main\n Speed 9\nFend\n")
+        val before = h.records.record
+        createLocal(h, "New")
+        assertTrue(h.coordinator.state.replacementDecisionRequired)
+        h.coordinator.resolveReplacement(ProjectReplacementDecision.CANCEL)
+        h.execution.drain()
+        assertEquals(before, h.records.record)
+        assertEquals("Saved Demo", h.project.state.projectName)
+        assertTrue(h.project.resourceBytes("Main.prg")!!.toString(Charsets.UTF_8).contains("Speed 9"))
+    }
+
+    @Test fun createReplacementSaveOrDiscardHonorsOldRevision() {
+        for (decision in listOf(ProjectReplacementDecision.SAVE, ProjectReplacementDecision.DISCARD)) {
+            val h = harness()
+            val oldId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+            h.seed(id = oldId)
+            h.start()
+            h.project.replaceSource("Main.prg", "Function main\n Speed 9\nFend\n")
+            createLocal(h, "New")
+            h.coordinator.resolveReplacement(decision)
+            h.execution.drain()
+            assertEquals("New", h.project.state.projectName)
+            assertTrue(h.project.export().isEmpty())
+            val oldSource = h.savedSnapshot(oldId).exportResources().getValue("Main.prg").toString(Charsets.UTF_8)
+            assertEquals(decision == ProjectReplacementDecision.SAVE, oldSource.contains("Speed 9"))
+        }
+    }
+
+    @Test fun createLocalPublicationFailureKeepsLiveProjectAndPointer() {
+        val h = harness()
+        h.seed()
+        h.start()
+        val before = h.records.record
+        h.records.rejectNextWrite = true
+        createLocal(h, "New")
+        h.execution.drain()
+        assertEquals(before, h.records.record)
+        assertEquals("Saved Demo", h.project.state.projectName)
+        assertArrayEquals(byteArrayOf(0, -1), h.project.resourceBytes("opaque.bin"))
+    }
+
+    @Test fun importAndCreateShareSupersessionGeneration() {
+        for (createFirst in listOf(true, false)) {
+            val h = harness()
+            h.start()
+            h.gateway.trees["content://tree/new"] = Tree("Imported", linkedMapOf("opaque.bin" to byteArrayOf(6)))
+            if (createFirst) createLocal(h, "Local")
+            h.coordinator.requestImport(readSelection("content://tree/new"))
+            if (!createFirst) createLocal(h, "Local")
+            h.execution.drain()
+            assertEquals(if (createFirst) "Imported" else "Local", h.project.state.projectName)
+            assertEquals("22222222-2222-4222-8222-222222222222", h.records.record?.projectId)
+        }
+    }
+
+    @Test fun failedLocalPublicationCanBeRetried() {
+        val h = harness()
+        h.start()
+        h.records.rejectNextWrite = true
+        createLocal(h, "First")
+        h.execution.drain()
+        assertNull(h.records.record)
+        createLocal(h, "Retry")
+        h.execution.drain()
+        assertEquals("Retry", h.project.state.projectName)
+        assertEquals(PersistenceSaveStatus.SAVED, h.coordinator.state.saveStatus)
+    }
+
+    @Test fun localSlotWriteFailureKeepsPreviousProjectAndSession() {
+        val h = harness()
+        h.seed()
+        h.start()
+        val before = h.records.record
+        val newId = "11111111-1111-4111-8111-111111111111"
+        h.slots.open(newId)
+        h.slots.files.getValue(newId).rejectWrites = true
+        createLocal(h, "New")
+        h.execution.drain()
+        assertEquals(before, h.records.record)
+        assertEquals("Saved Demo", h.project.state.projectName)
+        assertArrayEquals(byteArrayOf(0, -1), h.project.resourceBytes("opaque.bin"))
+    }
+
+    @Test fun publishedLocalRequestSupersededByImportRollsBackBeforeSwitching() {
+        val h = harness()
+        h.seed()
+        h.start()
+        createLocal(h, "Local")
+        h.execution.runWorkerAll()
+        h.gateway.trees["content://tree/new"] = Tree("Imported", linkedMapOf("opaque.bin" to byteArrayOf(6)))
+        h.coordinator.requestImport(readSelection("content://tree/new"))
+        h.execution.drain()
+        assertEquals("Imported", h.project.state.projectName)
+        assertArrayEquals(byteArrayOf(6), h.project.resourceBytes("opaque.bin"))
+        assertEquals("22222222-2222-4222-8222-222222222222", h.records.record?.projectId)
+    }
+
+    @Test fun editDuringAnonymousCreateDoesNotLoseSessionChanges() {
+        val h = harness()
+        val port = SessionPort(byteArrayOf(1))
+        h.coordinator.attachSessionPersistence(port)
+        h.start()
+        createLocal(h, "Local")
+        h.execution.runWorkerAll()
+        port.changeTo(byteArrayOf(2))
+        h.execution.drain()
+        assertNull(h.project.state.projectName)
+        assertNull(h.records.record)
+        assertTrue(h.coordinator.state.replacementDecisionRequired)
+        assertArrayEquals(byteArrayOf(2), port.captured)
+    }
+
+    private fun createLocal(h: Harness, name: String) {
+        h.coordinator.requestCreateLocal(name)
+    }
 
     @Test fun startupWithoutActiveRecordBecomesReadyAndEmpty() {
         val h = harness()

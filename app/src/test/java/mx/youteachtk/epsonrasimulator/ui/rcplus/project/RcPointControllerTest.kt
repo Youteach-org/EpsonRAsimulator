@@ -9,6 +9,29 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class RcPointControllerTest {
+    @Test fun rejectsNamesThatCannotBePersistedWithoutMutation() {
+        val runtime = AppRuntimeFactory.createDefault().runtime
+        val controller = RcPointController(runtime)
+        listOf("x".repeat(257), "é".repeat(129), "P\u0000x", "P\uD800").forEach { name ->
+            assertTrue(controller.save(name, "1", "2", "3", "4", "5", "6") is RcPointResult.Rejected)
+            assertTrue(runtime.state.teachPoints.isEmpty())
+        }
+    }
+
+    @Test fun manualEditPreservesFrameAndClearsPreferredJoints() {
+        val runtime = AppRuntimeFactory.createDefault().runtime
+        mx.youteachtk.epsonrasimulator.ui.visual.VisualLabPointController(runtime).captureCurrent("P1")
+        val controller = RcPointController(runtime)
+        controller.save("P1", "1", "2", "3", "4", "5", "6")
+        val point = runtime.state.teachPoints.getValue("P1")
+        assertEquals(mx.youteachtk.epsonrasimulator.domain.TeachPointFrame.SIMULATION_Z_UP, point.frame)
+        org.junit.Assert.assertNull(point.preferredJointState)
+        assertEquals(1.0, point.pose.x, 0.0)
+        controller.save("P2", "1", "2", "3", "4", "5", "6")
+        assertEquals(mx.youteachtk.epsonrasimulator.domain.TeachPointFrame.UNSPECIFIED,
+            runtime.state.teachPoints.getValue("P2").frame)
+    }
+
     @Test
     fun invalidPointInputRejectsWithoutRuntimeMutationOrPublication() {
         val runtime = AppRuntimeFactory.createDefault().runtime

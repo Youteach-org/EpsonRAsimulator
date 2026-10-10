@@ -1,7 +1,9 @@
 package mx.youteachtk.epsonrasimulator.ui.rcplus.project
 
+import mx.youteachtk.epsonrasimulator.domain.validatedTeachPointName
 import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import mx.youteachtk.epsonrasimulator.domain.TeachPoint
+import mx.youteachtk.epsonrasimulator.domain.TeachPointFrame
 import mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntime
 
@@ -32,7 +34,9 @@ class RcPointController(
         ry: String,
         rz: String
     ): RcPointResult {
-        val pointName = name.trim()
+        val pointName = try { validatedTeachPointName(name) } catch (error: IllegalArgumentException) {
+            return RcPointResult.Rejected(error.message ?: "Invalid point name")
+        }
         if (pointName.isEmpty()) {
             return RcPointResult.Rejected(
                 "Point name is required"
@@ -66,7 +70,8 @@ class RcPointController(
                         rx = values[3],
                         ry = values[4],
                         rz = values[5]
-                    )
+                    ),
+                    frame = runtime.state.teachPoints[pointName]?.frame ?: TeachPointFrame.UNSPECIFIED
                 )
             )
         )

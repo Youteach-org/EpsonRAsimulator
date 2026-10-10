@@ -40,6 +40,7 @@ fun AppExperienceRoot(
             available = session.persistence != null,
             onImport = { importLauncher.launch(Unit) },
             onSave = session::saveProject,
+            onCreateLocal = session::createLocalProject,
             onExport = { exportLauncher.launch(Unit) },
             onDismissMessage = session::dismissPersistenceMessage,
             onReplacement = session::resolveProjectReplacement
@@ -93,22 +94,20 @@ private fun ExperienceContent(session: AppSessionViewModel, modifier: Modifier) 
             modifier = modifier
         )
 
-        AppExperience.VISUAL_LAB -> Box(
-            modifier = modifier.fillMaxSize()
-        ) {
-            RobotTrainerScreen(
-                runtime = session.bundle.runtime,
-                projectRuntime = session.bundle.projectRuntime,
-                visualProgrammingAdapter = session.visualProgrammingAdapter,
-                visualProgrammingSession = session.visualProgrammingSession
-            )
+        AppExperience.VISUAL_LAB -> Column(modifier = modifier.fillMaxSize()) {
             OutlinedButton(
                 onClick = session::clearExperience,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(12.dp)
+                modifier = Modifier.padding(horizontal = 16.dp)
             ) {
                 Text("Back")
+            }
+            Box(Modifier.weight(1f)) {
+                RobotTrainerScreen(
+                    runtime = session.bundle.runtime,
+                    projectRuntime = session.bundle.projectRuntime,
+                    visualProgrammingAdapter = session.visualProgrammingAdapter,
+                    visualProgrammingSession = session.visualProgrammingSession
+                )
             }
         }
     }
