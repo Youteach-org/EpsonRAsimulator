@@ -21,6 +21,47 @@ import org.junit.Test
 
 class GraspRuntimeTest {
     @Test
+    fun rotatedMountCarriesOffCentrePartAndReleasesAtFinalPose() {
+        val tool = gripperDefinition()
+        val initial = closedToolState(tool).copy(
+            mountPose = CartesianPose(0.0, 0.0, 0.0, rz = 90.0)
+        )
+        val part = part("rotated", 0.0).copy(
+            pose = CartesianPose(0.0, 4.0, 0.0, rz = 135.0)
+        )
+        val attached = WorkcellRuntime.reconcileGrasp(workcell(part), initial, closeIo(tool))
+        assertTrue(attached.attachments.containsKey(part.id))
+        val moved = initial.copy(mountPose = CartesianPose(20.0, 0.0, 0.0, rz = 180.0))
+        val followed = WorkcellRuntime.followAttachments(attached, moved)
+        val pose = followed.entities.getValue(part.id).pose
+        assertEquals(16.0, pose.x, 1e-9)
+        assertEquals(0.0, pose.y, 1e-9)
+        assertEquals(0.0, pose.z, 1e-9)
+        assertEquals(-135.0, pose.rz, 1e-9)
+        val released = WorkcellRuntime.reconcileGrasp(followed, moved, IoState())
+        assertTrue(released.attachments.isEmpty())
+        assertEquals(pose, released.entities.getValue(part.id).pose)
+    }
+
+    @Test
+    fun rotatedCollisionBoundsIncludeRotatedLocalCenter() {
+        val part = part("asymmetric", 10.0).copy(
+            pose = CartesianPose(10.0, 20.0, 30.0, rz = 90.0),
+            collision = CollisionShapeComponent(AxisAlignedBox(
+                center = Vector3(4.0, 0.0, 0.0),
+                halfExtents = Vector3(3.0, 1.0, 2.0)
+            ))
+        )
+        val bounds = WorkcellRuntime.worldCollisionBox(workcell(part), part.id)!!
+        assertEquals(10.0, bounds.center.x, 1e-9)
+        assertEquals(24.0, bounds.center.y, 1e-9)
+        assertEquals(30.0, bounds.center.z, 1e-9)
+        assertEquals(1.0, bounds.halfExtents.x, 1e-9)
+        assertEquals(3.0, bounds.halfExtents.y, 1e-9)
+        assertEquals(2.0, bounds.halfExtents.z, 1e-9)
+    }
+
+    @Test
     fun fullyClosedActiveGripperAttachesOverlappingPart() {
         val tool = gripperDefinition()
         val toolState = closedToolState(tool).copy(
@@ -163,7 +204,7 @@ class GraspRuntimeTest {
         )
         val movedToolState = ToolRuntime.setMountPose(
             initialToolState,
-            CartesianPose(20.0, 0.0, 0.0, 90.0, 45.0, 30.0)
+            CartesianPose(20.0, 0.0, 0.0)
         )
 
         val after = WorkcellRuntime.followAttachments(
@@ -175,10 +216,13 @@ class GraspRuntimeTest {
             Vector3(4.0, 0.0, 0.0),
             after.attachments.getValue(part.id).offsetFromToolMm
         )
-        assertEquals(
-            CartesianPose(24.0, 0.0, 0.0, 11.0, 12.0, 13.0),
-            after.entities.getValue(part.id).pose
-        )
+        val pose = after.entities.getValue(part.id).pose
+        assertEquals(24.0, pose.x, 1e-9)
+        assertEquals(0.0, pose.y, 1e-9)
+        assertEquals(0.0, pose.z, 1e-9)
+        assertEquals(11.0, pose.rx, 1e-9)
+        assertEquals(12.0, pose.ry, 1e-9)
+        assertEquals(13.0, pose.rz, 1e-9)
     }
 
     @Test

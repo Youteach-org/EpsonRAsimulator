@@ -197,18 +197,18 @@ fun C4RobotScene(
                     materialInstance = targetMaterial)
             }
             workcellBoxes.forEach { box ->
-                CubeNode(
-                    size = Size(
-                        x = box.sizeMeters.x,
-                        y = box.sizeMeters.y,
-                        z = box.sizeMeters.z
-                    ),
-                    position = Position(
-                        x = box.centerMeters.x,
-                        y = box.centerMeters.y,
-                        z = box.centerMeters.z
-                    )
-                )
+                // Explicit nesting preserves the simulation convention Rz * Ry * Rx.
+                Node(
+                    position = Position(box.centerMeters.x, box.centerMeters.y, box.centerMeters.z),
+                    rotation = Rotation(z = box.rotationDegrees.z)
+                ) {
+                    Node(rotation = Rotation(y = box.rotationDegrees.y)) {
+                        CubeNode(
+                            size = Size(box.sizeMeters.x, box.sizeMeters.y, box.sizeMeters.z),
+                            rotation = Rotation(x = box.rotationDegrees.x)
+                        )
+                    }
+                }
             }
         }
 
