@@ -14,7 +14,9 @@ data class TrainingCellConfig(
     val approachPlace: JointState = JointState(listOf(-20.0, -30.0, 30.0, 25.0, 15.0, 40.0)),
     val place: JointState = JointState(listOf(-20.0, -20.0, 30.0, 25.0, 15.0, 40.0)),
     val segmentDurationMillis: Long = 2000,
-    val toolTcp: CartesianPose = CartesianPose(0.0, 0.0, 60.0),
+    // The CAD flange faces -Z. Turn the gripper's local +Z outward so its palm
+    // lies between the flange and the fingertips, rather than inside the wrist.
+    val toolTcp: CartesianPose = CartesianPose(0.0, 0.0, -60.0, rx = 180.0),
     val openWidthMm: Double = 60.0,
     val closedWidthMm: Double = 20.0,
     val speedMmPerSecond: Double = 40.0,

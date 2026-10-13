@@ -7,6 +7,34 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TrainingCellTest {
+    @Test fun presetGripperVerticesStayOutsideCadFlangeFace() {
+        val runtime = AppRuntimeFactory.createDefault().runtime
+        val config = TrainingCellConfig()
+        runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(config))
+        for (joints in listOf(config.pick, config.lift, config.place)) {
+            runtime.dispatch(RuntimeCommand.SetJointState(joints.values))
+            val cadToFlange = mx.youteachtk.epsonrasimulator.kinematics.C4Kinematics
+                .forward(joints.values).baseToTcp.inverseRigid()
+            val boxes = mx.youteachtk.epsonrasimulator.ui.WorkcellSceneProjection.boxes(
+                runtime.state.workcellState, runtime.state.toolState).filter { it.id.startsWith("tool:") }
+            assertEquals(3, boxes.size)
+            for (box in boxes) {
+                val center = box.centerMeters
+                val rotation = box.rotationDegrees
+                val localToCad = SimulationPoseTransforms.fromPose(mx.youteachtk.epsonrasimulator.domain.CartesianPose(
+                    center.x * 1000.0, center.y * 1000.0, center.z * 1000.0,
+                    rotation.x.toDouble(), rotation.y.toDouble(), rotation.z.toDouble()))
+                for (x in listOf(-1, 1)) for (y in listOf(-1, 1)) for (z in listOf(-1, 1)) {
+                    val corner = mx.youteachtk.epsonrasimulator.kinematics.Vector3(
+                        x * box.sizeMeters.x * 500.0, y * box.sizeMeters.y * 500.0, z * box.sizeMeters.z * 500.0)
+                    val flangePoint = (cadToFlange * localToCad).transformPoint(corner)
+                    // C4_J6.glb ends at local Z=-65 mm; outward from that face is -Z.
+                    assertTrue("${box.id} penetrates wrist: flange Z=${flangePoint.z}", flangePoint.z < -1.0)
+                }
+            }
+        }
+    }
+
     @Test fun renderedFingersFollowPhysicalOpeningAtRotatedMount() {
         val runtime = AppRuntimeFactory.createDefault().runtime
         runtime.dispatch(RuntimeCommand.SetJointValue(0, 35.0))
