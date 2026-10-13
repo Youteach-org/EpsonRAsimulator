@@ -55,7 +55,23 @@ object WorkcellSceneProjection {
                     }
             }
 
-        return workcellBoxes + toolBoxes
+        val gripperBoxes = activeToolId?.let { id ->
+            val definition = toolState.definitions.getValue(id)
+            val spec = definition.gripper ?: return@let emptyList()
+            val opening = toolState.gripperStates.getValue(id).openingWidthMm
+            val tcpTransform = SimulationPoseTransforms.fromPose(toolState.mountPose) *
+                SimulationPoseTransforms.fromPose(definition.tool.tcp)
+            val fingers = listOf(-1.0, 1.0).mapIndexed { index, side ->
+                project("tool:${id.value}:finger:$index",
+                    tcpTransform * Matrix4.translation(Vector3(side * (opening / 2 + 4), 0.0, 0.0)),
+                    Vector3(8.0, 20.0, 30.0), WorkcellRenderKind.BOX)
+            }
+            fingers + project("tool:${id.value}:palm",
+                tcpTransform * Matrix4.translation(Vector3(0.0, 0.0, -25.0)),
+                Vector3(spec.openWidthMm + 16.0, 20.0, 20.0), WorkcellRenderKind.BOX)
+        } ?: emptyList()
+
+        return workcellBoxes + toolBoxes + gripperBoxes
     }
 
     private fun project(id: String, worldTransform: Matrix4, sizeMm: Vector3, kind: WorkcellRenderKind): WorkcellSceneBox {

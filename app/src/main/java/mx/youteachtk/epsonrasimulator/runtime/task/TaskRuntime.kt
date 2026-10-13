@@ -26,7 +26,7 @@ class TaskRuntime(
         program: TaskProgram,
         breakpoints: Set<Int> = emptySet()
     ): TaskSnapshot {
-        require(program.actions.none { it is SimAction.MoveJoints }) {
+        require(program.actions.none { it is SimAction.MoveJoints || it is SimAction.WaitForGripper }) {
             "Training motion requires the canonical simulation coordinator"
         }
         require(id !in tasks) {
@@ -532,7 +532,7 @@ class TaskRuntime(
                     ?: return true
 
             return when (action) {
-                is SimAction.MoveJoints -> false
+                is SimAction.MoveJoints, is SimAction.WaitForGripper -> false
                 is SimAction.WaitForInput ->
                     IoRuntime.input(
                         ioState,
@@ -568,6 +568,11 @@ class TaskRuntime(
             return when (
                 val action = task.program.actions[task.actionIndex]
             ) {
+                is SimAction.WaitForGripper -> task.copy(
+                    status = TaskStatus.WAITING,
+                    waitingReason = TaskWaitingReason.Gripper(action.toolId, action.closed),
+                    delayDeadlineMillis = null
+                ) to ioState
                 is SimAction.MoveJoints -> task.copy(
                     status = TaskStatus.WAITING,
                     waitingReason = TaskWaitingReason.Motion,
@@ -688,6 +693,14 @@ class TaskRuntime(
                     val action =
                         current.program.actions[current.actionIndex]
                 ) {
+                    is SimAction.WaitForGripper -> {
+                        current = current.copy(
+                            status = TaskStatus.WAITING,
+                            waitingReason = TaskWaitingReason.Gripper(action.toolId, action.closed),
+                            delayDeadlineMillis = null
+                        )
+                        break
+                    }
                     is SimAction.MoveJoints -> {
                         current = current.copy(
                             status = TaskStatus.WAITING,

@@ -12,17 +12,46 @@ import mx.youteachtk.epsonrasimulator.runtime.task.*
 internal object TrainingMotionRuntime {
     fun reserve(state: SimulationDomainState, id: TaskId): SimulationDomainState {
         val task = requireNotNull(state.taskState.tasks[id]) { "Unknown task" }
-        if (task.program.actions.none { it is SimAction.MoveJoints }) return state
+        validateOutputAccess(state, id)
+        if (task.program.actions.none { it is SimAction.MoveJoints || it is SimAction.WaitForGripper }) return state
         require(state.robotId == EpsonRobotCatalog.C4_A601S.id) { "Training motion currently supports C4 only" }
         require(state.motionOwner == null || state.motionOwner == id) { "Another task owns robot motion" }
         var start = state.jointState
         task.program.actions.forEachIndexed { index, action ->
+            if (action is SimAction.WaitForGripper) {
+                require(action.toolId == state.toolState.activeToolId &&
+                    state.toolState.definitions[action.toolId]?.gripper != null) {
+                    "Gripper wait requires the active functional gripper"
+                }
+            }
             if (action is SimAction.MoveJoints) {
                 JointMotion(id, index, start, action.target, action.durationMillis)
                 start = action.target
             }
         }
-        return state.copy(motionOwner = id)
+        val reserved = state.copy(motionOwner = id)
+        validateActiveOutputs(reserved)
+        return reserved
+    }
+
+    fun validateOutputAccess(state: SimulationDomainState, id: TaskId) {
+        val owner = state.motionOwner ?: return
+        if (owner == id) return
+        val output = state.toolState.activeToolId?.let {
+            state.toolState.definitions.getValue(it).gripper?.closeOutput
+        } ?: return
+        val task = state.taskState.tasks.getValue(id)
+        require(task.program.actions.drop(task.actionIndex).none {
+            it is SimAction.SetOutput && it.address == output
+        }) { "The training task owns the gripper output" }
+    }
+
+    private fun validateActiveOutputs(state: SimulationDomainState) {
+        state.taskState.tasks.forEach { (id, task) ->
+            if (task.status in setOf(TaskStatus.RUNNING, TaskStatus.WAITING, TaskStatus.PAUSED, TaskStatus.HALTED)) {
+                validateOutputAccess(state, id)
+            }
+        }
     }
 
     fun advance(state: SimulationDomainState, elapsed: Long): SimulationDomainState {
@@ -52,7 +81,8 @@ internal object TrainingMotionRuntime {
         return next
     }
 
-    fun evaluate(state: SimulationDomainState): SimulationDomainState {
+    tailrec fun evaluate(state: SimulationDomainState): SimulationDomainState {
+        validateActiveOutputs(state)
         val result = TaskRuntime.evaluate(state.taskState, state.ioState, state.clockState.timeMillis)
         var next = state.copy(taskState = result.taskState, ioState = result.ioState)
         val owner = next.motionOwner ?: return next
@@ -65,6 +95,20 @@ internal object TrainingMotionRuntime {
             return next.copy(clockState = SimulationClock.pause(next.clockState), motionSingleStep = false)
         }
         val action = task.program.actions.getOrNull(task.actionIndex)
+        if (task.status == TaskStatus.WAITING && action is SimAction.WaitForGripper) {
+            val spec = next.toolState.definitions.getValue(action.toolId).gripper!!
+            val endpoint = if (action.closed) spec.closedWidthMm else spec.openWidthMm
+            if (next.toolState.gripperStates.getValue(action.toolId).openingWidthMm == endpoint) {
+                val completed = task.copy(
+                    actionIndex = task.actionIndex + 1,
+                    status = if (next.motionSingleStep) {
+                        if (task.actionIndex + 1 == task.program.actions.size) TaskStatus.FINISHED else TaskStatus.HALTED
+                    } else TaskStatus.RUNNING,
+                    waitingReason = null, delayDeadlineMillis = null
+                )
+                return evaluate(next.copy(taskState = next.taskState.copy(tasks = next.taskState.tasks + (owner to completed))))
+            }
+        }
         if (task.status == TaskStatus.WAITING && action is SimAction.MoveJoints && next.motion == null) {
             next = next.copy(motion = JointMotion(owner, task.actionIndex, next.jointState, action.target, action.durationMillis))
         }

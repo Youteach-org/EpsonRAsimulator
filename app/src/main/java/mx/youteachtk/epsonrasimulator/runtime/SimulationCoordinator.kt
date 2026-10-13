@@ -213,6 +213,7 @@ object SimulationCoordinator {
         state: SimulationDomainState,
         id: TaskId
     ): SimulationDomainState {
+        TrainingMotionRuntime.validateOutputAccess(state, id)
         val resumedTasks = TaskRuntime.resume(
             state.taskState,
             id,
@@ -265,6 +266,7 @@ object SimulationCoordinator {
         state: SimulationDomainState,
         id: TaskId
     ): SimulationDomainState {
+        TrainingMotionRuntime.validateOutputAccess(state, id)
         val result = TaskRuntime.step(
             state.taskState,
             id,

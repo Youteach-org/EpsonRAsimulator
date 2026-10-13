@@ -15,6 +15,118 @@ class TrainingTaskMotionTest {
     private val id = TaskId("training")
     private val target = JointState(listOf(20.0, -20.0, 30.0, 25.0, 15.0, 40.0))
 
+    private fun withGripper(): SharedRuntime {
+        val runtime = AppRuntimeFactory.createDefault().runtime
+        val tool = FunctionalToolDefinition(ToolRuntimeId("reserved"), ToolDefinition("reserved", "Reserved"),
+            gripper = TwoFingerGripperSpec(60.0, 20.0, 40.0,
+                AxisAlignedBox(halfExtents = Vector3(1.0, 1.0, 1.0)), DigitalIoAddress(0)))
+        runtime.dispatch(RuntimeCommand.RegisterFunctionalTool(tool))
+        runtime.dispatch(RuntimeCommand.SelectFunctionalTool(tool.id))
+        runtime.dispatch(RuntimeCommand.LoadTask(TaskProgram(id, "Move", listOf(SimAction.MoveJoints(target, 2000)))))
+        return runtime
+    }
+
+    @Test fun gripperWaitUsesEndpointAndPauseFreezesOpening() {
+        val runtime = withGripper()
+        val cycle = TaskId("close-open")
+        val toolId = ToolRuntimeId("reserved")
+        runtime.dispatch(RuntimeCommand.LoadTask(TaskProgram(cycle, "Close/open", listOf(
+            SimAction.SetOutput(DigitalIoAddress(0), true), SimAction.WaitForGripper(toolId, true),
+            SimAction.SetOutput(DigitalIoAddress(0), false), SimAction.WaitForGripper(toolId, false)
+        ))))
+        runtime.dispatch(RuntimeCommand.StartTask(cycle))
+        runtime.dispatch(RuntimeCommand.StartClock)
+        runtime.dispatch(RuntimeCommand.AdvanceSimulation(500))
+        assertEquals(40.0, runtime.state.toolState.gripperStates.getValue(toolId).openingWidthMm, 0.0)
+        assertEquals(1, runtime.state.taskState.tasks.getValue(cycle).actionIndex)
+        runtime.dispatch(RuntimeCommand.PauseTask(cycle))
+        val paused = runtime.state
+        runtime.dispatch(RuntimeCommand.AdvanceSimulation(5000))
+        assertEquals(paused, runtime.state)
+        runtime.dispatch(RuntimeCommand.ResumeTask(cycle))
+        runtime.dispatch(RuntimeCommand.AdvanceSimulation(500))
+        assertEquals(20.0, runtime.state.toolState.gripperStates.getValue(toolId).openingWidthMm, 0.0)
+        assertEquals(3, runtime.state.taskState.tasks.getValue(cycle).actionIndex)
+        assertEquals(cycle, runtime.state.motionOwner)
+        runtime.dispatch(RuntimeCommand.AdvanceSimulation(1000))
+        assertEquals(60.0, runtime.state.toolState.gripperStates.getValue(toolId).openingWidthMm, 0.0)
+        assertEquals(TaskStatus.FINISHED, runtime.state.taskState.tasks.getValue(cycle).status)
+        assertNull(runtime.state.motionOwner)
+    }
+
+    @Test fun invalidGripperReferenceIsRejectedBeforeOutput() {
+        val runtime = withGripper()
+        val invalid = TaskId("invalid-gripper")
+        runtime.dispatch(RuntimeCommand.LoadTask(TaskProgram(invalid, "Invalid", listOf(
+            SimAction.SetOutput(DigitalIoAddress(5), true), SimAction.WaitForGripper(ToolRuntimeId("missing"), true)
+        ))))
+        val before = runtime.state
+        assertThrows(IllegalArgumentException::class.java) { runtime.dispatch(RuntimeCommand.StartTask(invalid)) }
+        assertEquals(before, runtime.state)
+    }
+
+    @Test fun stepGripperWaitStopsBeforeNextOutputAndStopKeepsOpening() {
+        val runtime = withGripper()
+        val cycle = TaskId("step-gripper")
+        val toolId = ToolRuntimeId("reserved")
+        runtime.dispatch(RuntimeCommand.LoadTask(TaskProgram(cycle, "Step gripper", listOf(
+            SimAction.SetOutput(DigitalIoAddress(0), true), SimAction.WaitForGripper(toolId, true),
+            SimAction.SetOutput(DigitalIoAddress(5), true)
+        ))))
+        runtime.dispatch(RuntimeCommand.StartTask(cycle))
+        runtime.dispatch(RuntimeCommand.StartClock)
+        runtime.dispatch(RuntimeCommand.AdvanceSimulation(250))
+        runtime.dispatch(RuntimeCommand.PauseTask(cycle))
+        runtime.dispatch(RuntimeCommand.StepTask(cycle))
+        runtime.dispatch(RuntimeCommand.AdvanceSimulation(750))
+        assertEquals(TaskStatus.HALTED, runtime.state.taskState.tasks.getValue(cycle).status)
+        assertFalse(IoRuntime.output(runtime.state.ioState, DigitalIoAddress(5)))
+        assertFalse(runtime.state.clockState.running)
+        runtime.dispatch(RuntimeCommand.StopTask(cycle))
+        val stopped = runtime.state
+        runtime.dispatch(RuntimeCommand.AdvanceSimulation(5000))
+        assertEquals(stopped, runtime.state)
+        assertNull(runtime.state.motionOwner)
+    }
+
+    @Test fun legacyRuntimeRejectsGripperWaitBeforeEarlierOutput() {
+        val io = IoRuntime(mx.youteachtk.epsonrasimulator.runtime.io.IoLayout(0..5, 0..5))
+        val legacy = TaskRuntime(mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClock(), io)
+        val program = TaskProgram(id, "Legacy unsupported", listOf(
+            SimAction.SetOutput(DigitalIoAddress(0), true), SimAction.WaitForGripper(ToolRuntimeId("reserved"), true)))
+        assertThrows(IllegalArgumentException::class.java) { legacy.start(id, program) }
+        assertThrows(IllegalArgumentException::class.java) { legacy.snapshot(id) }
+    }
+
+    @Test fun otherTaskCannotWriteReservedGripperButUnrelatedOutputCanRun() {
+        val runtime = withGripper()
+        runtime.dispatch(RuntimeCommand.StartTask(id))
+        val writer = TaskId("writer")
+        runtime.dispatch(RuntimeCommand.LoadTask(TaskProgram(writer, "Writer", listOf(
+            SimAction.SetOutput(DigitalIoAddress(5), true), SimAction.SetOutput(DigitalIoAddress(0), true)))))
+        val before = runtime.state
+        assertThrows(IllegalArgumentException::class.java) { runtime.dispatch(RuntimeCommand.StartTask(writer)) }
+        assertEquals(before, runtime.state)
+        val independent = TaskId("independent")
+        runtime.dispatch(RuntimeCommand.LoadTask(TaskProgram(independent, "Independent", listOf(SimAction.SetOutput(DigitalIoAddress(5), true)))))
+        runtime.dispatch(RuntimeCommand.StartTask(independent))
+        assertTrue(IoRuntime.output(runtime.state.ioState, DigitalIoAddress(5)))
+        assertEquals(id, runtime.state.motionOwner)
+    }
+
+    @Test fun existingWaitingWriterPreventsMotionReservationAtomically() {
+        val runtime = withGripper()
+        val writer = TaskId("writer")
+        runtime.dispatch(RuntimeCommand.LoadTask(TaskProgram(writer, "Writer", listOf(
+            SimAction.WaitForInput(DigitalIoAddress(1)), SimAction.SetOutput(DigitalIoAddress(0), true)))))
+        runtime.dispatch(RuntimeCommand.StartTask(writer))
+        val before = runtime.state
+        assertThrows(IllegalArgumentException::class.java) { runtime.dispatch(RuntimeCommand.StartTask(id)) }
+        assertEquals(before, runtime.state)
+        runtime.dispatch(RuntimeCommand.SetDigitalInput(DigitalIoAddress(1), true))
+        assertTrue(IoRuntime.output(runtime.state.ioState, DigitalIoAddress(0)))
+    }
+
     @Test fun pausedOwnerCannotRestartClockDirectly() {
         val runtime = prepared()
         runtime.dispatch(RuntimeCommand.PauseTask(id))
