@@ -51,6 +51,17 @@ class TrainingPickPlaceAcceptanceTest {
         error("Cannot reveal $tag")
     }
     private fun directory() = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "acceptance").apply { mkdirs() }
+    private fun resetCell() {
+        click("training-setup")
+        compose.onNodeWithText("Reset cell").performClick(); frame()
+    }
+    private fun assertRenderedStatus(expected: String) {
+        compose.waitUntil(10_000) {
+            frame()
+            compose.onAllNodesWithText(expected).fetchSemanticsNodes().isNotEmpty()
+        }
+        reveal("training-status").assertTextEquals(expected)
+    }
     private fun screenshot(name: String) {
         compose.waitUntil(30_000) { frame(); compose.onAllNodesWithTag("c4-scene-ready").fetchSemanticsNodes().isNotEmpty() }
         val bitmap = requireNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
@@ -117,16 +128,54 @@ class TrainingPickPlaceAcceptanceTest {
         }
         // The real ticker can finish after the last manually advanced Compose frame.
         // Wait for the rendered status too, then expose it in the scroll viewport.
-        compose.waitUntil(10_000) {
-            frame()
-            compose.onAllNodesWithText("Pick and place completed").fetchSemanticsNodes().isNotEmpty()
-        }
-        reveal("training-status").assertTextEquals("Pick and place completed")
+        assertRenderedStatus("Pick and place completed")
         compose.activityRule.scenario.onActivity { it.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
         compose.waitUntil(10_000) { frame(); compose.activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE }
         screenshot("training-complete-landscape")
-        click("training-setup")
-        compose.onNodeWithText("Reset cell").performClick(); frame()
+        resetCell()
+        // A missed grasp must finish without claiming that a part was delivered.
+        compose.runOnIdle {
+            session().bundle.runtime.dispatch(RuntimeCommand.SetWorkcellEntityPose(
+                TrainingCellFactory.PART_ID,
+                mx.youteachtk.epsonrasimulator.domain.CartesianPose(5000.0, 5000.0, 5000.0)))
+        }
+        click("training-start")
+        waitState { it.taskState.tasks.getValue(TrainingSequence.TASK_ID).status == TaskStatus.FINISHED }
+        compose.runOnIdle {
+            assertFalse(state().trainingGraspSucceeded)
+            assertTrue(state().workcellState.attachments.isEmpty())
+            assertEquals(5000.0, state().workcellState.entities.getValue(TrainingCellFactory.PART_ID).pose.x, 0.0)
+        }
+        assertRenderedStatus("Finished without a successful pick and place")
+        screenshot("training-empty-grasp")
+
+        resetCell()
+        click("training-start")
+        waitState {
+            it.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex == 3 &&
+                it.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm < 55.0
+        }
+        // Background while actively closing: lifecycle must pause without a click.
+        compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
+        compose.runOnIdle {
+            paused = state()
+            assertEquals(TaskStatus.PAUSED, paused.taskState.tasks.getValue(TrainingSequence.TASK_ID).status)
+            assertFalse(paused.clockState.running)
+            assertTrue(paused.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm > 20.0)
+        }
+        compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED); frame()
+        compose.runOnIdle { assertEquals(paused, state()) }
+        click("training-resume")
+        click("training-stop")
+        compose.runOnIdle {
+            paused = state()
+            assertFalse(paused.clockState.running); assertNull(paused.motionOwner)
+            assertTrue(paused.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm > 20.0)
+        }
+        frame(); compose.runOnIdle { assertEquals(paused, state()) }
+        screenshot("training-stopped-closing")
+
+        resetCell()
         click("training-start")
         waitState { it.jointState != TrainingCellConfig().approachPlace }
         click("training-stop")
