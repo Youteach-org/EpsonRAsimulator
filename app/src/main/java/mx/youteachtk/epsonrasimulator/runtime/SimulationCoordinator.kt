@@ -220,7 +220,8 @@ object SimulationCoordinator {
             state.ioState,
             state.clockState.timeMillis
         )
-        val resumed = state.copy(taskState = resumedTasks, motionSingleStep = false,
+        val resumed = state.copy(taskState = resumedTasks,
+            motionSingleStep = if (state.motionOwner == id) false else state.motionSingleStep,
             clockState = if (state.motionOwner == id) SimulationClock.start(state.clockState) else state.clockState)
         if (state.motionOwner == id) return evaluateTasksAndReconcile(resumed)
         val evaluated =

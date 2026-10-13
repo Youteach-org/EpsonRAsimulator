@@ -15,6 +15,20 @@ class TrainingTaskMotionTest {
     private val id = TaskId("training")
     private val target = JointState(listOf(20.0, -20.0, 30.0, 25.0, 15.0, 40.0))
 
+    @Test fun resumingIndependentTaskCannotCancelOwnersSingleStep() {
+        val runtime = prepared()
+        val independent = TaskId("independent-wait")
+        runtime.dispatch(RuntimeCommand.LoadTask(TaskProgram(independent, "Independent", listOf(SimAction.WaitForInput(DigitalIoAddress(2))))))
+        runtime.dispatch(RuntimeCommand.StartTask(independent))
+        runtime.dispatch(RuntimeCommand.PauseTask(independent))
+        runtime.dispatch(RuntimeCommand.PauseTask(id))
+        runtime.dispatch(RuntimeCommand.StepTask(id))
+        runtime.dispatch(RuntimeCommand.ResumeTask(independent))
+        runtime.dispatch(RuntimeCommand.AdvanceSimulation(2000))
+        assertEquals(TaskStatus.FINISHED, runtime.state.taskState.tasks.getValue(id).status)
+        assertFalse(runtime.state.clockState.running)
+    }
+
     private fun withGripper(): SharedRuntime {
         val runtime = AppRuntimeFactory.createDefault().runtime
         val tool = FunctionalToolDefinition(ToolRuntimeId("reserved"), ToolDefinition("reserved", "Reserved"),

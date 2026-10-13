@@ -98,7 +98,10 @@ class TrainingPickPlaceAcceptanceTest {
         screenshot("training-paused-closing")
         click("training-resume")
         waitState { TrainingCellFactory.PART_ID in it.workcellState.attachments }
+        click("training-pause")
+        compose.runOnIdle { assertTrue(TrainingCellFactory.PART_ID in state().workcellState.attachments) }
         screenshot("training-carrying")
+        click("training-resume")
         waitState { it.taskState.tasks.getValue(TrainingSequence.TASK_ID).status == TaskStatus.FINISHED }
         compose.runOnIdle {
             val s = state()
