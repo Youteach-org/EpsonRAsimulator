@@ -1,6 +1,10 @@
 package mx.youteachtk.epsonrasimulator.runtime
 
 import mx.youteachtk.epsonrasimulator.domain.CartesianPose
+import mx.youteachtk.epsonrasimulator.domain.JointState
+import mx.youteachtk.epsonrasimulator.domain.EpsonRobotCatalog
+import mx.youteachtk.epsonrasimulator.runtime.motion.JointMotion
+import mx.youteachtk.epsonrasimulator.runtime.motion.TrainingMotionRuntime
 import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClock
 import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClockState
 import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
@@ -26,7 +30,12 @@ data class SimulationDomainState(
     val ioState: IoState = IoState(),
     val taskState: TaskRuntimeState = TaskRuntimeState(),
     val workcellState: WorkcellState = WorkcellState(),
-    val toolState: ToolRuntimeState = ToolRuntimeState()
+    val toolState: ToolRuntimeState = ToolRuntimeState(),
+    val robotId: String = EpsonRobotCatalog.C4_A601S.id,
+    val jointState: JointState = EpsonRobotCatalog.C4_A601S.zeroState(),
+    val motion: JointMotion? = null,
+    val motionOwner: TaskId? = null,
+    val motionSingleStep: Boolean = false
 ) {
     init {
         WorkcellRuntime.validateAttachments(workcellState, toolState)
@@ -36,10 +45,15 @@ data class SimulationDomainState(
 object SimulationCoordinator {
     fun startClock(
         state: SimulationDomainState
-    ): SimulationDomainState =
-        state.copy(
+    ): SimulationDomainState {
+        val ownerStatus = state.motionOwner?.let { state.taskState.tasks.getValue(it).status }
+        require(ownerStatus != TaskStatus.PAUSED && ownerStatus != TaskStatus.HALTED) {
+            "Resume or step the owning task before starting the clock"
+        }
+        return state.copy(
             clockState = SimulationClock.start(state.clockState)
         )
+    }
 
     fun pauseClock(
         state: SimulationDomainState
@@ -77,7 +91,8 @@ object SimulationCoordinator {
         val elapsedSimulationMillis =
             nextClock.timeMillis - state.clockState.timeMillis
 
-        val advanced = state.copy(
+        val moved = TrainingMotionRuntime.advance(state, elapsedSimulationMillis)
+        val advanced = moved.copy(
             clockState = nextClock,
             workcellState = WorkcellRuntime.advanceActuators(
                 state.workcellState,
@@ -85,7 +100,7 @@ object SimulationCoordinator {
                 elapsedSimulationMillis
             ),
             toolState = ToolRuntime.advance(
-                state.toolState,
+                moved.toolState,
                 state.ioState,
                 elapsedSimulationMillis
             )
@@ -113,8 +128,14 @@ object SimulationCoordinator {
         state: SimulationDomainState,
         address: DigitalIoAddress,
         value: Boolean
-    ): SimulationDomainState =
-        reconcileOutputs(
+    ): SimulationDomainState {
+        val reservedOutput = state.toolState.activeToolId?.let {
+            state.toolState.definitions.getValue(it).gripper?.closeOutput
+        }
+        require(state.motionOwner == null || address != reservedOutput) {
+            "The training task owns the gripper output"
+        }
+        return reconcileOutputs(
             state.copy(
                 ioState = IoRuntime.setOutput(
                     state.ioState,
@@ -123,6 +144,7 @@ object SimulationCoordinator {
                 )
             )
         )
+    }
 
     fun setInputLabel(
         state: SimulationDomainState,
@@ -165,7 +187,8 @@ object SimulationCoordinator {
         state: SimulationDomainState,
         id: TaskId
     ): SimulationDomainState {
-        val started = state.copy(
+        val reserved = TrainingMotionRuntime.reserve(state, id)
+        val started = reserved.copy(
             taskState = TaskRuntime.start(
                 state.taskState,
                 id
@@ -182,7 +205,8 @@ object SimulationCoordinator {
             taskState = TaskRuntime.pause(
                 state.taskState,
                 id
-            )
+            ),
+            clockState = if (state.motionOwner == id) SimulationClock.pause(state.clockState) else state.clockState
         )
 
     fun resumeTask(
@@ -195,7 +219,9 @@ object SimulationCoordinator {
             state.ioState,
             state.clockState.timeMillis
         )
-        val resumed = state.copy(taskState = resumedTasks)
+        val resumed = state.copy(taskState = resumedTasks, motionSingleStep = false,
+            clockState = if (state.motionOwner == id) SimulationClock.start(state.clockState) else state.clockState)
+        if (state.motionOwner == id) return evaluateTasksAndReconcile(resumed)
         val evaluated =
             if (
                 resumed.taskState.tasks.getValue(id).status ==
@@ -216,7 +242,8 @@ object SimulationCoordinator {
             taskState = TaskRuntime.halt(
                 state.taskState,
                 id
-            )
+            ),
+            clockState = if (state.motionOwner == id) SimulationClock.pause(state.clockState) else state.clockState
         )
 
     fun stopTask(
@@ -227,7 +254,11 @@ object SimulationCoordinator {
             taskState = TaskRuntime.stop(
                 state.taskState,
                 id
-            )
+            ),
+            motion = if (state.motionOwner == id) null else state.motion,
+            motionOwner = if (state.motionOwner == id) null else state.motionOwner,
+            motionSingleStep = if (state.motionOwner == id) false else state.motionSingleStep,
+            clockState = if (state.motionOwner == id) SimulationClock.pause(state.clockState) else state.clockState
         )
 
     fun stepTask(
@@ -240,6 +271,12 @@ object SimulationCoordinator {
             state.ioState,
             state.clockState.timeMillis
         )
+        if (state.motionOwner == id) {
+            return evaluateTasksAndReconcile(state.copy(
+                taskState = result.taskState, ioState = result.ioState,
+                motionSingleStep = true, clockState = SimulationClock.start(state.clockState)
+            ))
+        }
         return reconcileOutputs(
             state.copy(
                 taskState = result.taskState,
@@ -359,12 +396,15 @@ object SimulationCoordinator {
 
     fun selectFunctionalTool(
         state: SimulationDomainState,
-        id: ToolRuntimeId
+        id: ToolRuntimeId,
+        mountPose: CartesianPose? = null
     ): SimulationDomainState {
         if (state.toolState.activeToolId == id) {
             return evaluateWorkcellAndTasks(
                 state.copy(
-                    toolState = ToolRuntime.select(state.toolState, id)
+                    toolState = ToolRuntime.select(state.toolState, id).let {
+                        if (mountPose == null) it else ToolRuntime.setMountPose(it, mountPose)
+                    }
                 )
             )
         }
@@ -373,7 +413,9 @@ object SimulationCoordinator {
             state.workcellState,
             state.toolState
         )
-        val selectedTool = ToolRuntime.select(state.toolState, id)
+        val selectedTool = ToolRuntime.select(state.toolState, id).let {
+            if (mountPose == null) it else ToolRuntime.setMountPose(it, mountPose)
+        }
         val releasedWorkcell = settledWorkcell.copy(
             attachments = emptyMap()
         )
@@ -401,17 +443,7 @@ object SimulationCoordinator {
 
     private fun evaluateTasks(
         state: SimulationDomainState
-    ): SimulationDomainState {
-        val result = TaskRuntime.evaluate(
-            state.taskState,
-            state.ioState,
-            state.clockState.timeMillis
-        )
-        return state.copy(
-            taskState = result.taskState,
-            ioState = result.ioState
-        )
-    }
+    ): SimulationDomainState = TrainingMotionRuntime.evaluate(state)
 
     private fun evaluateTasksAndReconcile(
         state: SimulationDomainState
@@ -444,11 +476,7 @@ object SimulationCoordinator {
             followedBeforeSensors,
             state.ioState
         )
-        val taskResult = TaskRuntime.evaluate(
-            state.taskState,
-            sensorResult.ioState,
-            state.clockState.timeMillis
-        )
+        val taskResult = evaluateTasks(state.copy(ioState = sensorResult.ioState))
         val grasped = WorkcellRuntime.reconcileGrasp(
             sensorResult.workcellState,
             state.toolState,
@@ -459,7 +487,7 @@ object SimulationCoordinator {
             state.toolState
         )
 
-        return state.copy(
+        return taskResult.copy(
             ioState = taskResult.ioState,
             taskState = taskResult.taskState,
             workcellState = followedAfterGrasp

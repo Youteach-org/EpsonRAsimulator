@@ -1,6 +1,10 @@
 package mx.youteachtk.epsonrasimulator.runtime
 
 import mx.youteachtk.epsonrasimulator.domain.JointState
+import mx.youteachtk.epsonrasimulator.domain.EpsonRobotCatalog
+import mx.youteachtk.epsonrasimulator.kinematics.C4Kinematics
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationFrames
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationPoseTransforms
 import mx.youteachtk.epsonrasimulator.domain.RobotDefinition
 import mx.youteachtk.epsonrasimulator.domain.TeachPoint
 import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClockState
@@ -31,7 +35,15 @@ class SharedRuntime(
 
     fun dispatch(command: RuntimeCommand): SharedRuntimeState {
         val current = state
-        val next = when (command) {
+        if (current.motionOwner != null) {
+            require(command !is RuntimeCommand.SetJointValue && command !is RuntimeCommand.SetJointState &&
+                command != RuntimeCommand.ResetJoints && command !is RuntimeCommand.SelectRobot &&
+                command !is RuntimeCommand.SelectFunctionalTool && command !is RuntimeCommand.SetToolMountPose &&
+                command !is RuntimeCommand.UpsertWorkcellEntity && command !is RuntimeCommand.RemoveWorkcellEntity &&
+                command !is RuntimeCommand.SetWorkcellEntityPose && command !is RuntimeCommand.SetSignalBindings &&
+                command != RuntimeCommand.ResetClock) { "A training task owns robot motion" }
+        }
+        var next = when (command) {
             is RuntimeCommand.SelectRobot -> {
                 val robot = robots.require(command.robotId)
                 current.copy(
@@ -254,7 +266,13 @@ class SharedRuntime(
                 current.withSimulation(
                     SimulationCoordinator.selectFunctionalTool(
                         current.simulationDomain(),
-                        command.id
+                        command.id,
+                        if (current.activeRobotId == EpsonRobotCatalog.C4_A601S.id) {
+                            SimulationPoseTransforms.toPose(
+                                SimulationFrames.cadToSimulationTransform *
+                                    C4Kinematics.forward(current.jointState.values).baseToTcp
+                            )
+                        } else null
                     )
                 )
 
@@ -265,6 +283,23 @@ class SharedRuntime(
                         command.pose
                     )
                 )
+        }
+
+        if (next.jointState != current.jointState &&
+            next.activeRobotId == EpsonRobotCatalog.C4_A601S.id &&
+            next.toolState.activeToolId != null
+        ) {
+            // Functional geometry is flange-local. The tool TCP offset is applied
+            // by its consumers, never a second time to the mounting transform.
+            val mount = SimulationPoseTransforms.toPose(
+                SimulationFrames.cadToSimulationTransform *
+                    C4Kinematics.forward(next.jointState.values).baseToTcp
+            )
+            if (next.toolState.mountPose != mount) {
+                next = next.withSimulation(
+                    SimulationCoordinator.setToolMountPose(next.simulationDomain(), mount)
+                )
+            }
         }
 
         if (next != current) {
@@ -309,7 +344,10 @@ class SharedRuntime(
             ioState = IoState(),
             taskState = TaskRuntimeState(),
             workcellState = WorkcellState(),
-            toolState = ToolRuntimeState()
+            toolState = ToolRuntimeState(),
+            motion = null,
+            motionOwner = null,
+            motionSingleStep = false
         )
 
         if (next != state) {
@@ -331,7 +369,12 @@ class SharedRuntime(
             ioState = ioState,
             taskState = taskState,
             workcellState = workcellState,
-            toolState = toolState
+            toolState = toolState,
+            robotId = activeRobotId,
+            jointState = jointState,
+            motion = motion,
+            motionOwner = motionOwner,
+            motionSingleStep = motionSingleStep
         )
 
     private fun SharedRuntimeState.withSimulation(
@@ -342,7 +385,11 @@ class SharedRuntime(
             ioState = domain.ioState,
             taskState = domain.taskState,
             workcellState = domain.workcellState,
-            toolState = domain.toolState
+            toolState = domain.toolState,
+            jointState = domain.jointState,
+            motion = domain.motion,
+            motionOwner = domain.motionOwner,
+            motionSingleStep = domain.motionSingleStep
         )
 
     private fun validateInitialJointState(
