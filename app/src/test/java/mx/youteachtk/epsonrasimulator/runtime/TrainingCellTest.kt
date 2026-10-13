@@ -7,6 +7,29 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TrainingCellTest {
+    @Test fun supportsStayBelowRotatedPartAtBothEndpoints() {
+        val cell = TrainingCellFactory.build(TrainingCellConfig())
+        fun heightRange(pose: mx.youteachtk.epsonrasimulator.domain.CartesianPose,
+                        size: mx.youteachtk.epsonrasimulator.kinematics.Vector3): ClosedFloatingPointRange<Double> {
+            val transform = SimulationPoseTransforms.fromPose(pose)
+            val heights = buildList {
+                for (x in listOf(-1, 1)) for (y in listOf(-1, 1)) for (z in listOf(-1, 1)) {
+                    add(transform.transformPoint(mx.youteachtk.epsonrasimulator.kinematics.Vector3(
+                        x * size.x / 2, y * size.y / 2, z * size.z / 2)).z)
+                }
+            }
+            return heights.min()..heights.max()
+        }
+        for ((fixtureId, joints) in listOf("training-source" to cell.config.pick, "training-destination" to cell.config.place)) {
+            val fixture = cell.entities.single { it.id.value == fixtureId }
+            val part = heightRange(TrainingCellFactory.tcpPose(joints, cell.config.toolTcp), cell.config.partSizeMm)
+            val support = heightRange(fixture.pose, fixture.render!!.sizeMm)
+            assertTrue("$fixtureId intersects part: top=${support.endInclusive}, part bottom=${part.start}",
+                support.endInclusive <= part.start + 1e-6)
+            assertEquals("Part should rest on support", part.start, support.endInclusive, 1e-6)
+        }
+    }
+
     @Test fun presetGripperVerticesStayOutsideCadFlangeFace() {
         val runtime = AppRuntimeFactory.createDefault().runtime
         val config = TrainingCellConfig()

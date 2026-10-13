@@ -41,10 +41,15 @@ object TrainingCellFactory {
             collision = CollisionShapeComponent(AxisAlignedBox(halfExtents = Vector3(
                 config.partSizeMm.x / 2, config.partSizeMm.y / 2, config.partSizeMm.z / 2))),
             graspable = GraspableComponent, render = render)
-        fun fixture(name: String, pose: CartesianPose) = WorkcellEntity(
-            WorkcellEntityId(name), pose.copy(z = pose.z - config.partSizeMm.z / 2 - 5.0),
-            fixture = FixtureComponent,
-            render = RenderPrimitiveComponent(WorkcellRenderKind.BOX, Vector3(60.0, 60.0, 10.0)))
+        fun fixture(name: String, pose: CartesianPose): WorkcellEntity {
+            val partHalfHeight = part.collision!!.box.transformed(pose).halfExtents.z
+            // Horizontal supports touch the lowest rotated part vertex. Copying
+            // the TCP rotation tilts a wide plate through the part and hides it.
+            return WorkcellEntity(
+                WorkcellEntityId(name), CartesianPose(pose.x, pose.y, pose.z - partHalfHeight - 5.0),
+                fixture = FixtureComponent,
+                render = RenderPrimitiveComponent(WorkcellRenderKind.BOX, Vector3(60.0, 60.0, 10.0)))
+        }
         return TrainingCellDefinition(config, tool,
             listOf(part, fixture("training-source", pickPose), fixture("training-destination", placePose)),
             TrainingSequence.program(config, TOOL_ID))

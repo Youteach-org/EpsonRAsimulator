@@ -115,6 +115,13 @@ class TrainingPickPlaceAcceptanceTest {
         click("training-pause")
         compose.runOnIdle { assertTrue(TrainingCellFactory.PART_ID in state().workcellState.attachments) }
         screenshot("training-carrying")
+        // Inspect the gripped part from another angle; the default camera sees
+        // the rear of the wrist. Orbiting must never change canonical posture.
+        compose.runOnIdle { paused = state() }
+        compose.onNodeWithTag("c4-scene-ready").performTouchInput { swipeLeft(durationMillis = 400) }
+        repeat(3) { frame() }
+        compose.runOnIdle { assertEquals(paused, state()) }
+        screenshot("training-carrying-orbit")
         click("training-resume")
         waitState { it.taskState.tasks.getValue(TrainingSequence.TASK_ID).status == TaskStatus.FINISHED }
         compose.runOnIdle {
@@ -150,6 +157,9 @@ class TrainingPickPlaceAcceptanceTest {
         screenshot("training-empty-grasp")
 
         resetCell()
+        // Reset restores speed=1. Give lifecycle/scroll work a four-second
+        // closing window so slow emulators can observe the in-flight gripper.
+        compose.runOnIdle { session().bundle.runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.25)) }
         click("training-start")
         waitState {
             it.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex == 3 &&
