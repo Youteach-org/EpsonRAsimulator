@@ -31,6 +31,9 @@ class TrainingPickPlaceAcceptanceTest {
         compose.waitUntil(40_000) { frame(); var done = false; compose.runOnIdle { done = predicate(state()) }; done }
     }
     private fun click(tag: String) {
+        reveal(tag).performClick(); frame()
+    }
+    private fun reveal(tag: String): SemanticsNodeInteraction {
         val target = compose.onNodeWithTag(tag)
         val container = compose.onNodeWithTag("visual-controls")
         repeat(30) {
@@ -39,7 +42,7 @@ class TrainingPickPlaceAcceptanceTest {
             val delta = when {
                 bounds.top < viewport.top -> bounds.top - viewport.top
                 bounds.bottom > viewport.bottom -> bounds.bottom - viewport.bottom
-                else -> { target.assertIsDisplayed().performClick(); frame(); return }
+                else -> { return target.assertIsDisplayed() }
             }
             val pixels = with(compose.density) { delta.toPx() }
             container.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, pixels) }
@@ -112,7 +115,13 @@ class TrainingPickPlaceAcceptanceTest {
             val expected = SimulationPoseTransforms.fromPose(TrainingCellFactory.tcpPose(config.place, config.toolTcp))
             for (r in 0..3) for (c in 0..3) assertEquals(expected[r,c], actual[r,c], 1e-5)
         }
-        compose.onNodeWithText("Pick and place completed").assertExists()
+        // The real ticker can finish after the last manually advanced Compose frame.
+        // Wait for the rendered status too, then expose it in the scroll viewport.
+        compose.waitUntil(10_000) {
+            frame()
+            compose.onAllNodesWithText("Pick and place completed").fetchSemanticsNodes().isNotEmpty()
+        }
+        reveal("training-status").assertTextEquals("Pick and place completed")
         compose.activityRule.scenario.onActivity { it.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE }
         compose.waitUntil(10_000) { frame(); compose.activity.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE }
         screenshot("training-complete-landscape")
