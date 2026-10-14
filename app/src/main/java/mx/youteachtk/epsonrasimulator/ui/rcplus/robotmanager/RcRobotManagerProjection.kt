@@ -38,7 +38,8 @@ object RcRobotManagerProjection {
                         joint.maxSpeedDegPerSec
                 )
             },
-            connectionMode = state.connectionMode
+            connectionMode = state.connectionMode,
+            jointJogEnabled = state.motionOwner == null
         )
     }
 }

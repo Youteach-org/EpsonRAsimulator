@@ -125,6 +125,24 @@ class TrainingPickPlaceAcceptanceTest {
         compose.activityRule.scenario.recreate(); frame()
         compose.runOnIdle { assertEquals(paused, state()); assertFalse(state().clockState.running) }
         screenshot("training-paused-portrait")
+        // Leaving Visual Lab preserves the paused owner. The other experience
+        // must reject competing jogs without crashing or changing that state.
+        compose.onNodeWithText("Back").performClick(); frame()
+        compose.onNodeWithText("RC+ Trainer").performClick(); frame()
+        compose.onNodeWithText("Robot Manager").performClick(); frame()
+        compose.onNodeWithText("Jog & Teach").performScrollTo(); frame()
+        compose.onNodeWithText("Jog & Teach").performClick(); frame()
+        for (direction in listOf("negative", "positive")) {
+            val jog = compose.onNodeWithTag("rc-jog-$direction-0")
+            jog.performScrollTo(); frame()
+            jog.assertIsDisplayed().assertIsNotEnabled().performTouchInput { click() }
+            frame()
+            compose.runOnIdle { assertEquals(paused, state()) }
+        }
+        compose.onNodeWithText("Experiences").performScrollTo(); frame()
+        compose.onNodeWithText("Experiences").performClick(); frame()
+        compose.onNodeWithText("Visual Lab").performClick(); frame()
+        compose.runOnIdle { assertEquals(paused, state()) }
         click("training-resume")
         waitState {
             it.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex == 3 &&
