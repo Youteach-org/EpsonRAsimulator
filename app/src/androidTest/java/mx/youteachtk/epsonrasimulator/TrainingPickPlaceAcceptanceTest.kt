@@ -42,7 +42,10 @@ class TrainingPickPlaceAcceptanceTest {
             val delta = when {
                 bounds.top < viewport.top -> bounds.top - viewport.top
                 bounds.bottom > viewport.bottom -> bounds.bottom - viewport.bottom
-                else -> { return target.assertIsDisplayed() }
+                else -> {
+                    try { return target.assertIsDisplayed() }
+                    catch (_: AssertionError) { frame(); return@repeat }
+                }
             }
             val pixels = with(compose.density) { delta.toPx() }
             container.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, pixels) }
@@ -175,8 +178,16 @@ class TrainingPickPlaceAcceptanceTest {
         }
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED); frame()
         compose.runOnIdle { assertEquals(paused, state()) }
-        click("training-resume")
-        click("training-stop")
+        // Invoke the same button semantics without waiting for Compose to idle
+        // between them: the real ticker can finish closing during that wait.
+        val resumeClosing = reveal("training-resume").fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        val stopClosing = reveal("training-stop").fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        compose.runOnUiThread {
+            assertTrue(resumeClosing())
+            assertTrue(state().clockState.running)
+            assertEquals(TaskStatus.WAITING, state().taskState.tasks.getValue(TrainingSequence.TASK_ID).status)
+            assertTrue(stopClosing())
+        }
         compose.runOnIdle {
             paused = state()
             assertFalse(paused.clockState.running); assertNull(paused.motionOwner)

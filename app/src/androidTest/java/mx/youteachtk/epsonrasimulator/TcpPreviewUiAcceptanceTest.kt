@@ -32,7 +32,13 @@ class TcpPreviewUiAcceptanceTest {
             val delta = when {
                 bounds.top < viewport.top -> bounds.top - viewport.top
                 bounds.bottom > viewport.bottom -> bounds.bottom - viewport.bottom
-                else -> return target.assertIsDisplayed()
+                else -> {
+                    // IME/inset changes can clip a node after its bounds were
+                    // measured. Re-measure on the next frame before declaring
+                    // it unreachable; keep the same bounded reveal attempt.
+                    try { return target.assertIsDisplayed() }
+                    catch (_: AssertionError) { frame(); return@repeat }
+                }
             }
             container.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, with(compose.density) { delta.toPx() }) }
             compose.mainClock.advanceTimeBy(500); compose.waitForIdle()
