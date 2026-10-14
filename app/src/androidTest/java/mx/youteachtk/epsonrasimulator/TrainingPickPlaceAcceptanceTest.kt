@@ -128,6 +128,9 @@ class TrainingPickPlaceAcceptanceTest {
         // Leaving Visual Lab preserves the paused owner. The other experience
         // must reject competing jogs without crashing or changing that state.
         compose.onNodeWithText("Back").performClick(); frame()
+        // performScrollTo waits for animated scrolling. Let the Compose test
+        // clock advance on this screen; the canonical simulation stays paused.
+        compose.mainClock.autoAdvance = true
         compose.onNodeWithText("RC+ Trainer").performClick(); frame()
         compose.onNodeWithText("Robot Manager").performClick(); frame()
         compose.onNodeWithText("Jog & Teach").performScrollTo(); frame()
@@ -141,8 +144,12 @@ class TrainingPickPlaceAcceptanceTest {
         }
         compose.onNodeWithText("Experiences").performScrollTo(); frame()
         compose.onNodeWithText("Experiences").performClick(); frame()
+        compose.mainClock.autoAdvance = false
         compose.onNodeWithText("Visual Lab").performClick(); frame()
         compose.runOnIdle { assertEquals(paused, state()) }
+        InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply {
+            putString("stream", "\nTRAINING_CROSS_EXPERIENCE_JOG_VERIFIED\n")
+        })
         click("training-resume")
         waitState {
             it.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex == 3 &&
