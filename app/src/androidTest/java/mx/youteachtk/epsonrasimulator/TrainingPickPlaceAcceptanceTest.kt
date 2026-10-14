@@ -67,9 +67,36 @@ class TrainingPickPlaceAcceptanceTest {
     }
     private fun screenshot(name: String) {
         compose.waitUntil(30_000) { frame(); compose.onAllNodesWithTag("c4-scene-ready").fetchSemanticsNodes().isNotEmpty() }
-        val bitmap = requireNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
-        File(directory(), "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        streamAcceptanceScreenshot(name, bitmap); bitmap.recycle()
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        var robotPixels = 0
+        try {
+            // A surface can still be black immediately after foregrounding,
+            // even when its Compose ready tag survived the lifecycle change.
+            compose.waitUntil(10_000) {
+                frame()
+                val bounds = compose.onNodeWithTag("c4-scene-ready").fetchSemanticsNode().boundsInWindow
+                val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
+                val left = (bounds.left + bounds.width * 0.15f).toInt().coerceIn(0, bitmap.width - 1)
+                val right = (bounds.right - bounds.width * 0.15f).toInt().coerceIn(left + 1, bitmap.width)
+                val top = (bounds.top + bounds.height * 0.25f).toInt().coerceIn(0, bitmap.height - 1)
+                val bottom = (bounds.bottom - bounds.height * 0.15f).toInt().coerceIn(top + 1, bitmap.height)
+                robotPixels = 0
+                for (y in top until bottom) for (x in left until right) {
+                    val pixel = bitmap.getPixel(x, y)
+                    val r = android.graphics.Color.red(pixel)
+                    val g = android.graphics.Color.green(pixel)
+                    val b = android.graphics.Color.blue(pixel)
+                    if (minOf(r, g, b) > 100 && maxOf(r, g, b) - minOf(r, g, b) < 20) robotPixels++
+                }
+                bitmap.recycle()
+                robotPixels >= 1000
+            }
+        } finally {
+            val bitmap = requireNotNull(instrumentation.uiAutomation.takeScreenshot())
+            File(directory(), "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            streamAcceptanceScreenshot(name, bitmap); bitmap.recycle()
+            instrumentation.sendStatus(0, android.os.Bundle().apply { putString("stream", "\nSCENE_PIXELS_$name=$robotPixels\n") })
+        }
     }
 
     @Test(timeout = 240_000) fun controlsCarryReleasePauseRecreateAndSave() {
