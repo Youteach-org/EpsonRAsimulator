@@ -23,6 +23,15 @@ object TrainingCellFactory {
             SimulationPoseTransforms.fromPose(tcp)
     )
 
+    /** Nominal part centre relative to the grasp frame, retained during attachment. */
+    fun partPose(joints: JointState, config: TrainingCellConfig): CartesianPose =
+        SimulationPoseTransforms.toPose(
+            SimulationPoseTransforms.fromPose(tcpPose(joints, config.toolTcp)) *
+                // Fingers reach 15 mm beyond TCP. The default 20 mm part extends
+                // 18 mm: grasp above its centre to leave 3 mm over the plate.
+                Matrix4.translation(Vector3(0.0, 0.0, 8.0))
+        )
+
     fun build(configuration: TrainingCellConfig): TrainingCellDefinition {
         val config = configuration.snapshot()
         require(config.presetId == "c4-pick-place-v1") { "Unsupported training preset" }
@@ -35,24 +44,24 @@ object TrainingCellFactory {
             AxisAlignedBox(Vector3(config.toolTcp.x, config.toolTcp.y, config.toolTcp.z), Vector3(15.0, 15.0, 15.0)),
             config.closeOutput)
         val tool = FunctionalToolDefinition(TOOL_ID, ToolDefinition("training-gripper", "Training gripper", tcp = config.toolTcp), gripper = gripper)
-        val pickPose = tcpPose(config.pick, config.toolTcp)
-        val placePose = tcpPose(config.place, config.toolTcp)
+        val pickPose = partPose(config.pick, config)
+        val placePose = partPose(config.place, config)
         val part = WorkcellEntity(PART_ID, pickPose,
             collision = CollisionShapeComponent(AxisAlignedBox(halfExtents = Vector3(
                 config.partSizeMm.x / 2, config.partSizeMm.y / 2, config.partSizeMm.z / 2))),
             graspable = GraspableComponent, render = render)
         fun fixture(name: String, pose: CartesianPose): WorkcellEntity {
-            val tcp = SimulationPoseTransforms.fromPose(pose)
-            // Support the lower-facing Y face between the fingers. A broad
-            // horizontal plate clears the part but intersects the tilted tool.
-            val side = if (tcp[2, 1] > 0.0) -1.0 else 1.0
-            val supportPose = SimulationPoseTransforms.toPose(tcp * Matrix4.translation(
-                Vector3(0.0, side * (config.partSizeMm.y / 2 + 5.0), 0.0)))
+            val partFrame = SimulationPoseTransforms.fromPose(pose)
+            val half = config.partSizeMm
+            val verticalHalfExtent = (kotlin.math.abs(partFrame[2,0]) * half.x +
+                kotlin.math.abs(partFrame[2,1]) * half.y +
+                kotlin.math.abs(partFrame[2,2]) * half.z) / 2
+            // Horizontal full-size plate: its top touches the bottom of the part.
+            val supportPose = CartesianPose(pose.x, pose.y, pose.z - verticalHalfExtent - 5.0)
             return WorkcellEntity(
                 WorkcellEntityId(name), supportPose,
                 fixture = FixtureComponent,
-                render = RenderPrimitiveComponent(WorkcellRenderKind.BOX,
-                    Vector3(config.partSizeMm.x / 2, 10.0, config.partSizeMm.z / 2)))
+                render = RenderPrimitiveComponent(WorkcellRenderKind.BOX, Vector3(60.0, 60.0, 10.0)))
         }
         return TrainingCellDefinition(config, tool,
             listOf(part, fixture("training-source", pickPose), fixture("training-destination", placePose)),

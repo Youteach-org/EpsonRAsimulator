@@ -29,7 +29,9 @@ class TrainingFixtureClearanceTest {
             val boxes = WorkcellSceneProjection.boxes(runtime.state.workcellState, runtime.state.toolState)
             val fixtures = boxes.filter { it.id in listOf("training-source", "training-destination") }
             assertEquals(2, fixtures.size)
-            for (tool in boxes.filter { it.id.startsWith("tool:") }) for (fixture in fixtures) {
+            for (fixture in fixtures) assertTrue("Full-size support required",
+                fixture.sizeMeters.x >= 0.059f && fixture.sizeMeters.y >= 0.059f)
+            for (tool in boxes.filter { it.id.startsWith("tool:") || it.id == "training-part" }) for (fixture in fixtures) {
                 assertFalse("${tool.id} intersects ${fixture.id} at ${tick * 20} ms, action=" +
                     runtime.state.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex,
                     penetrates(tool, fixture))

@@ -16,7 +16,7 @@ class TrainingCellController(private val runtime: SharedRuntime) {
         val task = state.taskState.tasks[TrainingSequence.TASK_ID] ?: return "Training task unavailable"
         if (task.status == TaskStatus.FINISHED) {
             val part = state.workcellState.entities[TrainingCellFactory.PART_ID]
-            val expected = SimulationPoseTransforms.fromPose(TrainingCellFactory.tcpPose(config.place, config.toolTcp))
+            val expected = SimulationPoseTransforms.fromPose(TrainingCellFactory.partPose(config.place, config))
             val actual = part?.let { SimulationPoseTransforms.fromPose(it.pose) }
             val atDestination = actual != null && (0..3).all { r -> (0..3).all { c -> abs(actual[r,c] - expected[r,c]) < 1e-5 } }
             return if (state.trainingGraspSucceeded && state.workcellState.attachments.isEmpty() && atDestination)

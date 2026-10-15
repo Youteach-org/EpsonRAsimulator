@@ -83,3 +83,23 @@ Reviewer exclusions accepted: physical calibration/RC+ motion equivalence/collis
 
 ## Tablet support-penetration correction
 User on Samsung Tab S7+ observed gripper penetrating the support despite successful grasp. RED610/2 reproduced default approaches below the endpoint and rendered-tool/fixture intersection during the actual cycle. Default J2 approaches/lift change from-30 to-10; wide horizontal slabs become narrow oriented rests on the lower-facing partY face, clear of the fingers/palm. Explicit saved configurations are retained; Reset training cell adopts new defaults. Contact regression preserves no-gap/no-part-penetration semantics for oriented rests. Independent OBB separating-axis regression checks actual rendered boxes every20ms over the complete canonical cycle, both fixtures and all fingers/palm. GREEN fullsuite610 plus instrumentation compilation, log block3-fixture-clearance-green.log. Physical correction supersedes prior visual acceptance; current-head CI/device/video confirmation and replacement APK remain required. No general collision avoidance or native semantics change.
+
+## 2026-10-15: restore realistic horizontal supports after tablet feedback
+
+User confirmed a27ca3e completed but rejected its small, tilted support as a workaround.
+Restore 60 x 60 x 10 mm horizontal source/destination plates. Default wrist points
+down (J4/J6=0, J2+J3+J5=-90), maintaining orientation on approach/retreat.
+Place the part centre 8 mm along tool +Z from TCP: 30 mm fingers reach 15 mm,
+20 mm part bottom reaches 18 mm, leaving 3 mm tip clearance over the plate.
+Preserve the actual grasp transform and use nominal part pose for completion status.
+No renderer geometry shrinking, no TCP snapping, no automatic saved-config migration.
+Reset training cell is required to use the new default path.
+
+Verification: horizontal-base-red.log: 610 tests, 2 failures (broad flat support
+and full-cycle clearance preconditions). First green attempt exposed the UI's
+old part-centre-equals-TCP assumption; existing controller regression caught it.
+horizontal-base-green-final.log: full unit suite and Android test Kotlin compile
+BUILD SUCCESSFUL. Geometry checks include carried part vs both supports throughout
+the actual runtime cycle, flat initial contact and released contact at destination.
+CI, video/screenshots and tablet installation pending for this revision.
+General runtime collision detection/stop is NOT implemented by these sampled tests.

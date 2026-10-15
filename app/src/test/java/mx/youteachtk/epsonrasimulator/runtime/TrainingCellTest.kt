@@ -7,24 +7,20 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TrainingCellTest {
-    @Test fun supportsContactLowerFacingPartFaceWithoutIntersectingIt() {
+    @Test fun partRestsFlatOnBroadHorizontalSourcePlate() {
         val cell = TrainingCellFactory.build(TrainingCellConfig())
-        for ((fixtureId, joints) in listOf("training-source" to cell.config.pick, "training-destination" to cell.config.place)) {
-            val fixture = cell.entities.single { it.id.value == fixtureId }
-            val partPose = TrainingCellFactory.tcpPose(joints, cell.config.toolTcp)
-            val partFrame = SimulationPoseTransforms.fromPose(partPose)
-            val relative = partFrame.inverseRigid() * SimulationPoseTransforms.fromPose(fixture.pose)
-            val size = fixture.render!!.sizeMm
-            assertEquals(0.0, relative.translation.x, 1e-6)
-            assertEquals(0.0, relative.translation.z, 1e-6)
-            // Parallel contact faces, with no volume intersection or air gap.
-            for (r in 0..2) for (c in 0..2) assertEquals(if (r == c) 1.0 else 0.0, relative[r,c], 1e-6)
-            assertEquals(cell.config.partSizeMm.y / 2 + size.y / 2,
-                kotlin.math.abs(relative.translation.y), 1e-6)
-            assertTrue(size.x < cell.config.partSizeMm.x)
-            assertTrue(size.z < cell.config.partSizeMm.z)
-            assertTrue("Support must be on the lower-facing side", fixture.pose.z < partPose.z)
-        }
+        val part = cell.entities.single { it.id == TrainingCellFactory.PART_ID }
+        val source = cell.entities.single { it.id.value == "training-source" }
+        val frame = SimulationPoseTransforms.fromPose(part.pose)
+        val size = source.render!!.sizeMm
+        assertTrue("Base must extend beyond the part on both sides", size.x >= 60.0 && size.y >= 60.0)
+        assertEquals(0.0, source.pose.rx, 1e-6)
+        assertEquals(0.0, source.pose.ry, 1e-6)
+        assertEquals("Part must rest on a face, not a corner", 1.0, kotlin.math.abs(frame[2,2]), 1e-6)
+        assertEquals(part.pose.x, source.pose.x, 1e-6)
+        assertEquals(part.pose.y, source.pose.y, 1e-6)
+        assertEquals("No air gap or penetration", part.pose.z - cell.config.partSizeMm.z / 2,
+            source.pose.z + size.z / 2, 1e-6)
     }
 
     @Test fun presetGripperVerticesStayOutsideCadFlangeFace() {
@@ -94,8 +90,13 @@ class TrainingCellTest {
         runtime.dispatch(RuntimeCommand.AdvanceSimulation(2000)) // place, command open
         assertTrue(runtime.state.workcellState.attachments.isEmpty())
         val released = runtime.state.workcellState.entities.getValue(TrainingCellFactory.PART_ID).pose
+        val destination = runtime.state.workcellState.entities.values.single { it.id.value == "training-destination" }
+        assertEquals("Released part must rest on the destination", released.z - config.partSizeMm.z / 2,
+            destination.pose.z + destination.render!!.sizeMm.z / 2, 1e-6)
         val actual = SimulationPoseTransforms.fromPose(released)
-        val expected = SimulationPoseTransforms.fromPose(TrainingCellFactory.tcpPose(config.place, config.toolTcp))
+        val expected = SimulationPoseTransforms.fromPose(TrainingCellFactory.tcpPose(config.place, config.toolTcp)) *
+            SimulationPoseTransforms.fromPose(TrainingCellFactory.tcpPose(config.pick, config.toolTcp)).inverseRigid() *
+            SimulationPoseTransforms.fromPose(initial)
         for (r in 0..3) for (c in 0..3) assertEquals(expected[r,c], actual[r,c], 1e-7)
         runtime.dispatch(RuntimeCommand.AdvanceSimulation(1000)) // open, retreat
         runtime.dispatch(RuntimeCommand.AdvanceSimulation(2000))

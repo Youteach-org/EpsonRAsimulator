@@ -8,11 +8,12 @@ import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
 /** Configuration only: execution counters and attachments are deliberately transient. */
 data class TrainingCellConfig(
     val presetId: String = "c4-pick-place-v1",
-    val approachPick: JointState = JointState(listOf(20.0, -10.0, 30.0, 25.0, 15.0, 40.0)),
-    val pick: JointState = JointState(listOf(20.0, -20.0, 30.0, 25.0, 15.0, 40.0)),
-    val lift: JointState = JointState(listOf(20.0, -10.0, 30.0, 25.0, 15.0, 40.0)),
-    val approachPlace: JointState = JointState(listOf(-20.0, -10.0, 30.0, 25.0, 15.0, 40.0)),
-    val place: JointState = JointState(listOf(-20.0, -20.0, 30.0, 25.0, 15.0, 40.0)),
+    // Keep the wrist pointing down during approach and retreat (J2 + J3 + J5 = -90).
+    val approachPick: JointState = JointState(listOf(20.0, -10.0, 30.0, 0.0, -110.0, 0.0)),
+    val pick: JointState = JointState(listOf(20.0, -20.0, 30.0, 0.0, -100.0, 0.0)),
+    val lift: JointState = JointState(listOf(20.0, -10.0, 30.0, 0.0, -110.0, 0.0)),
+    val approachPlace: JointState = JointState(listOf(-20.0, -10.0, 30.0, 0.0, -110.0, 0.0)),
+    val place: JointState = JointState(listOf(-20.0, -20.0, 30.0, 0.0, -100.0, 0.0)),
     val segmentDurationMillis: Long = 2000,
     // The CAD flange faces -Z. Turn the gripper's local +Z outward so its palm
     // lies between the flange and the fingertips, rather than inside the wrist.

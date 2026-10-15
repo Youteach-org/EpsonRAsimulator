@@ -185,7 +185,10 @@ class TrainingPickPlaceAcceptanceTest {
             assertTrue(s.workcellState.attachments.isEmpty())
             val actual = SimulationPoseTransforms.fromPose(s.workcellState.entities.getValue(TrainingCellFactory.PART_ID).pose)
             val config = s.trainingCell!!
-            val expected = SimulationPoseTransforms.fromPose(TrainingCellFactory.tcpPose(config.place, config.toolTcp))
+            val initialPart = TrainingCellFactory.build(config).entities.single { it.id == TrainingCellFactory.PART_ID }
+            val expected = SimulationPoseTransforms.fromPose(TrainingCellFactory.tcpPose(config.place, config.toolTcp)) *
+                SimulationPoseTransforms.fromPose(TrainingCellFactory.tcpPose(config.pick, config.toolTcp)).inverseRigid() *
+                SimulationPoseTransforms.fromPose(initialPart.pose)
             for (r in 0..3) for (c in 0..3) assertEquals(expected[r,c], actual[r,c], 1e-5)
         }
         // The real ticker can finish after the last manually advanced Compose frame.
