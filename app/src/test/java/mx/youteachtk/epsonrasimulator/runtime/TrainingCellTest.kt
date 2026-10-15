@@ -7,26 +7,23 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TrainingCellTest {
-    @Test fun supportsStayBelowRotatedPartAtBothEndpoints() {
+    @Test fun supportsContactLowerFacingPartFaceWithoutIntersectingIt() {
         val cell = TrainingCellFactory.build(TrainingCellConfig())
-        fun heightRange(pose: mx.youteachtk.epsonrasimulator.domain.CartesianPose,
-                        size: mx.youteachtk.epsonrasimulator.kinematics.Vector3): ClosedFloatingPointRange<Double> {
-            val transform = SimulationPoseTransforms.fromPose(pose)
-            val heights = buildList {
-                for (x in listOf(-1, 1)) for (y in listOf(-1, 1)) for (z in listOf(-1, 1)) {
-                    add(transform.transformPoint(mx.youteachtk.epsonrasimulator.kinematics.Vector3(
-                        x * size.x / 2, y * size.y / 2, z * size.z / 2)).z)
-                }
-            }
-            return heights.min()..heights.max()
-        }
         for ((fixtureId, joints) in listOf("training-source" to cell.config.pick, "training-destination" to cell.config.place)) {
             val fixture = cell.entities.single { it.id.value == fixtureId }
-            val part = heightRange(TrainingCellFactory.tcpPose(joints, cell.config.toolTcp), cell.config.partSizeMm)
-            val support = heightRange(fixture.pose, fixture.render!!.sizeMm)
-            assertTrue("$fixtureId intersects part: top=${support.endInclusive}, part bottom=${part.start}",
-                support.endInclusive <= part.start + 1e-6)
-            assertEquals("Part should rest on support", part.start, support.endInclusive, 1e-6)
+            val partPose = TrainingCellFactory.tcpPose(joints, cell.config.toolTcp)
+            val partFrame = SimulationPoseTransforms.fromPose(partPose)
+            val relative = partFrame.inverseRigid() * SimulationPoseTransforms.fromPose(fixture.pose)
+            val size = fixture.render!!.sizeMm
+            assertEquals(0.0, relative.translation.x, 1e-6)
+            assertEquals(0.0, relative.translation.z, 1e-6)
+            // Parallel contact faces, with no volume intersection or air gap.
+            for (r in 0..2) for (c in 0..2) assertEquals(if (r == c) 1.0 else 0.0, relative[r,c], 1e-6)
+            assertEquals(cell.config.partSizeMm.y / 2 + size.y / 2,
+                kotlin.math.abs(relative.translation.y), 1e-6)
+            assertTrue(size.x < cell.config.partSizeMm.x)
+            assertTrue(size.z < cell.config.partSizeMm.z)
+            assertTrue("Support must be on the lower-facing side", fixture.pose.z < partPose.z)
         }
     }
 

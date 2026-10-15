@@ -42,13 +42,17 @@ object TrainingCellFactory {
                 config.partSizeMm.x / 2, config.partSizeMm.y / 2, config.partSizeMm.z / 2))),
             graspable = GraspableComponent, render = render)
         fun fixture(name: String, pose: CartesianPose): WorkcellEntity {
-            val partHalfHeight = part.collision!!.box.transformed(pose).halfExtents.z
-            // Horizontal supports touch the lowest rotated part vertex. Copying
-            // the TCP rotation tilts a wide plate through the part and hides it.
+            val tcp = SimulationPoseTransforms.fromPose(pose)
+            // Support the lower-facing Y face between the fingers. A broad
+            // horizontal plate clears the part but intersects the tilted tool.
+            val side = if (tcp[2, 1] > 0.0) -1.0 else 1.0
+            val supportPose = SimulationPoseTransforms.toPose(tcp * Matrix4.translation(
+                Vector3(0.0, side * (config.partSizeMm.y / 2 + 5.0), 0.0)))
             return WorkcellEntity(
-                WorkcellEntityId(name), CartesianPose(pose.x, pose.y, pose.z - partHalfHeight - 5.0),
+                WorkcellEntityId(name), supportPose,
                 fixture = FixtureComponent,
-                render = RenderPrimitiveComponent(WorkcellRenderKind.BOX, Vector3(60.0, 60.0, 10.0)))
+                render = RenderPrimitiveComponent(WorkcellRenderKind.BOX,
+                    Vector3(config.partSizeMm.x / 2, 10.0, config.partSizeMm.z / 2)))
         }
         return TrainingCellDefinition(config, tool,
             listOf(part, fixture("training-source", pickPose), fixture("training-destination", placePose)),
