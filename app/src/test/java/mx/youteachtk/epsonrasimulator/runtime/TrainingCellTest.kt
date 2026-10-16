@@ -23,6 +23,30 @@ class TrainingCellTest {
             source.pose.z + size.z / 2, 1e-6)
     }
 
+    @Test fun gripperBackFaceContactsFlangeAtEveryPresetPosture() {
+        val runtime = AppRuntimeFactory.createDefault().runtime
+        val config = TrainingCellConfig()
+        runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(config))
+        for (joints in listOf(config.pick, config.lift, config.place,
+            mx.youteachtk.epsonrasimulator.domain.JointState(listOf(20.0, -20.0, 30.0, 25.0, 15.0, 40.0)))) {
+            runtime.dispatch(RuntimeCommand.SetJointState(joints.values))
+            val flangeFromCad = mx.youteachtk.epsonrasimulator.kinematics.C4Kinematics
+                .forward(joints.values).baseToTcp.inverseRigid()
+            val palm = mx.youteachtk.epsonrasimulator.ui.WorkcellSceneProjection.boxes(
+                runtime.state.workcellState, runtime.state.toolState).single { it.id.endsWith(":palm") }
+            val c = palm.centerMeters
+            val r = palm.rotationDegrees
+            val palmToCad = SimulationPoseTransforms.fromPose(mx.youteachtk.epsonrasimulator.domain.CartesianPose(
+                c.x * 1000.0, c.y * 1000.0, c.z * 1000.0,
+                r.x.toDouble(), r.y.toDouble(), r.z.toDouble()))
+            val corners = listOf(-1, 1).flatMap { x -> listOf(-1, 1).flatMap { y -> listOf(-1, 1).map { z ->
+                (flangeFromCad * palmToCad).transformPoint(mx.youteachtk.epsonrasimulator.kinematics.Vector3(
+                    x * palm.sizeMeters.x * 500.0, y * palm.sizeMeters.y * 500.0, z * palm.sizeMeters.z * 500.0))
+            } } }
+            assertEquals("Palm must meet flange without an air gap", 0.0, corners.maxOf { it.z }, 1e-4)
+        }
+    }
+
     @Test fun presetGripperVerticesStayOutsideCadFlangeFace() {
         val runtime = AppRuntimeFactory.createDefault().runtime
         val config = TrainingCellConfig()
@@ -45,7 +69,7 @@ class TrainingCellTest {
                         x * box.sizeMeters.x * 500.0, y * box.sizeMeters.y * 500.0, z * box.sizeMeters.z * 500.0)
                     val flangePoint = (cadToFlange * localToCad).transformPoint(corner)
                     // C4_J6.glb ends at local Z=-65 mm; outward from that face is -Z.
-                    assertTrue("${box.id} penetrates wrist: flange Z=${flangePoint.z}", flangePoint.z < -1.0)
+                    assertTrue("${box.id} penetrates wrist: flange Z=${flangePoint.z}", flangePoint.z <= 1e-4)
                 }
             }
         }

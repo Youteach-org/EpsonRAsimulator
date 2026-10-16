@@ -103,3 +103,21 @@ BUILD SUCCESSFUL. Geometry checks include carried part vs both supports througho
 the actual runtime cycle, flat initial contact and released contact at destination.
 CI, video/screenshots and tablet installation pending for this revision.
 General runtime collision detection/stop is NOT implemented by these sampled tests.
+
+## 2026-10-16: gripper-to-flange air gap
+Tablet feedback on a07264d: cycle appears correct, but gripper visibly detached.
+Measured C4_J6.glb POSITION bounds localZ [-0.0649999976,-0.0557999872] metres,
+no node transforms: existing 65mm flange offset agrees with mesh. Not a double
+flange transform. Rendered palm centre is TCP localZ=-25mm and half-depth10mm,
+so its back is35mm behind grasp frame. Default TCP60mm left25mm of empty space.
+Change default toolTcp translation from -60 to -35mm, keep RX180 and all geometry.
+No invented connector or mesh rescale. Default cell positions derive from this TCP;
+the part and full-size horizontal supports remain mutually aligned. Existing saved
+explicit TCP values are preserved; reset or clean installation uses new default.
+
+RED: flange-contact-red.log,611 tests/1 expected failure; backface measured
+-24.999987mm relative to flange versus expected0. New test checks pick/lift/place
+and a fully rotated calibration posture. Existing wrist exclusion test now permits
+contact within0.0001mm while rejecting penetration (previous <-1 prohibited contact).
+GREEN: flange-contact-green.log, full testDebugUnitTest and compileDebugAndroidTestKotlin
+BUILD SUCCESSFUL. CI, device captures and replacement APK pending this revision.
