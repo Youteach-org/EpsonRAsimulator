@@ -107,7 +107,7 @@ class TcpPreviewUiAcceptanceTest {
         // The preceding process-restore test can leave Visual Lab selected durably.
         if (session().activeExperience != AppExperience.VISUAL_LAB) {
             if (session().activeExperience != null) {
-                compose.onNodeWithText("Back").performClick(); frame()
+                compose.onNodeWithTag("experience-back").performClick(); frame()
             }
             compose.onNodeWithText("Visual Lab").performClick(); frame()
         }

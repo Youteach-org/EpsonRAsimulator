@@ -127,7 +127,7 @@ class TrainingPickPlaceAcceptanceTest {
         screenshot("training-paused-portrait")
         // Leaving Visual Lab preserves the paused owner. The other experience
         // must reject competing jogs without crashing or changing that state.
-        compose.onNodeWithText("Back").performClick(); frame()
+        compose.onNodeWithTag("experience-back").performClick(); frame()
         // performScrollTo waits for animated scrolling. Let the Compose test
         // clock advance on this screen; the canonical simulation stays paused.
         compose.mainClock.autoAdvance = true
@@ -142,8 +142,7 @@ class TrainingPickPlaceAcceptanceTest {
             frame()
             compose.runOnIdle { assertEquals(paused, state()) }
         }
-        compose.onNodeWithText("Experiences").performScrollTo(); frame()
-        compose.onNodeWithText("Experiences").performClick(); frame()
+        compose.onNodeWithTag("experience-back").assertIsDisplayed().performClick(); frame()
         compose.mainClock.autoAdvance = false
         compose.onNodeWithText("Visual Lab").performClick(); frame()
         compose.runOnIdle { assertEquals(paused, state()) }

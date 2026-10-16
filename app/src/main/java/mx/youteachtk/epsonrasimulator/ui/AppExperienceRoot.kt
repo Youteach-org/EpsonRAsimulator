@@ -1,5 +1,6 @@
 package mx.youteachtk.epsonrasimulator.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.material3.CircularProgressIndicator
 import mx.youteachtk.epsonrasimulator.ProjectPersistenceBar
@@ -17,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import mx.youteachtk.epsonrasimulator.AppExperience
@@ -34,7 +36,16 @@ fun AppExperienceRoot(
     val exportLauncher = rememberLauncherForActivityResult(PersistableDocumentTreeContract()) { selection ->
         if (selection != null) session.exportTreeSelected(selection)
     }
+    BackHandler(enabled = session.activeExperience != null) { session.clearExperience() }
     Column(modifier = modifier.fillMaxSize()) {
+        if (session.activeExperience != null) {
+            OutlinedButton(
+                onClick = session::clearExperience,
+                modifier = Modifier.padding(horizontal = 16.dp).testTag("experience-back")
+            ) {
+                Text("← Volver al inicio")
+            }
+        }
         ProjectPersistenceBar(
             state = session.persistenceState,
             available = session.persistence != null,
@@ -95,12 +106,6 @@ private fun ExperienceContent(session: AppSessionViewModel, modifier: Modifier) 
         )
 
         AppExperience.VISUAL_LAB -> Column(modifier = modifier.fillMaxSize()) {
-            OutlinedButton(
-                onClick = session::clearExperience,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            ) {
-                Text("Back")
-            }
             Box(Modifier.weight(1f)) {
                 RobotTrainerScreen(
                     runtime = session.bundle.runtime,

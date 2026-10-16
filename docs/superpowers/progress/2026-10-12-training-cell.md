@@ -121,3 +121,20 @@ and a fully rotated calibration posture. Existing wrist exclusion test now permi
 contact within0.0001mm while rejecting penetration (previous <-1 prohibited contact).
 GREEN: flange-contact-green.log, full testDebugUnitTest and compileDebugAndroidTestKotlin
 BUILD SUCCESSFUL. CI, device captures and replacement APK pending this revision.
+
+## 2026-10-16: explicit return navigation and next feature design
+User accepted flange connection on tablet; default path passes over supports, so
+this is not acceptance of general collision detection. User now requests own
+sequences/guarding and a return button in BOTH RC Trainer and Visual Lab.
+Added a fixed root-level Volver al inicio button outside scrolling content and
+Android Back handling, both routed through existing clearExperience (preserves
+project/session). Previously RC exit was Experiences at end of horizontal menu.
+Existing cross-experience and TCP Android acceptance now use common navigation tag;
+RC test checks it is displayed without scrolling.
+Local return-navigation-green-final.log: unit suite and instrumentation compile
+BUILD SUCCESSFUL. First attempt failed after a local text-encoding write error;
+file was restored from HEAD and correctly written as UTF-8 before successful rerun.
+Next feature is architectural; read-only audit/spec prepared in
+specs/2026-10-16-user-training-sequences-design.md. Await user review before
+implementation plan: collision guard first, local sequence editor second.
+No runtime collision or sequence editor implemented in this navigation change.
