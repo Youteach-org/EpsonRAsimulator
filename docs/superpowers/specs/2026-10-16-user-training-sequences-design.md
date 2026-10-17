@@ -1,5 +1,5 @@
 # Secuencias propias y colisiones en Visual Lab
-Estado: propuesta para revision del usuario; no implementada.
+Estado: aprobado por el usuario el 2026-10-16; implementacion pendiente.
 Base revisada: 63fb7a1. Navegacion de retorno: correccion independiente autorizada.
 
 ## Objetivo y criterio de exito
@@ -117,5 +117,5 @@ restauracion atomica detenida y conservacion de fuentes nativas byte a byte.
 ## Revision de la propuesta
 Autorrevision: se separan detector y editor para entregas comprobables; no se
 promete deteccion de todos los eslabones ni fidelidad Epson aun no validada.
-La navegacion solicitada se entrega aparte. Falta revision del usuario de este
-diseno antes del plan de implementacion del primer bloque.
+La navegacion solicitada se entrega aparte. El usuario aprobo el diseno y el orden
+en ambas respuestas: "Si, ese diseno" y "Si, sigue asi". Mantener ejecucion directa.

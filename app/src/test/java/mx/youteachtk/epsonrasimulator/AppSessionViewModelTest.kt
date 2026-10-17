@@ -41,6 +41,44 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AppSessionViewModelTest {
+    @Test fun leavingEitherExperiencePausesTrainingWithoutDiscardingPostureOrResumingOnReturn() {
+        for (experience in listOf(AppExperience.RCPLUS_TRAINER, AppExperience.VISUAL_LAB)) {
+            val bundle = AppRuntimeFactory.createDefault()
+            val session = AppSessionViewModel(initialBundle = bundle)
+            session.selectExperience(experience)
+            val runtime = bundle.runtime
+            val id = mx.youteachtk.epsonrasimulator.runtime.training.TrainingSequence.TASK_ID
+            runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig()))
+            runtime.dispatch(RuntimeCommand.StartTask(id))
+            runtime.dispatch(RuntimeCommand.StartClock)
+            runtime.dispatch(RuntimeCommand.AdvanceSimulation(100))
+            val joints = runtime.state.jointState
+            session.clearExperience()
+            assertEquals(TaskStatus.PAUSED, runtime.state.taskState.tasks.getValue(id).status)
+            org.junit.Assert.assertFalse(runtime.state.clockState.running)
+            session.selectExperience(experience)
+            runtime.dispatch(RuntimeCommand.AdvanceSimulation(60000))
+            assertEquals(joints, runtime.state.jointState)
+            assertEquals(TaskStatus.PAUSED, runtime.state.taskState.tasks.getValue(id).status)
+        }
+    }
+    @Test fun collidingSavedPostureIsRejectedDuringPrepareBeforeAnyProjectReplacement() {
+        val persistence = FakePersistence()
+        val bundle = AppRuntimeFactory.createDefault()
+        AppSessionViewModel(initialBundle = bundle, persistence = persistence)
+        val config = mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig()
+        val inside = config.pick.values.toMutableList().also { it[1] -= 3.0 }
+        val snapshot = ProjectSnapshot(
+            projectId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", projectName = "Invalid collision", revision = 1,
+            adapterId = bundle.runtime.state.simulatorAdapterId.value, robotId = bundle.runtime.state.activeRobotId,
+            resources = mapOf("Main.prg" to "Function main\nFend\n".toByteArray()),
+            sidecar = ProjectSessionCodec().encode(ProjectSessionSnapshot.neutral().copy(jointValues = inside, trainingCell = config)))
+        val before = bundle.runtime.state
+        org.junit.Assert.assertThrows(mx.youteachtk.epsonrasimulator.project.persistence.PersistenceException::class.java) {
+            requireNotNull(persistence.attachedSessionPort).prepareRestore(snapshot)
+        }
+        assertEquals(before, bundle.runtime.state)
+    }
     @Test fun createProjectIntentReachesPersistence() {
         val persistence = FakePersistence()
         val session = AppSessionViewModel(initialBundle = AppRuntimeFactory.createDefault(), persistence = persistence)

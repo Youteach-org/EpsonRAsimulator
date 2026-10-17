@@ -156,7 +156,7 @@ fun RobotTrainerScreen(
                     JointSlider(
                         joint = joint,
                         value = jointValues[index],
-                        enabled = runtimeState.motionOwner == null,
+                        enabled = runtimeState.motionOwner == null && runtimeState.collisionStop == null,
                         onValueChange = {
                             runtime.dispatch(
                                 RuntimeCommand.SetJointValue(
@@ -174,7 +174,7 @@ fun RobotTrainerScreen(
                     onClick = {
                         runtime.dispatch(RuntimeCommand.ResetJoints)
                     },
-                    enabled = runtimeState.motionOwner == null,
+                    enabled = runtimeState.motionOwner == null && runtimeState.collisionStop == null,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("ZERO JOINTS")
@@ -190,7 +190,7 @@ fun RobotTrainerScreen(
                             )
                         )
                     },
-                    enabled = runtimeState.motionOwner == null,
+                    enabled = runtimeState.motionOwner == null && runtimeState.collisionStop == null,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("RC+ TEST POSE")

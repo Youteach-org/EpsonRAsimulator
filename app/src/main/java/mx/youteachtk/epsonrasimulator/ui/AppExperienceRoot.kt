@@ -30,6 +30,7 @@ fun AppExperienceRoot(
     session: AppSessionViewModel,
     modifier: Modifier = Modifier
 ) {
+    val runtimeState = rememberRuntimeState(session.bundle.runtime)
     val importLauncher = rememberLauncherForActivityResult(PersistableDocumentTreeContract()) { selection ->
         if (selection != null) session.importTreeSelected(selection)
     }
@@ -45,6 +46,17 @@ fun AppExperienceRoot(
             ) {
                 Text("← Volver al inicio")
             }
+        }
+        runtimeState.collisionStop?.let { collision ->
+            Text(
+                mx.youteachtk.epsonrasimulator.ui.visual.training.collisionMessage(collision),
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 16.dp).testTag("collision-message")
+            )
+            OutlinedButton(onClick = {
+                session.bundle.runtime.dispatch(mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand.StopTask(
+                    runtimeState.motionOwner ?: mx.youteachtk.epsonrasimulator.runtime.training.TrainingSequence.TASK_ID))
+            }, modifier = Modifier.padding(horizontal = 16.dp).testTag("collision-stop")) { Text("Detener") }
         }
         ProjectPersistenceBar(
             state = session.persistenceState,

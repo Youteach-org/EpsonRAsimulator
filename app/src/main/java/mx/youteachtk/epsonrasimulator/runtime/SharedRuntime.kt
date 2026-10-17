@@ -40,6 +40,9 @@ class SharedRuntime(
 
     fun dispatch(command: RuntimeCommand): SharedRuntimeState {
         val current = state
+        if (current.trainingCell != null && command is RuntimeCommand.SetToolMountPose) {
+            require(false) { "Training tool mount follows the robot flange" }
+        }
         if (current.motionOwner != null) {
             require(command !is RuntimeCommand.SetJointValue && command !is RuntimeCommand.SetJointState &&
                 command != RuntimeCommand.ResetJoints && command !is RuntimeCommand.SelectRobot &&
@@ -63,6 +66,7 @@ class SharedRuntime(
                 current.copy(
                     trainingCell = definition.config,
                     trainingGraspSucceeded = false,
+                    collisionStop = null,
                     clockState = SimulationClockState(),
                     ioState = IoRuntime.setOutput(current.ioState, definition.config.closeOutput, false),
                     toolState = tools.copy(mountPose = SimulationPoseTransforms.toPose(
@@ -70,7 +74,12 @@ class SharedRuntime(
                     workcellState = WorkcellState(order = definition.entities.map { it.id }, entities = definition.entities.associateBy { it.id }),
                     taskState = TaskRuntime.load(TaskRuntimeState(), definition.program),
                     motion = null, motionOwner = null, motionSingleStep = false
-                )
+                ).also { configured ->
+                    require(mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(
+                        configured.simulationDomain(), configured.simulationDomain()) == null) {
+                        "Move the robot clear before setting up this training cell"
+                    }
+                }
             }
             is RuntimeCommand.SelectRobot -> {
                 val robot = robots.require(command.robotId)
@@ -330,6 +339,18 @@ class SharedRuntime(
             }
         }
 
+        if (current.trainingCell != null && command !is RuntimeCommand.AdvanceSimulation) {
+            val manualMotion = command is RuntimeCommand.SetJointValue || command is RuntimeCommand.SetJointState || command == RuntimeCommand.ResetJoints
+            val geometryEdit = command is RuntimeCommand.UpsertWorkcellEntity || command is RuntimeCommand.SetWorkcellEntityPose ||
+                command is RuntimeCommand.SelectFunctionalTool || command is RuntimeCommand.SelectRobot
+            if (manualMotion || geometryEdit) {
+                if (current.collisionStop != null) return current
+                val collision = mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(
+                    if (manualMotion) current.simulationDomain() else next.simulationDomain(), next.simulationDomain())
+                if (collision != null) next = current.withSimulation(SimulationCoordinator.collisionStopped(current.simulationDomain(), collision))
+            }
+        }
+
         if (next.motionOwner == mx.youteachtk.epsonrasimulator.runtime.training.TrainingSequence.TASK_ID &&
             TrainingCellFactory.PART_ID in next.workcellState.attachments) {
             next = next.copy(trainingGraspSucceeded = true)
@@ -344,6 +365,20 @@ class SharedRuntime(
 
 
     fun restoreLocalPersistentSession(
+        robotId: String,
+        jointValues: List<Double>,
+        teachPoints: Map<String, TeachPoint>,
+        trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null
+    ): SharedRuntimeState {
+        val next = prepareLocalPersistentSession(robotId, jointValues, teachPoints, trainingCell)
+        if (next != state) {
+            state = next
+            listeners.toList().forEach { it(next) }
+        }
+        return state
+    }
+
+    fun prepareLocalPersistentSession(
         robotId: String,
         jointValues: List<Double>,
         teachPoints: Map<String, TeachPoint>,
@@ -389,16 +424,17 @@ class SharedRuntime(
             toolState = restoredTools,
             trainingCell = definition?.config,
             trainingGraspSucceeded = false,
+                    collisionStop = null,
             motion = null,
             motionOwner = null,
             motionSingleStep = false
         )
 
-        if (next != state) {
-            state = next
-            listeners.toList().forEach { it(next) }
+        require(mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(
+            next.simulationDomain(), next.simulationDomain()) == null) {
+            "Saved training posture intersects a fixture or part; project was not restored"
         }
-        return state
+        return next
     }
 
     fun subscribe(listener: (SharedRuntimeState) -> Unit): RuntimeSubscription {
@@ -418,7 +454,9 @@ class SharedRuntime(
             jointState = jointState,
             motion = motion,
             motionOwner = motionOwner,
-            motionSingleStep = motionSingleStep
+            motionSingleStep = motionSingleStep,
+            collisionGuardEnabled = trainingCell != null,
+            collisionStop = collisionStop
         )
 
     private fun SharedRuntimeState.withSimulation(
@@ -433,7 +471,8 @@ class SharedRuntime(
             jointState = domain.jointState,
             motion = domain.motion,
             motionOwner = domain.motionOwner,
-            motionSingleStep = domain.motionSingleStep
+            motionSingleStep = domain.motionSingleStep,
+            collisionStop = domain.collisionStop
         )
 
     private fun validateInitialJointState(

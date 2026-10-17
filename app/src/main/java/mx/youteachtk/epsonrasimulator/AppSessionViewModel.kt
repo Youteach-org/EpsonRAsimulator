@@ -147,12 +147,25 @@ class AppSessionViewModel(
 
     fun selectExperience(experience: AppExperience) {
         if (activeExperience == experience) return
+        if (activeExperience != null) pauseVisibleSimulation()
         activeExperience = experience
         sessionPersistence?.notifyExternalSessionChange()
     }
 
+    private fun pauseVisibleSimulation() {
+        val runtime = bundle.runtime
+        val owner = runtime.state.motionOwner
+        if (owner != null && runtime.state.taskState.tasks.getValue(owner).status in setOf(
+            mx.youteachtk.epsonrasimulator.runtime.task.TaskStatus.RUNNING,
+            mx.youteachtk.epsonrasimulator.runtime.task.TaskStatus.WAITING)) {
+            runtime.dispatch(mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand.PauseTask(owner))
+        }
+        runtime.dispatch(mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand.PauseClock)
+    }
+
     fun clearExperience() {
         if (activeExperience == null) return
+        pauseVisibleSimulation()
         activeExperience = null
         sessionPersistence?.notifyExternalSessionChange()
     }

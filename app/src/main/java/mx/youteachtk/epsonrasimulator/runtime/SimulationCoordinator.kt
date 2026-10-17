@@ -3,6 +3,8 @@ package mx.youteachtk.epsonrasimulator.runtime
 import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import mx.youteachtk.epsonrasimulator.domain.JointState
 import mx.youteachtk.epsonrasimulator.domain.EpsonRobotCatalog
+import mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard
+import mx.youteachtk.epsonrasimulator.runtime.motion.CollisionStop
 import mx.youteachtk.epsonrasimulator.runtime.motion.JointMotion
 import mx.youteachtk.epsonrasimulator.runtime.motion.TrainingMotionRuntime
 import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClock
@@ -35,7 +37,9 @@ data class SimulationDomainState(
     val jointState: JointState = EpsonRobotCatalog.C4_A601S.zeroState(),
     val motion: JointMotion? = null,
     val motionOwner: TaskId? = null,
-    val motionSingleStep: Boolean = false
+    val motionSingleStep: Boolean = false,
+    val collisionGuardEnabled: Boolean = false,
+    val collisionStop: CollisionStop? = null
 ) {
     init {
         WorkcellRuntime.validateAttachments(workcellState, toolState)
@@ -46,6 +50,7 @@ object SimulationCoordinator {
     fun startClock(
         state: SimulationDomainState
     ): SimulationDomainState {
+        require(state.collisionStop == null) { "Stop and correct the blocked movement before continuing" }
         val ownerStatus = state.motionOwner?.let { state.taskState.tasks.getValue(it).status }
         require(ownerStatus != TaskStatus.PAUSED && ownerStatus != TaskStatus.HALTED) {
             "Resume or step the owning task before starting the clock"
@@ -106,7 +111,18 @@ object SimulationCoordinator {
             )
         )
 
+        if (elapsedSimulationMillis > 0) {
+            val collision = TrainingCollisionGuard.check(state, advanced, elapsedSimulationMillis)
+            if (collision != null) return collisionStopped(state, collision)
+        }
         return evaluateWorkcellAndTasks(advanced)
+    }
+
+    internal fun collisionStopped(state: SimulationDomainState, collision: CollisionStop): SimulationDomainState {
+        val owner = state.motionOwner
+        val tasks = if (owner != null) TaskRuntime.pause(state.taskState, owner) else state.taskState
+        return state.copy(clockState = SimulationClock.pause(state.clockState), taskState = tasks,
+            collisionStop = collision, motionSingleStep = false)
     }
 
     fun setInput(
@@ -187,6 +203,7 @@ object SimulationCoordinator {
         state: SimulationDomainState,
         id: TaskId
     ): SimulationDomainState {
+        require(state.collisionStop == null) { "Stop and correct the blocked movement before continuing" }
         val reserved = TrainingMotionRuntime.reserve(state, id)
         val started = reserved.copy(
             taskState = TaskRuntime.start(
@@ -213,6 +230,7 @@ object SimulationCoordinator {
         state: SimulationDomainState,
         id: TaskId
     ): SimulationDomainState {
+        require(state.collisionStop == null) { "Stop and correct the blocked movement before continuing" }
         TrainingMotionRuntime.validateOutputAccess(state, id)
         val resumedTasks = TaskRuntime.resume(
             state.taskState,
@@ -253,6 +271,7 @@ object SimulationCoordinator {
         id: TaskId
     ): SimulationDomainState =
         state.copy(
+            collisionStop = if (state.motionOwner == null || state.motionOwner == id) null else state.collisionStop,
             taskState = TaskRuntime.stop(
                 state.taskState,
                 id
@@ -267,6 +286,7 @@ object SimulationCoordinator {
         state: SimulationDomainState,
         id: TaskId
     ): SimulationDomainState {
+        require(state.collisionStop == null) { "Stop and correct the blocked movement before continuing" }
         TrainingMotionRuntime.validateOutputAccess(state, id)
         val result = TaskRuntime.step(
             state.taskState,

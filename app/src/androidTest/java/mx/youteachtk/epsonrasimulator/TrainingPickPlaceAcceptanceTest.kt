@@ -111,6 +111,7 @@ class TrainingPickPlaceAcceptanceTest {
         }
         compose.mainClock.autoAdvance = false
         compose.onNodeWithText("Visual Lab").performClick(); frame()
+        verifyDeliberateCollision()
         click("training-setup")
         click("training-close")
         waitState { it.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm == 20.0 }
@@ -270,5 +271,45 @@ class TrainingPickPlaceAcceptanceTest {
         compose.waitUntil(30_000) { frame(); session().persistenceState.saveStatus == PersistenceSaveStatus.SAVED }
         screenshot("training-saved-stopped")
         InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply { putString("stream", "\nTRAINING_UI_VERIFIED\n") })
+    }
+
+    private fun verifyDeliberateCollision() {
+        compose.runOnIdle {
+            val runtime = session().bundle.runtime
+            val config = TrainingCellConfig()
+            runtime.dispatch(RuntimeCommand.SetJointState(config.approachPick.values))
+            runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(config))
+            val middle = config.approachPick.values.toMutableList().also { it[0] = 0.0 }
+            val pose = SimulationPoseTransforms.toPose(
+                mx.youteachtk.epsonrasimulator.kinematics.SimulationFrames.cadToSimulationTransform *
+                    mx.youteachtk.epsonrasimulator.kinematics.C4Kinematics.forward(middle).baseToTcp *
+                    SimulationPoseTransforms.fromPose(config.toolTcp) *
+                    mx.youteachtk.epsonrasimulator.kinematics.Matrix4.translation(mx.youteachtk.epsonrasimulator.kinematics.Vector3(0.0, 0.0, -25.0)))
+            runtime.dispatch(RuntimeCommand.UpsertWorkcellEntity(mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntity(
+                mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntityId("test-support"), pose,
+                fixture = mx.youteachtk.epsonrasimulator.runtime.workcell.FixtureComponent,
+                render = mx.youteachtk.epsonrasimulator.runtime.workcell.RenderPrimitiveComponent(
+                    mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellRenderKind.BOX,
+                    mx.youteachtk.epsonrasimulator.kinematics.Vector3(2.0, 2.0, 2.0)))))
+            runtime.dispatch(RuntimeCommand.LoadTask(mx.youteachtk.epsonrasimulator.runtime.task.TaskProgram(
+                TrainingSequence.TASK_ID, "Intentional collision", listOf(
+                    mx.youteachtk.epsonrasimulator.runtime.task.SimAction.MoveJoints(config.approachPlace, 2000)))))
+        }
+        click("training-start")
+        waitState { it.collisionStop != null }
+        compose.onNodeWithTag("collision-message").assertIsDisplayed()
+        reveal("training-resume").assertIsNotEnabled()
+        compose.runOnIdle {
+            assertFalse(state().clockState.running)
+            assertEquals(TaskStatus.PAUSED, state().taskState.tasks.getValue(TrainingSequence.TASK_ID).status)
+        }
+        screenshot("training-collision-stopped")
+        compose.onNodeWithTag("collision-stop").performClick(); frame()
+        compose.runOnIdle {
+            assertNull(state().collisionStop)
+            session().bundle.runtime.restoreLocalPersistentSession(state().activeRobotId, List(6) { 0.0 }, emptyMap())
+        }
+        frame()
+        InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply { putString("stream", "\nTRAINING_COLLISION_STOP_VERIFIED\n") })
     }
 }

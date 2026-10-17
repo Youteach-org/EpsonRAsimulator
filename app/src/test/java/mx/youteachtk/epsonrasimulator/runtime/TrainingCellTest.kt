@@ -24,12 +24,14 @@ class TrainingCellTest {
     }
 
     @Test fun gripperBackFaceContactsFlangeAtEveryPresetPosture() {
-        val runtime = AppRuntimeFactory.createDefault().runtime
         val config = TrainingCellConfig()
-        runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(config))
         for (joints in listOf(config.pick, config.lift, config.place,
             mx.youteachtk.epsonrasimulator.domain.JointState(listOf(20.0, -20.0, 30.0, 25.0, 15.0, 40.0)))) {
+            // Test the flange geometry at each pose independently. Travelling
+            // directly between these poses is a separate, collision-checked path.
+            val runtime = AppRuntimeFactory.createDefault().runtime
             runtime.dispatch(RuntimeCommand.SetJointState(joints.values))
+            runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(config))
             val flangeFromCad = mx.youteachtk.epsonrasimulator.kinematics.C4Kinematics
                 .forward(joints.values).baseToTcp.inverseRigid()
             val palm = mx.youteachtk.epsonrasimulator.ui.WorkcellSceneProjection.boxes(
@@ -48,11 +50,13 @@ class TrainingCellTest {
     }
 
     @Test fun presetGripperVerticesStayOutsideCadFlangeFace() {
-        val runtime = AppRuntimeFactory.createDefault().runtime
         val config = TrainingCellConfig()
-        runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(config))
         for (joints in listOf(config.pick, config.lift, config.place)) {
+            // Test the flange geometry at each pose independently. Travelling
+            // directly between these poses is a separate, collision-checked path.
+            val runtime = AppRuntimeFactory.createDefault().runtime
             runtime.dispatch(RuntimeCommand.SetJointState(joints.values))
+            runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(config))
             val cadToFlange = mx.youteachtk.epsonrasimulator.kinematics.C4Kinematics
                 .forward(joints.values).baseToTcp.inverseRigid()
             val boxes = mx.youteachtk.epsonrasimulator.ui.WorkcellSceneProjection.boxes(

@@ -242,6 +242,12 @@ class AppProjectSessionPersistence(
         }
         val experience = if (legacyEmpty) null else decoded.activeExperience
 
+        // Validate physical geometry before the caller replaces any project data.
+        try {
+            bundle.runtime.prepareLocalPersistentSession(robot.id, joints, teachPoints, decoded.trainingCell)
+        } catch (failure: IllegalArgumentException) {
+            invalid(failure.message ?: "Invalid training geometry in saved project")
+        }
         return ProjectSessionRestorePlan {
             applyingRestore = true
             try {

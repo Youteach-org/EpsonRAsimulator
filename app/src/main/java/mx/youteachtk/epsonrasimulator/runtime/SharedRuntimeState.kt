@@ -28,7 +28,8 @@ data class SharedRuntimeState(
     val motionOwner: TaskId? = null,
     val motionSingleStep: Boolean = false,
     val trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null,
-    val trainingGraspSucceeded: Boolean = false
+    val trainingGraspSucceeded: Boolean = false,
+    val collisionStop: mx.youteachtk.epsonrasimulator.runtime.motion.CollisionStop? = null
 ) {
     init {
         WorkcellRuntime.validateAttachments(workcellState, toolState)

@@ -12,6 +12,7 @@ class TrainingCellController(private val runtime: SharedRuntime) {
 
     val status: String get() {
         val state = runtime.state
+        state.collisionStop?.let { return collisionMessage(it) }
         val config = state.trainingCell ?: return "No training cell"
         val task = state.taskState.tasks[TrainingSequence.TASK_ID] ?: return "Training task unavailable"
         if (task.status == TaskStatus.FINISHED) {
