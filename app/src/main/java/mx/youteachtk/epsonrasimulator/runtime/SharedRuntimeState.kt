@@ -2,6 +2,8 @@ package mx.youteachtk.epsonrasimulator.runtime
 
 import mx.youteachtk.epsonrasimulator.adapters.SimulatorAdapterId
 import mx.youteachtk.epsonrasimulator.domain.JointState
+import mx.youteachtk.epsonrasimulator.runtime.motion.JointMotion
+import mx.youteachtk.epsonrasimulator.runtime.task.TaskId
 import mx.youteachtk.epsonrasimulator.domain.TeachPoint
 import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClockState
 import mx.youteachtk.epsonrasimulator.runtime.io.IoState
@@ -21,7 +23,13 @@ data class SharedRuntimeState(
     val ioState: IoState = IoState(),
     val taskState: TaskRuntimeState = TaskRuntimeState(),
     val workcellState: WorkcellState = WorkcellState(),
-    val toolState: ToolRuntimeState = ToolRuntimeState()
+    val toolState: ToolRuntimeState = ToolRuntimeState(),
+    val motion: JointMotion? = null,
+    val motionOwner: TaskId? = null,
+    val motionSingleStep: Boolean = false,
+    val trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null,
+    val trainingGraspSucceeded: Boolean = false,
+    val collisionStop: mx.youteachtk.epsonrasimulator.runtime.motion.CollisionStop? = null
 ) {
     init {
         WorkcellRuntime.validateAttachments(workcellState, toolState)

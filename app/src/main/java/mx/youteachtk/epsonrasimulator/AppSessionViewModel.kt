@@ -4,6 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationTicker
 import mx.youteachtk.epsonrasimulator.project.persistence.DocumentTreeSelection
 import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceController
 import mx.youteachtk.epsonrasimulator.project.persistence.ProjectPersistenceState
@@ -32,6 +34,8 @@ class AppSessionViewModel(
     val persistence: ProjectPersistenceController? = null
 ) : ViewModel() {
     val bundle: AppRuntimeBundle = initialBundle
+    private val simulationTicker = SimulationTicker(bundle.runtime, viewModelScope)
+    fun setForeground(value: Boolean) = simulationTicker.setForeground(value)
     val visualProgrammingSession = VisualProgrammingSession()
     val visualProgrammingAdapter = bundle.adapters.visualSourceLanguageFor(
         bundle.runtime.state.simulatorAdapterId
@@ -135,6 +139,7 @@ class AppSessionViewModel(
     fun dismissPersistenceMessage() { persistence?.dismissMessage() }
 
     override fun onCleared() {
+        simulationTicker.close()
         persistenceSubscription?.cancel()
         persistence?.close()
         super.onCleared()
@@ -142,12 +147,25 @@ class AppSessionViewModel(
 
     fun selectExperience(experience: AppExperience) {
         if (activeExperience == experience) return
+        if (activeExperience != null) pauseVisibleSimulation()
         activeExperience = experience
         sessionPersistence?.notifyExternalSessionChange()
     }
 
+    private fun pauseVisibleSimulation() {
+        val runtime = bundle.runtime
+        val owner = runtime.state.motionOwner
+        if (owner != null && runtime.state.taskState.tasks.getValue(owner).status in setOf(
+            mx.youteachtk.epsonrasimulator.runtime.task.TaskStatus.RUNNING,
+            mx.youteachtk.epsonrasimulator.runtime.task.TaskStatus.WAITING)) {
+            runtime.dispatch(mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand.PauseTask(owner))
+        }
+        runtime.dispatch(mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand.PauseClock)
+    }
+
     fun clearExperience() {
         if (activeExperience == null) return
+        pauseVisibleSimulation()
         activeExperience = null
         sessionPersistence?.notifyExternalSessionChange()
     }

@@ -18,6 +18,36 @@ import org.junit.Test
 
 class RcRobotManagerControllerTest {
     @Test
+    fun trainingOwnerRejectsJogWithoutMutationAndStopRestoresJog() {
+        val bundle = AppRuntimeFactory.createDefault()
+        val runtime = bundle.runtime
+        val training = mx.youteachtk.epsonrasimulator.ui.visual.training.TrainingCellController(runtime)
+        val controller = RcRobotManagerController(runtime, bundle.robots, RcRobotManagerSession())
+        assertTrue(training.setup())
+        assertTrue(training.start())
+        for (paused in listOf(false, true)) {
+            if (paused) assertTrue(training.pause())
+            val before = runtime.state
+            assertEquals(false, RcRobotManagerProjection.build(
+                before, runtime.activeRobot(), RcPlus7SimulatorAdapter.capabilities
+            ).jointJogEnabled)
+            for (direction in RcJogDirection.entries) {
+                val result = controller.nudgeJoint(0, direction)
+                assertTrue(result is RcRobotManagerResult.Rejected)
+                assertTrue((result as RcRobotManagerResult.Rejected).message.contains("owns robot motion"))
+                assertSame(before, runtime.state)
+            }
+        }
+        assertTrue(training.stop())
+        assertEquals(true, RcRobotManagerProjection.build(
+            runtime.state, runtime.activeRobot(), RcPlus7SimulatorAdapter.capabilities
+        ).jointJogEnabled)
+        val before = runtime.state.jointState[0]
+        assertEquals(RcRobotManagerResult.Applied, controller.nudgeJoint(0, RcJogDirection.POSITIVE))
+        assertTrue(runtime.state.jointState[0] > before)
+    }
+
+    @Test
     fun selectingActiveRobotIsNoOpAndDoesNotResetJoints() {
         val bundle = AppRuntimeFactory.createDefault()
         val runtime = bundle.runtime

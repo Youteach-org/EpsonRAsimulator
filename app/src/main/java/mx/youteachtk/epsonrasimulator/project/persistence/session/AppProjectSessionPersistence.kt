@@ -86,7 +86,8 @@ class AppProjectSessionPersistence(
                 robotManagerPage =
                     robotManagerSession.state.selectedPage.name,
                 robotManagerTrainingStepDegrees =
-                    robotManagerSession.state.trainingStepDegrees
+                    robotManagerSession.state.trainingStepDegrees,
+                trainingCell = runtime.trainingCell
             )
         )
     }
@@ -109,6 +110,9 @@ class AppProjectSessionPersistence(
             decoded.jointValues
         }
         validateJointValues(robot.id, joints)
+        if (decoded.trainingCell != null && robot.id != mx.youteachtk.epsonrasimulator.domain.EpsonRobotCatalog.C4_A601S.id) {
+            invalid("Training cell requires C4")
+        }
 
         val teachPoints = if (legacyEmpty) {
             emptyMap()
@@ -238,13 +242,20 @@ class AppProjectSessionPersistence(
         }
         val experience = if (legacyEmpty) null else decoded.activeExperience
 
+        // Validate physical geometry before the caller replaces any project data.
+        try {
+            bundle.runtime.prepareLocalPersistentSession(robot.id, joints, teachPoints, decoded.trainingCell)
+        } catch (failure: IllegalArgumentException) {
+            invalid(failure.message ?: "Invalid training geometry in saved project")
+        }
         return ProjectSessionRestorePlan {
             applyingRestore = true
             try {
                 bundle.runtime.restoreLocalPersistentSession(
                     robotId = robot.id,
                     jointValues = joints,
-                    teachPoints = teachPoints
+                    teachPoints = teachPoints,
+                    trainingCell = decoded.trainingCell
                 )
                 workspaceSession.restoreReconciled(workspace)
                 projectNavigationSession.restoreSelection(selection)
@@ -270,15 +281,18 @@ class AppProjectSessionPersistence(
         var durableRobotId = bundle.runtime.state.activeRobotId
         var durableJointState = bundle.runtime.state.jointState
         var durableTeachPoints = bundle.runtime.state.teachPoints
+        var durableTrainingCell = bundle.runtime.state.trainingCell
         val runtimeSubscription = bundle.runtime.subscribe { next ->
             val durableChanged =
                 next.activeRobotId != durableRobotId ||
                     next.jointState != durableJointState ||
-                    next.teachPoints != durableTeachPoints
+                    next.teachPoints != durableTeachPoints ||
+                    next.trainingCell != durableTrainingCell
 
             durableRobotId = next.activeRobotId
             durableJointState = next.jointState
             durableTeachPoints = next.teachPoints
+            durableTrainingCell = next.trainingCell
 
             if (runtimeInitial) {
                 runtimeInitial = false

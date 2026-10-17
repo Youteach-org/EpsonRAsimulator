@@ -55,6 +55,7 @@ fun RobotTrainerScreen(
     visualProgrammingSession: VisualProgrammingSession
 ) {
     val pointController = remember(runtime) { VisualLabPointController(runtime) }
+    val trainingController = remember(runtime) { mx.youteachtk.epsonrasimulator.ui.visual.training.TrainingCellController(runtime) }
     val scope = rememberCoroutineScope()
     val tcpController = remember(runtime, scope) { TcpPreviewController(runtime, CoroutineTcpPreviewExecution(scope)) }
     var tcpState by remember(tcpController) { mutableStateOf(tcpController.state) }
@@ -155,6 +156,7 @@ fun RobotTrainerScreen(
                     JointSlider(
                         joint = joint,
                         value = jointValues[index],
+                        enabled = runtimeState.motionOwner == null && runtimeState.collisionStop == null,
                         onValueChange = {
                             runtime.dispatch(
                                 RuntimeCommand.SetJointValue(
@@ -172,6 +174,7 @@ fun RobotTrainerScreen(
                     onClick = {
                         runtime.dispatch(RuntimeCommand.ResetJoints)
                     },
+                    enabled = runtimeState.motionOwner == null && runtimeState.collisionStop == null,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("ZERO JOINTS")
@@ -187,6 +190,7 @@ fun RobotTrainerScreen(
                             )
                         )
                     },
+                    enabled = runtimeState.motionOwner == null && runtimeState.collisionStop == null,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("RC+ TEST POSE")
@@ -209,6 +213,8 @@ fun RobotTrainerScreen(
                 }, tcpPlane, { tcpPlane = it })
                 Spacer(Modifier.height(16.dp))
                 VisualLabPointsPanel(runtimeState, pointController)
+                Spacer(Modifier.height(16.dp))
+                mx.youteachtk.epsonrasimulator.ui.visual.training.TrainingCellPanel(runtimeState, trainingController)
                 Spacer(Modifier.height(16.dp))
                 VisualProgrammingPanel(programmingState, programmingController)
             }
@@ -307,6 +313,7 @@ private fun Header(robot: RobotDefinition) {
 private fun JointSlider(
     joint: JointDefinition,
     value: Float,
+    enabled: Boolean = true,
     onValueChange: (Float) -> Unit
 ) {
     Column(modifier = Modifier.padding(bottom = 10.dp)) {
@@ -323,6 +330,7 @@ private fun JointSlider(
 
         Slider(
             value = value,
+            enabled = enabled,
             onValueChange = onValueChange,
             valueRange = joint.minValue.toFloat()..joint.maxValue.toFloat()
         )

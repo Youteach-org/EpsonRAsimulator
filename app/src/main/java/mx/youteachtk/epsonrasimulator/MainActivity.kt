@@ -57,4 +57,14 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onStart() {
+        super.onStart()
+        session.setForeground(true)
+    }
+
+    override fun onStop() {
+        session.setForeground(false)
+        super.onStop()
+    }
 }
