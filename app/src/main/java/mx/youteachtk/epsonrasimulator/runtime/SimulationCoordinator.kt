@@ -269,18 +269,22 @@ object SimulationCoordinator {
     fun stopTask(
         state: SimulationDomainState,
         id: TaskId
-    ): SimulationDomainState =
-        state.copy(
+    ): SimulationDomainState {
+        val acknowledgeCollision = state.collisionStop != null &&
+            (state.motionOwner == null || state.motionOwner == id)
+        val terminal = state.taskState.tasks[id]?.status in setOf(TaskStatus.ABORTED, TaskStatus.FINISHED)
+        return state.copy(
             collisionStop = if (state.motionOwner == null || state.motionOwner == id) null else state.collisionStop,
-            taskState = TaskRuntime.stop(
+            taskState = if (acknowledgeCollision && terminal) state.taskState else TaskRuntime.stop(
                 state.taskState,
                 id
             ),
             motion = if (state.motionOwner == id) null else state.motion,
             motionOwner = if (state.motionOwner == id) null else state.motionOwner,
             motionSingleStep = if (state.motionOwner == id) false else state.motionSingleStep,
-            clockState = if (state.motionOwner == id) SimulationClock.pause(state.clockState) else state.clockState
+            clockState = if (acknowledgeCollision || state.motionOwner == id) SimulationClock.pause(state.clockState) else state.clockState
         )
+    }
 
     fun stepTask(
         state: SimulationDomainState,

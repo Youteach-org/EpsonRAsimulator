@@ -35,9 +35,10 @@ internal object TrainingCollisionGuard {
         fun actuatorPosition(id: WorkcellEntityId, t: Double): Double? {
             val a = before.workcellState.entities.getValue(id)
             val b = after.workcellState.entities.getValue(id)
-            val begin = a.actuatorState?.positionMm ?: return null
+            val actuator = a.actuator ?: return null
+            val begin = a.actuatorState?.positionMm ?: 0.0
             val end = b.actuatorState?.positionMm ?: return begin
-            val speed = requireNotNull(a.actuator).speedMmPerSecond
+            val speed = actuator.speedMmPerSecond
             return begin + (end - begin) * progress(t, abs(end - begin) / speed * 1000)
         }
         fun sample(t: Double): Pair<List<WorldBox>, Matrix4> {

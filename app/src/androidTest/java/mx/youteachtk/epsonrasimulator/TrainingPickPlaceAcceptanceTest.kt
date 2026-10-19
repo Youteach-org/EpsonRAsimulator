@@ -291,9 +291,8 @@ class TrainingPickPlaceAcceptanceTest {
                 render = mx.youteachtk.epsonrasimulator.runtime.workcell.RenderPrimitiveComponent(
                     mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellRenderKind.BOX,
                     mx.youteachtk.epsonrasimulator.kinematics.Vector3(2.0, 2.0, 2.0)))))
-            runtime.dispatch(RuntimeCommand.LoadTask(mx.youteachtk.epsonrasimulator.runtime.task.TaskProgram(
-                TrainingSequence.TASK_ID, "Intentional collision", listOf(
-                    mx.youteachtk.epsonrasimulator.runtime.task.SimAction.MoveJoints(config.approachPlace, 2000)))))
+            // ConfigureTrainingCell already loaded this task. The default transfer
+            // from lift to approachPlace crosses the deliberately placed support.
         }
         click("training-start")
         waitState { it.collisionStop != null }

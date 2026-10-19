@@ -11,6 +11,36 @@ import org.junit.Test
 class TrainingCollisionGuardTest {
     private val config = TrainingCellConfig()
     private val target = config.approachPlace
+    @Test fun firstActuatorTickCannotTunnelWhenPositionStateWasOmitted() {
+        val runtime = AppRuntimeFactory.createDefault().runtime
+        runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(config))
+        val palm = WorkcellGeometry.boxes(runtime.state.workcellState, runtime.state.toolState).single { it.id.endsWith(":palm") }
+        val center = palm.transform.translation
+        val id = WorkcellEntityId("moving-support")
+        runtime.dispatch(RuntimeCommand.UpsertWorkcellEntity(WorkcellEntity(id,
+            CartesianPose(center.x - 100.0, center.y, center.z), fixture = FixtureComponent,
+            actuator = LinearActuatorComponent(Vector3.X, 200.0, 2000.0),
+            render = RenderPrimitiveComponent(WorkcellRenderKind.BOX, Vector3(2.0, 2.0, 2.0)))))
+        val output = mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress(5)
+        runtime.dispatch(RuntimeCommand.SetSignalBindings(listOf(SignalBinding.OutputToActuator(output, id))))
+        runtime.dispatch(RuntimeCommand.SetDigitalOutput(output, true))
+        runtime.dispatch(RuntimeCommand.StartClock)
+        val before = runtime.state
+        runtime.dispatch(RuntimeCommand.AdvanceSimulation(100))
+        assertNotNull(runtime.state.collisionStop)
+        assertEquals(before.workcellState, runtime.state.workcellState)
+        assertEquals(before.clockState.timeMillis, runtime.state.clockState.timeMillis)
+    }
+
+    @Test fun repeatedManualCollisionCanBeStoppedAfterTrainingTaskWasAlreadyAborted() {
+        val runtime = prepared()
+        repeat(2) {
+            runtime.dispatch(RuntimeCommand.SetJointState(target.values))
+            assertNotNull(runtime.state.collisionStop)
+            runtime.dispatch(RuntimeCommand.StopTask(TrainingSequence.TASK_ID))
+            assertNull(runtime.state.collisionStop)
+        }
+    }
     private fun prepared(): SharedRuntime = AppRuntimeFactory.createDefault().runtime.also {
         it.dispatch(RuntimeCommand.SetJointState(config.approachPick.values))
         it.dispatch(RuntimeCommand.ConfigureTrainingCell(config))
