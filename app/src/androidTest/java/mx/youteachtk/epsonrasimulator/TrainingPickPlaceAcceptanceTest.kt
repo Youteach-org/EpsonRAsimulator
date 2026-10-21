@@ -296,6 +296,15 @@ class TrainingPickPlaceAcceptanceTest {
         }
         click("training-start")
         waitState { it.collisionStop != null }
+        // The ticker can publish the stop after the frame driven by waitState.
+        // With autoAdvance disabled, drive the frame that presents that update.
+        compose.waitUntil(10_000) {
+            frame()
+            try {
+                compose.onNodeWithTag("collision-message").assertIsDisplayed()
+                true
+            } catch (_: AssertionError) { false }
+        }
         compose.onNodeWithTag("collision-message").assertIsDisplayed()
         reveal("training-resume").assertIsNotEnabled()
         compose.runOnIdle {
