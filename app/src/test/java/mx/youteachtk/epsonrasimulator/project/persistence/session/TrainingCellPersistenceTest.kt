@@ -11,7 +11,7 @@ class TrainingCellPersistenceTest {
     private val codec = ProjectSessionCodec()
     @Test fun malformedV3FieldsAreRejectedAndEveryPayloadTruncationFails() {
         val base = ProjectSessionSnapshot.neutral().copy(jointValues = List(6) { 0.0 })
-        val offset = codec.encode(base).size - 1
+        val offset = codec.encode(base).size - 5
         val bytes = codec.encode(base.copy(trainingCell = TrainingCellConfig()))
         for (length in offset until bytes.size) {
             assertThrows("Truncation at $length", PersistenceException::class.java) { codec.decodeOrDefault(bytes.copyOf(length)) }
@@ -26,9 +26,9 @@ class TrainingCellPersistenceTest {
         rejects { it.putDouble(offset + 2, Double.NaN) }
         rejects { it.putDouble(offset + 2, 10000.0) }
         rejects { it.putLong(offset + 2 + 30 * 8, 0) }
-        rejects { it.putDouble(bytes.size - 4 - 6 * 8, -1.0) }
-        rejects { it.putDouble(bytes.size - 4 - 3 * 8, -1.0) }
-        rejects { it.putInt(bytes.size - 4, -1) }
+        rejects { it.putDouble(bytes.size - 8 - 6 * 8, -1.0) }
+        rejects { it.putDouble(bytes.size - 8 - 3 * 8, -1.0) }
+        rejects { it.putInt(bytes.size - 8, -1) }
     }
     @Test fun roundTripConfigAndRestoreOpenWithoutResumingMotion() {
         val config = TrainingCellConfig(openWidthMm = 75.0, speedMmPerSecond = 35.0, segmentDurationMillis = 2500)

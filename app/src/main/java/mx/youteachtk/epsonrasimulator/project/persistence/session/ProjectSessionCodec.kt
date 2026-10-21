@@ -67,6 +67,7 @@ class ProjectSessionCodec(
             data.writeByte(robotManagerPageMarker(snapshot.robotManagerPage, decoding = false))
             data.writeDouble(snapshot.robotManagerTrainingStepDegrees)
             TrainingCellCodec.write(data, snapshot.trainingCell)
+            UserSequenceCodec.write(data, snapshot.userSequence)
         }
 
         val bytes = output.toByteArray()
@@ -148,6 +149,8 @@ class ProjectSessionCodec(
                 val trainingStep = data.readDouble()
                 val trainingCell = if (schema >= 3) TrainingCellCodec.read(data) else null
 
+                val userSequence = if (schema >= 4) UserSequenceCodec.read(data) else mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence()
+
                 if (data.available() != 0) {
                     fail(PersistenceFailure.CORRUPT, "Trailing project session data")
                 }
@@ -163,7 +166,8 @@ class ProjectSessionCodec(
                     visualSourcePath = visualSourcePath,
                     robotManagerPage = robotManagerPage,
                     robotManagerTrainingStepDegrees = trainingStep,
-                    trainingCell = trainingCell
+                    trainingCell = trainingCell,
+                    userSequence = userSequence
                 )
                 validate(snapshot, decoding = true)
                 return snapshot.copy(
@@ -180,6 +184,7 @@ class ProjectSessionCodec(
         snapshot: ProjectSessionSnapshot,
         decoding: Boolean
     ) {
+        try { snapshot.userSequence.snapshot() } catch(error: IllegalArgumentException) { invalid(decoding, "Invalid sequence: ${error.message}") }
         snapshot.trainingCell?.let {
             try {
                 mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellFactory.build(it)
@@ -415,7 +420,7 @@ class ProjectSessionCodec(
 
     companion object {
         private val MAGIC = "EPSSES01".toByteArray(Charsets.US_ASCII)
-        private const val SCHEMA_VERSION = 3
+        private const val SCHEMA_VERSION = 4
         private val ROBOT_MANAGER_PAGES = listOf(
             "CONTROL_PANEL",
             "JOG_TEACH",

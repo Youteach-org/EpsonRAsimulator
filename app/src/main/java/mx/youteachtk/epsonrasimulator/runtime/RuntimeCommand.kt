@@ -47,6 +47,10 @@ sealed interface RuntimeCommand {
         val label: String?
     ) : RuntimeCommand
 
+    data class SetUserSequence(val sequence: mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence) : RuntimeCommand
+    data object LoadUserSequenceExample : RuntimeCommand
+    data object StartUserSequence : RuntimeCommand
+
     data class LoadTask(val program: TaskProgram) : RuntimeCommand
     data class StartTask(val id: TaskId) : RuntimeCommand
     data class PauseTask(val id: TaskId) : RuntimeCommand

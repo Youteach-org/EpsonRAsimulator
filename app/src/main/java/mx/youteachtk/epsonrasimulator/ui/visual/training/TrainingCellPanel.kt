@@ -25,7 +25,7 @@ fun TrainingCellPanel(state: SharedRuntimeState, controller: TrainingCellControl
             if (state.trainingCell == null) run { controller.setup() } else confirmReset = true
         }, enabled = free, modifier = Modifier.testTag("training-setup")) { Text(if (state.trainingCell == null) "Set up training cell" else "Reset training cell") }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Button(onClick = { run { controller.start() } }, enabled = state.collisionStop == null && task?.status == TaskStatus.READY,
+            Button(onClick = { run { controller.start() } }, enabled = free && state.collisionStop == null && task?.status == TaskStatus.READY,
                 modifier = Modifier.testTag("training-start")) { Text("Start") }
             OutlinedButton(onClick = { run { controller.pause() } }, enabled = task?.status in listOf(TaskStatus.RUNNING, TaskStatus.WAITING),
                 modifier = Modifier.testTag("training-pause")) { Text("Pause") }
@@ -33,7 +33,7 @@ fun TrainingCellPanel(state: SharedRuntimeState, controller: TrainingCellControl
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Button(onClick = { run { controller.resume() } }, enabled = state.collisionStop == null && task?.status in listOf(TaskStatus.PAUSED, TaskStatus.HALTED),
                 modifier = Modifier.testTag("training-resume")) { Text("Resume") }
-            OutlinedButton(onClick = { run { controller.stop() } }, enabled = !free || state.collisionStop != null,
+            OutlinedButton(onClick = { run { controller.stop() } }, enabled = state.motionOwner == TrainingSequence.TASK_ID || (state.motionOwner == null && state.collisionStop != null),
                 modifier = Modifier.testTag("training-stop")) { Text("Stop") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

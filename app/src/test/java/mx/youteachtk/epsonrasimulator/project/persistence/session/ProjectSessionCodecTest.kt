@@ -292,14 +292,14 @@ class ProjectSessionCodecTest {
         }
     }
 
-    @Test fun readsV2PointsAndWritesV3WithoutChangingPoseOrPreferredJoints() {
+    @Test fun readsV2PointsAndWritesV4WithoutChangingPoseOrPreferredJoints() {
         val restored = codec.decodeOrDefault(rawPayload(schema = 2))
         assertEquals(listOf("P1", "P2"), restored.teachPoints.map { it.name })
         assertEquals(List(6) { it.toDouble() }, restored.teachPoints.first().pose)
         assertEquals(List(4) { it.toDouble() }, restored.teachPoints.first().preferredJointValues)
         assertEquals("SIMULATION_Z_UP", restored.teachPoints.first().frame)
         assertNull(restored.trainingCell)
-        assertEquals(3, codec.encode(restored)[11].toInt())
+        assertEquals(4, codec.encode(restored)[11].toInt())
         assertEquals(restored, codec.decodeOrDefault(codec.encode(restored)))
     }
 

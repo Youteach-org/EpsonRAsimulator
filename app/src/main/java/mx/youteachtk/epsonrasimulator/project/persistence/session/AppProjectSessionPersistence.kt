@@ -87,7 +87,8 @@ class AppProjectSessionPersistence(
                     robotManagerSession.state.selectedPage.name,
                 robotManagerTrainingStepDegrees =
                     robotManagerSession.state.trainingStepDegrees,
-                trainingCell = runtime.trainingCell
+                trainingCell = runtime.trainingCell,
+                userSequence = runtime.userSequence.snapshot()
             )
         )
     }
@@ -244,7 +245,7 @@ class AppProjectSessionPersistence(
 
         // Validate physical geometry before the caller replaces any project data.
         try {
-            bundle.runtime.prepareLocalPersistentSession(robot.id, joints, teachPoints, decoded.trainingCell)
+            bundle.runtime.prepareLocalPersistentSession(robot.id, joints, teachPoints, decoded.trainingCell, decoded.userSequence)
         } catch (failure: IllegalArgumentException) {
             invalid(failure.message ?: "Invalid training geometry in saved project")
         }
@@ -255,7 +256,8 @@ class AppProjectSessionPersistence(
                     robotId = robot.id,
                     jointValues = joints,
                     teachPoints = teachPoints,
-                    trainingCell = decoded.trainingCell
+                    trainingCell = decoded.trainingCell,
+                    userSequence = decoded.userSequence
                 )
                 workspaceSession.restoreReconciled(workspace)
                 projectNavigationSession.restoreSelection(selection)
@@ -282,17 +284,20 @@ class AppProjectSessionPersistence(
         var durableJointState = bundle.runtime.state.jointState
         var durableTeachPoints = bundle.runtime.state.teachPoints
         var durableTrainingCell = bundle.runtime.state.trainingCell
+        var durableUserSequence = bundle.runtime.state.userSequence
         val runtimeSubscription = bundle.runtime.subscribe { next ->
             val durableChanged =
                 next.activeRobotId != durableRobotId ||
                     next.jointState != durableJointState ||
                     next.teachPoints != durableTeachPoints ||
-                    next.trainingCell != durableTrainingCell
+                    next.trainingCell != durableTrainingCell ||
+                    next.userSequence != durableUserSequence
 
             durableRobotId = next.activeRobotId
             durableJointState = next.jointState
             durableTeachPoints = next.teachPoints
             durableTrainingCell = next.trainingCell
+            durableUserSequence = next.userSequence
 
             if (runtimeInitial) {
                 runtimeInitial = false

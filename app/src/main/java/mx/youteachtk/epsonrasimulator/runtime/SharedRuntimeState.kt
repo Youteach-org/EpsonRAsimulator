@@ -28,6 +28,8 @@ data class SharedRuntimeState(
     val motionOwner: TaskId? = null,
     val motionSingleStep: Boolean = false,
     val trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null,
+    val userSequence: mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence = mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence(),
+    val userSequenceActionSteps: List<Int> = emptyList(),
     val trainingGraspSucceeded: Boolean = false,
     val collisionStop: mx.youteachtk.epsonrasimulator.runtime.motion.CollisionStop? = null
 ) {

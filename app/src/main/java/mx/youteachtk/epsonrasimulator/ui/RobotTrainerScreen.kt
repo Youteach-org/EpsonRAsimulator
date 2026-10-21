@@ -55,6 +55,7 @@ fun RobotTrainerScreen(
     visualProgrammingSession: VisualProgrammingSession
 ) {
     val pointController = remember(runtime) { VisualLabPointController(runtime) }
+    val userSequenceController = remember(runtime) { mx.youteachtk.epsonrasimulator.ui.visual.training.UserSequenceController(runtime) }
     val trainingController = remember(runtime) { mx.youteachtk.epsonrasimulator.ui.visual.training.TrainingCellController(runtime) }
     val scope = rememberCoroutineScope()
     val tcpController = remember(runtime, scope) { TcpPreviewController(runtime, CoroutineTcpPreviewExecution(scope)) }
@@ -214,6 +215,8 @@ fun RobotTrainerScreen(
                 Spacer(Modifier.height(16.dp))
                 VisualLabPointsPanel(runtimeState, pointController)
                 Spacer(Modifier.height(16.dp))
+                mx.youteachtk.epsonrasimulator.ui.visual.training.UserSequencePanel(runtimeState, userSequenceController)
+
                 mx.youteachtk.epsonrasimulator.ui.visual.training.TrainingCellPanel(runtimeState, trainingController)
                 Spacer(Modifier.height(16.dp))
                 VisualProgrammingPanel(programmingState, programmingController)

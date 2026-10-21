@@ -13,7 +13,8 @@ internal object TrainingMotionRuntime {
     fun reserve(state: SimulationDomainState, id: TaskId): SimulationDomainState {
         val task = requireNotNull(state.taskState.tasks[id]) { "Unknown task" }
         validateOutputAccess(state, id)
-        if (task.program.actions.none { it is SimAction.MoveJoints || it is SimAction.WaitForGripper }) return state
+        if (id != mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence.TASK_ID &&
+            task.program.actions.none { it is SimAction.MoveJoints || it is SimAction.WaitForGripper }) return state
         require(state.robotId == EpsonRobotCatalog.C4_A601S.id) { "Training motion currently supports C4 only" }
         require(state.motionOwner == null || state.motionOwner == id) { "Another task owns robot motion" }
         var start = state.jointState
@@ -89,7 +90,7 @@ internal object TrainingMotionRuntime {
         val task = next.taskState.tasks.getValue(owner)
         if (task.status == TaskStatus.FINISHED || task.status == TaskStatus.ABORTED) {
             return next.copy(motionOwner = null, motion = null, motionSingleStep = false,
-                clockState = if (next.motionSingleStep) SimulationClock.pause(next.clockState) else next.clockState)
+                clockState = if (next.motionSingleStep || owner == mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence.TASK_ID) SimulationClock.pause(next.clockState) else next.clockState)
         }
         if (task.status == TaskStatus.HALTED || task.status == TaskStatus.PAUSED) {
             return next.copy(clockState = SimulationClock.pause(next.clockState), motionSingleStep = false)

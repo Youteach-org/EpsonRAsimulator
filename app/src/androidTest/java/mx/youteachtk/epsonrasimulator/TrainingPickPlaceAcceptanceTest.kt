@@ -257,6 +257,7 @@ class TrainingPickPlaceAcceptanceTest {
         click("training-stop")
         compose.runOnIdle { paused = state(); assertFalse(paused.clockState.running); assertNull(paused.motionOwner) }
         frame(); compose.runOnIdle { assertEquals(paused, state()) }
+        verifyAuthoredSequence()
         compose.runOnIdle {
             mx.youteachtk.epsonrasimulator.ui.visual.VisualLabPointController(session().bundle.runtime).captureCurrent("TrainingSaved")
             DataOutputStream(File(directory(), "training-expected.bin").outputStream()).use { data ->
@@ -271,6 +272,44 @@ class TrainingPickPlaceAcceptanceTest {
         compose.waitUntil(30_000) { frame(); session().persistenceState.saveStatus == PersistenceSaveStatus.SAVED }
         screenshot("training-saved-stopped")
         InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply { putString("stream", "\nTRAINING_UI_VERIFIED\n") })
+    }
+
+    private fun verifyAuthoredSequence() {
+        compose.runOnIdle { assertTrue(state().userSequence.steps.isEmpty()) }
+        reveal("sequence-capture-name").performTextInput("Mi posición")
+        click("sequence-capture")
+        click("sequence-kind-move")
+        reveal("sequence-duration").performTextReplacement("1000")
+        click("sequence-add")
+        click("sequence-kind-close"); click("sequence-add")
+        click("sequence-kind-open"); click("sequence-add")
+        click("sequence-kind-wait")
+        reveal("sequence-duration").performTextReplacement("10000")
+        click("sequence-add")
+        click("sequence-step-3"); click("sequence-up"); click("sequence-down")
+        reveal("sequence-duration").performTextReplacement("0")
+        click("sequence-add"); click("sequence-step-4"); click("sequence-remove")
+        compose.runOnIdle {
+            assertEquals(4,state().userSequence.steps.size)
+            assertTrue(state().teachPoints.containsKey("Mi posición"))
+            assertFalse(state().clockState.running)
+        }
+        click("sequence-start")
+        reveal("sequence-add").assertIsNotEnabled()
+        click("sequence-pause")
+        lateinit var paused: SharedRuntimeState
+        compose.runOnIdle { paused=state(); assertFalse(paused.clockState.running) }
+        compose.activityRule.scenario.recreate(); frame()
+        compose.runOnIdle { assertEquals(paused,state()) }
+        click("sequence-resume")
+        waitState { it.taskState.tasks.getValue(UserTrainingSequence.TASK_ID).status==TaskStatus.FINISHED }
+        compose.runOnIdle { assertNull(state().collisionStop);assertFalse(state().clockState.running) }
+        compose.waitUntil(10_000) {
+            frame()
+            compose.onAllNodesWithText("Secuencia terminada").fetchSemanticsNodes().isNotEmpty()
+        }
+        screenshot("user-sequence-completed")
+        InstrumentationRegistry.getInstrumentation().sendStatus(0,android.os.Bundle().apply { putString("stream","\nUSER_SEQUENCE_AUTHORED_VERIFIED\n") })
     }
 
     private fun verifyDeliberateCollision() {

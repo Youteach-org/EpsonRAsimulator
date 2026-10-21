@@ -13,7 +13,7 @@ import mx.youteachtk.epsonrasimulator.runtime.task.TaskRuntimeState
 import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeState
 import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellState
 import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
-import mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellFactory
+import mx.youteachtk.epsonrasimulator.runtime.training.*
 import mx.youteachtk.epsonrasimulator.runtime.task.TaskStatus
 import mx.youteachtk.epsonrasimulator.runtime.task.TaskRuntime
 import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntime
@@ -43,6 +43,11 @@ class SharedRuntime(
         if (current.trainingCell != null && command is RuntimeCommand.SetToolMountPose) {
             require(false) { "Training tool mount follows the robot flange" }
         }
+        if (current.motionOwner == UserTrainingSequence.TASK_ID) {
+            require(command !is RuntimeCommand.SaveTeachPoint && command !is RuntimeCommand.RemoveTeachPoint) {
+                "DetÃ©n Mi secuencia antes de cambiar posiciones"
+            }
+        }
         if (current.motionOwner != null) {
             require(command !is RuntimeCommand.SetJointValue && command !is RuntimeCommand.SetJointState &&
                 command != RuntimeCommand.ResetJoints && command !is RuntimeCommand.SelectRobot &&
@@ -52,6 +57,29 @@ class SharedRuntime(
                 command != RuntimeCommand.ResetClock) { "A training task owns robot motion" }
         }
         var next = when (command) {
+            is RuntimeCommand.SetUserSequence, RuntimeCommand.LoadUserSequenceExample -> {
+                require(current.motionOwner == null && current.taskState.tasks[UserTrainingSequence.TASK_ID]?.status !in
+                    setOf(TaskStatus.RUNNING, TaskStatus.WAITING, TaskStatus.PAUSED, TaskStatus.HALTED)) {
+                    "DetÃ©n la ejecuciÃ³n antes de editar Mi secuencia"
+                }
+                if (command is RuntimeCommand.SetUserSequence) current.copy(userSequence = command.sequence.snapshot())
+                else {
+                    val (sequence, points) = UserSequenceExample.build(current)
+                    current.copy(userSequence = sequence, teachPoints = current.teachPoints + points)
+                }
+            }
+            RuntimeCommand.StartUserSequence -> {
+                require(current.motionOwner == null && current.collisionStop == null) { "DetÃ©n y corrige el movimiento bloqueado primero" }
+                require(current.taskState.tasks.values.none { it.status in setOf(TaskStatus.RUNNING, TaskStatus.WAITING, TaskStatus.PAUSED, TaskStatus.HALTED) }) {
+                    "DetÃ©n las tareas activas antes de ejecutar Mi secuencia"
+                }
+                val compiled = UserSequenceCompiler.compile(current.userSequence, current)
+                val id = UserTrainingSequence.TASK_ID
+                val tasks = current.taskState.copy(order = current.taskState.order.filter { it != id }, tasks = current.taskState.tasks - id)
+                val prepared = current.copy(taskState = TaskRuntime.load(tasks, compiled.program), userSequenceActionSteps = compiled.actionSteps)
+                prepared.withSimulation(SimulationCoordinator.startClock(
+                    SimulationCoordinator.startTask(prepared.simulationDomain(), id)))
+            }
             is RuntimeCommand.ConfigureTrainingCell -> {
                 require(current.motionOwner == null && current.taskState.tasks.values.none {
                     it.status in setOf(TaskStatus.RUNNING, TaskStatus.WAITING, TaskStatus.PAUSED, TaskStatus.HALTED)
@@ -368,9 +396,10 @@ class SharedRuntime(
         robotId: String,
         jointValues: List<Double>,
         teachPoints: Map<String, TeachPoint>,
-        trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null
+        trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null,
+        userSequence: UserTrainingSequence = UserTrainingSequence()
     ): SharedRuntimeState {
-        val next = prepareLocalPersistentSession(robotId, jointValues, teachPoints, trainingCell)
+        val next = prepareLocalPersistentSession(robotId, jointValues, teachPoints, trainingCell, userSequence)
         if (next != state) {
             state = next
             listeners.toList().forEach { it(next) }
@@ -382,7 +411,8 @@ class SharedRuntime(
         robotId: String,
         jointValues: List<Double>,
         teachPoints: Map<String, TeachPoint>,
-        trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null
+        trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null,
+        userSequence: UserTrainingSequence = UserTrainingSequence()
     ): SharedRuntimeState {
         val robot = robots.require(robotId)
         validatePersistentJointValues(robot, jointValues)
@@ -423,6 +453,8 @@ class SharedRuntime(
             workcellState = definition?.let { WorkcellState(order = it.entities.map { e -> e.id }, entities = it.entities.associateBy { e -> e.id }) } ?: WorkcellState(),
             toolState = restoredTools,
             trainingCell = definition?.config,
+            userSequence = userSequence.snapshot(),
+            userSequenceActionSteps = emptyList(),
             trainingGraspSucceeded = false,
                     collisionStop = null,
             motion = null,
@@ -472,7 +504,9 @@ class SharedRuntime(
             motion = domain.motion,
             motionOwner = domain.motionOwner,
             motionSingleStep = domain.motionSingleStep,
-            collisionStop = domain.collisionStop
+            collisionStop = if (motionOwner == UserTrainingSequence.TASK_ID && domain.collisionStop != collisionStop)
+                domain.collisionStop?.let { stop -> stop.copy(actionIndex = stop.actionIndex?.let { userSequenceActionSteps.getOrNull(it) }) }
+                else domain.collisionStop
         )
 
     private fun validateInitialJointState(
