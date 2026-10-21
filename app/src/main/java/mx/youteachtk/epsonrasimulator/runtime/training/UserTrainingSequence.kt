@@ -10,7 +10,8 @@ import kotlin.math.abs
 sealed interface UserSequenceAction {
     data class Move(val pointName: String, val durationMillis: Long = 2000) : UserSequenceAction {
         init {
-            require(validatedTeachPointName(pointName) == pointName) { "Selecciona una posición válida" }
+            val valid = try { validatedTeachPointName(pointName) == pointName } catch (_: IllegalArgumentException) { false }
+            require(valid) { "Selecciona una posición válida" }
             require(durationMillis in 100..60000) { "El movimiento debe durar entre 100 y 60000 ms" }
         }
     }
@@ -54,7 +55,8 @@ object UserSequenceCompiler {
                     val point = requireNotNull(state.teachPoints[action.pointName]) { "Paso ${index+1}: falta la posición ${action.pointName}" }
                     require(point.frame == TeachPointFrame.SIMULATION_Z_UP) { "Paso ${index+1}: vuelve a capturar la posición en Visual Lab" }
                     val joints = requireNotNull(point.preferredJointState) { "Paso ${index+1}: la posición no tiene articulaciones guardadas" }
-                    val captured = C4PointCapture.capture(point.name, joints, definition.tool.tcp)
+                    val captured = try { C4PointCapture.capture(point.name, joints, definition.tool.tcp) }
+                    catch (_: IllegalArgumentException) { throw IllegalArgumentException("Paso ${index+1}: la posición guardada no es válida; vuelve a capturarla") }
                     val expected = SimulationPoseTransforms.fromPose(captured.pose)
                     val actual = SimulationPoseTransforms.fromPose(point.pose)
                     require((0..3).all { r -> (0..3).all { c -> actual[r,c].isFinite() && abs(actual[r,c]-expected[r,c]) <= 1e-5 } }) {

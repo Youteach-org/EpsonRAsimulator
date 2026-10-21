@@ -6,6 +6,37 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class UserSequenceControllerTest {
+    @Test fun synchronousWaitAndAlreadyOpenGripperFinishWithoutStartingClock() {
+        for(actions in listOf(listOf(UserSequenceAction.Wait(0)),listOf(UserSequenceAction.Gripper(false)))) {
+            val r=AppRuntimeFactory.createDefault().runtime
+            r.dispatch(RuntimeCommand.ConfigureTrainingCell(TrainingCellConfig()))
+            val c=UserSequenceController(r)
+            actions.forEach { assertTrue(c.append(it)) }
+            assertTrue(c.start())
+            assertEquals("Secuencia terminada",c.status)
+            assertNull(r.state.motionOwner)
+            assertFalse(r.state.clockState.running)
+        }
+    }
+    @Test fun editingFinishedDraftDoesNotClaimNewStepsHaveRun() {
+        val r=AppRuntimeFactory.createDefault().runtime
+        r.dispatch(RuntimeCommand.ConfigureTrainingCell(TrainingCellConfig()))
+        val c=UserSequenceController(r)
+        c.append(UserSequenceAction.Wait(100));c.start()
+        r.dispatch(RuntimeCommand.AdvanceSimulation(1000))
+        assertEquals("Secuencia terminada",c.status)
+        assertTrue(c.append(UserSequenceAction.Wait(0)))
+        assertEquals("Lista para editar",c.status)
+        assertTrue(r.state.userSequenceActionSteps.isEmpty())
+    }
+    @Test fun blankNamesAreExplainedInSpanishAtEditorBoundary() {
+        val r=AppRuntimeFactory.createDefault().runtime
+        val c=UserSequenceController(r)
+        assertFalse(c.capture(" "))
+        assertEquals("Escribe un nombre para la posición",c.error)
+        val error=assertThrows(IllegalArgumentException::class.java) { UserSequenceAction.Move("") }
+        assertEquals("Selecciona una posición válida",error.message)
+    }
     @Test fun legacyPointPanelRejectsCaptureAndDeleteDuringUserExecutionWithoutThrowing() {
         val r=AppRuntimeFactory.createDefault().runtime
         r.dispatch(RuntimeCommand.ConfigureTrainingCell(TrainingCellConfig()))

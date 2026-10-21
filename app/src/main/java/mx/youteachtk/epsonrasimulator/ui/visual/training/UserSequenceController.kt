@@ -24,7 +24,10 @@ class UserSequenceController(private val runtime: SharedRuntime) {
     }
     fun capture(name: String): Boolean = attempt {
         require(editable) { "Detén la ejecución antes de guardar una posición" }
-        require(name.trim() !in runtime.state.teachPoints) { "Ya existe una posición con ese nombre" }
+        require(name.isNotBlank()) { "Escribe un nombre para la posición" }
+        val validName = try { mx.youteachtk.epsonrasimulator.domain.validatedTeachPointName(name) }
+            catch (_: IllegalArgumentException) { throw IllegalArgumentException("Usa un nombre válido de hasta 256 bytes para la posición") }
+        require(validName !in runtime.state.teachPoints) { "Ya existe una posición con ese nombre" }
         when (val result=VisualLabPointController(runtime).captureCurrent(name)) {
             is VisualLabPointResult.Rejected -> throw IllegalArgumentException(result.message)
             VisualLabPointResult.Applied -> Unit

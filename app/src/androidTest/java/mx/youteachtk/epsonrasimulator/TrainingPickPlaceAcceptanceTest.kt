@@ -220,8 +220,12 @@ class TrainingPickPlaceAcceptanceTest {
         compose.runOnIdle { session().bundle.runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.25)) }
         click("training-start")
         waitState {
-            it.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex == 3 &&
-                it.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm < 55.0
+            val opening = it.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm
+            val closing = it.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex == 3 && opening > 20.0 && opening < 55.0
+            // This predicate runs on the UI thread. Widen the remaining window
+            // atomically before ActivityScenario waits for the scene transition.
+            if (closing) session().bundle.runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.01))
+            closing
         }
         // Background while actively closing: lifecycle must pause without a click.
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)

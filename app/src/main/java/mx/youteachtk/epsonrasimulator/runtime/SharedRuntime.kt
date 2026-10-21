@@ -45,7 +45,7 @@ class SharedRuntime(
         }
         if (current.motionOwner == UserTrainingSequence.TASK_ID) {
             require(command !is RuntimeCommand.SaveTeachPoint && command !is RuntimeCommand.RemoveTeachPoint) {
-                "DetÃ©n Mi secuencia antes de cambiar posiciones"
+                "Detén Mi secuencia antes de cambiar posiciones"
             }
         }
         if (current.motionOwner != null) {
@@ -60,25 +60,25 @@ class SharedRuntime(
             is RuntimeCommand.SetUserSequence, RuntimeCommand.LoadUserSequenceExample -> {
                 require(current.motionOwner == null && current.taskState.tasks[UserTrainingSequence.TASK_ID]?.status !in
                     setOf(TaskStatus.RUNNING, TaskStatus.WAITING, TaskStatus.PAUSED, TaskStatus.HALTED)) {
-                    "DetÃ©n la ejecuciÃ³n antes de editar Mi secuencia"
+                    "Detén la ejecución antes de editar Mi secuencia"
                 }
-                if (command is RuntimeCommand.SetUserSequence) current.copy(userSequence = command.sequence.snapshot())
+                if (command is RuntimeCommand.SetUserSequence) current.copy(userSequence = command.sequence.snapshot()).withoutUserSequenceRun()
                 else {
                     val (sequence, points) = UserSequenceExample.build(current)
-                    current.copy(userSequence = sequence, teachPoints = current.teachPoints + points)
+                    current.copy(userSequence = sequence, teachPoints = current.teachPoints + points).withoutUserSequenceRun()
                 }
             }
             RuntimeCommand.StartUserSequence -> {
-                require(current.motionOwner == null && current.collisionStop == null) { "DetÃ©n y corrige el movimiento bloqueado primero" }
+                require(current.motionOwner == null && current.collisionStop == null) { "Detén y corrige el movimiento bloqueado primero" }
                 require(current.taskState.tasks.values.none { it.status in setOf(TaskStatus.RUNNING, TaskStatus.WAITING, TaskStatus.PAUSED, TaskStatus.HALTED) }) {
-                    "DetÃ©n las tareas activas antes de ejecutar Mi secuencia"
+                    "Detén las tareas activas antes de ejecutar Mi secuencia"
                 }
                 val compiled = UserSequenceCompiler.compile(current.userSequence, current)
                 val id = UserTrainingSequence.TASK_ID
                 val tasks = current.taskState.copy(order = current.taskState.order.filter { it != id }, tasks = current.taskState.tasks - id)
                 val prepared = current.copy(taskState = TaskRuntime.load(tasks, compiled.program), userSequenceActionSteps = compiled.actionSteps)
-                prepared.withSimulation(SimulationCoordinator.startClock(
-                    SimulationCoordinator.startTask(prepared.simulationDomain(), id)))
+                val started = SimulationCoordinator.startTask(prepared.simulationDomain(), id)
+                prepared.withSimulation(if (started.motionOwner == id) SimulationCoordinator.startClock(started) else started)
             }
             is RuntimeCommand.ConfigureTrainingCell -> {
                 require(current.motionOwner == null && current.taskState.tasks.values.none {
@@ -474,6 +474,12 @@ class SharedRuntime(
         listener(state)
         return RuntimeSubscription { listeners -= listener }
     }
+
+    private fun SharedRuntimeState.withoutUserSequenceRun(): SharedRuntimeState = copy(
+        taskState = taskState.copy(order = taskState.order.filter { it != UserTrainingSequence.TASK_ID },
+            tasks = taskState.tasks - UserTrainingSequence.TASK_ID),
+        userSequenceActionSteps = emptyList()
+    )
 
     private fun SharedRuntimeState.simulationDomain(): SimulationDomainState =
         SimulationDomainState(
