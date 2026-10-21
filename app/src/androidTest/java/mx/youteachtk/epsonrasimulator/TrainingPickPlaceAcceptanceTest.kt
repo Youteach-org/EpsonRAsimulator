@@ -282,6 +282,7 @@ class TrainingPickPlaceAcceptanceTest {
         compose.runOnIdle { assertTrue(state().userSequence.steps.isEmpty()) }
         reveal("sequence-capture-name").performTextInput("Mi posición")
         click("sequence-capture")
+        compose.onNodeWithTag("sequence-capture-name").assertIsNotFocused()
         click("sequence-kind-move")
         reveal("sequence-duration").performTextReplacement("1000")
         click("sequence-add")

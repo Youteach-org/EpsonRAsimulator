@@ -5,6 +5,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import mx.youteachtk.epsonrasimulator.runtime.SharedRuntimeState
@@ -21,11 +23,19 @@ fun UserSequencePanel(state: SharedRuntimeState, controller: UserSequenceControl
     var showPoints by remember { mutableStateOf(false) }
     var confirmExample by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    val focusManager=LocalFocusManager.current
+    val keyboardController=LocalSoftwareKeyboardController.current
     val editable=controller.editable
     val task=state.taskState.tasks[UserTrainingSequence.TASK_ID]
     val index=state.userSequence.steps.indexOfFirst { it.id==selected }
     fun perform(action: ()->Boolean) {
-        try { if(action()) error=null else error=controller.error }
+        try {
+            if(action()) {
+                error=null
+                focusManager.clearFocus()
+                keyboardController?.hide()
+            } else error=controller.error
+        }
         catch(failure: IllegalArgumentException) { error=failure.message }
     }
     fun action(): UserSequenceAction = when(kind) {
