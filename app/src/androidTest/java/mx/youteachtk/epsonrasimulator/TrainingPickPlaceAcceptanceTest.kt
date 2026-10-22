@@ -280,19 +280,21 @@ class TrainingPickPlaceAcceptanceTest {
 
     private fun verifyAuthoredSequence() {
         compose.runOnIdle { assertTrue(state().userSequence.steps.isEmpty()) }
-        reveal("sequence-capture-name").performTextInput("Mi posición")
+        reveal("sequence-capture-name").apply { performTextInput("Mi posición"); performImeAction() }
+        compose.onNodeWithTag("sequence-capture-name").assertIsNotFocused()
         click("sequence-capture")
+        compose.runOnIdle { assertTrue("Capture must save the authored point",state().teachPoints.containsKey("Mi posición")) }
         compose.onNodeWithTag("sequence-capture-name").assertIsNotFocused()
         click("sequence-kind-move")
-        reveal("sequence-duration").performTextReplacement("1000")
+        reveal("sequence-duration").apply { performTextReplacement("1000"); performImeAction() }
         click("sequence-add")
         click("sequence-kind-close"); click("sequence-add")
         click("sequence-kind-open"); click("sequence-add")
         click("sequence-kind-wait")
-        reveal("sequence-duration").performTextReplacement("10000")
+        reveal("sequence-duration").apply { performTextReplacement("10000"); performImeAction() }
         click("sequence-add")
         click("sequence-step-3"); click("sequence-up"); click("sequence-down")
-        reveal("sequence-duration").performTextReplacement("0")
+        reveal("sequence-duration").apply { performTextReplacement("0"); performImeAction() }
         click("sequence-add"); click("sequence-step-4"); click("sequence-remove")
         compose.runOnIdle {
             assertEquals(4,state().userSequence.steps.size)

@@ -1,6 +1,9 @@
 package mx.youteachtk.epsonrasimulator.ui.visual.training
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -25,6 +28,10 @@ fun UserSequencePanel(state: SharedRuntimeState, controller: UserSequenceControl
     var error by remember { mutableStateOf<String?>(null) }
     val focusManager=LocalFocusManager.current
     val keyboardController=LocalSoftwareKeyboardController.current
+    fun dismissKeyboard() {
+        focusManager.clearFocus()
+        keyboardController?.hide()
+    }
     val editable=controller.editable
     val task=state.taskState.tasks[UserTrainingSequence.TASK_ID]
     val index=state.userSequence.steps.indexOfFirst { it.id==selected }
@@ -32,8 +39,7 @@ fun UserSequencePanel(state: SharedRuntimeState, controller: UserSequenceControl
         try {
             if(action()) {
                 error=null
-                focusManager.clearFocus()
-                keyboardController?.hide()
+                dismissKeyboard()
             } else error=controller.error
         }
         catch(failure: IllegalArgumentException) { error=failure.message }
@@ -50,7 +56,9 @@ fun UserSequencePanel(state: SharedRuntimeState, controller: UserSequenceControl
         Text("Mueve el brazo y guarda posiciones. Añade tus pasos; solo Ejecutar inicia el movimiento.",style=MaterialTheme.typography.bodySmall)
         Text(controller.status,Modifier.testTag("sequence-status"))
         OutlinedTextField(value=captureName,onValueChange={captureName=it},label={Text("Nombre de posición")},
-            enabled=editable,singleLine=true,modifier=Modifier.fillMaxWidth().testTag("sequence-capture-name"))
+            enabled=editable,singleLine=true,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),
+            keyboardActions=KeyboardActions(onDone={dismissKeyboard()}),
+            modifier=Modifier.fillMaxWidth().testTag("sequence-capture-name"))
         OutlinedButton(onClick={perform { controller.capture(captureName).also { if(it) { pointName=captureName.trim();captureName="" } } }},
             enabled=editable && state.trainingCell!=null,modifier=Modifier.testTag("sequence-capture")) { Text("Guardar posición actual") }
         Text("Tipo de paso",style=MaterialTheme.typography.titleSmall)
@@ -75,7 +83,9 @@ fun UserSequencePanel(state: SharedRuntimeState, controller: UserSequenceControl
         }
         if(kind=="move" || kind=="wait") OutlinedTextField(value=duration,onValueChange={duration=it},
             label={Text(if(kind=="move") "Duración del movimiento (ms)" else "Espera (ms)")},enabled=editable,
-            singleLine=true,modifier=Modifier.fillMaxWidth().testTag("sequence-duration"))
+            singleLine=true,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),
+            keyboardActions=KeyboardActions(onDone={dismissKeyboard()}),
+            modifier=Modifier.fillMaxWidth().testTag("sequence-duration"))
         Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
             Button(onClick={perform { controller.append(action()) }},enabled=editable && state.userSequence.steps.size<100,
                 modifier=Modifier.testTag("sequence-add")) { Text("Añadir paso") }
