@@ -5,6 +5,8 @@ import android.os.Process
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -278,24 +280,44 @@ class TrainingPickPlaceAcceptanceTest {
         InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply { putString("stream", "\nTRAINING_UI_VERIFIED\n") })
     }
 
+    private fun enterSequenceText(tag: String, value: String, replace: Boolean = false) {
+        reveal(tag).apply {
+            if (replace) performTextReplacement(value) else performTextInput(value)
+            performImeAction()
+        }
+        // Done clears focus immediately; Android's IME window closes asynchronously.
+        // Wait for the actual window before injecting a touch into the resized panel.
+        compose.waitUntil(10_000) {
+            frame()
+            var hidden = false
+            compose.runOnIdle {
+                hidden = ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
+                    ?.isVisible(WindowInsetsCompat.Type.ime()) == false
+            }
+            hidden
+        }
+    }
+
     private fun verifyAuthoredSequence() {
         compose.runOnIdle { assertTrue(state().userSequence.steps.isEmpty()) }
-        reveal("sequence-capture-name").apply { performTextInput("Mi posición"); performImeAction() }
+        enterSequenceText("sequence-capture-name", "Mi posición")
         compose.onNodeWithTag("sequence-capture-name").assertIsNotFocused()
         click("sequence-capture")
         compose.runOnIdle { assertTrue("Capture must save the authored point",state().teachPoints.containsKey("Mi posición")) }
         compose.onNodeWithTag("sequence-capture-name").assertIsNotFocused()
         click("sequence-kind-move")
-        reveal("sequence-duration").apply { performTextReplacement("1000"); performImeAction() }
+        enterSequenceText("sequence-duration", "1000", replace = true)
         click("sequence-add")
         click("sequence-kind-close"); click("sequence-add")
         click("sequence-kind-open"); click("sequence-add")
         click("sequence-kind-wait")
-        reveal("sequence-duration").apply { performTextReplacement("10000"); performImeAction() }
+        enterSequenceText("sequence-duration", "10000", replace = true)
         click("sequence-add")
         click("sequence-step-3"); click("sequence-up"); click("sequence-down")
-        reveal("sequence-duration").apply { performTextReplacement("0"); performImeAction() }
-        click("sequence-add"); click("sequence-step-4"); click("sequence-remove")
+        enterSequenceText("sequence-duration", "0", replace = true)
+        click("sequence-add")
+        compose.runOnIdle { assertEquals("The extra wait must be added before testing deletion",5,state().userSequence.steps.size) }
+        click("sequence-step-4"); click("sequence-remove")
         compose.runOnIdle {
             assertEquals(4,state().userSequence.steps.size)
             assertTrue(state().teachPoints.containsKey("Mi posición"))
