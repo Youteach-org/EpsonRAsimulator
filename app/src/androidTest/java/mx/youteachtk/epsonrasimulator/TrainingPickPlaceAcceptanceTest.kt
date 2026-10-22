@@ -38,10 +38,17 @@ class TrainingPickPlaceAcceptanceTest {
     private fun reveal(tag: String): SemanticsNodeInteraction {
         val target = compose.onNodeWithTag(tag)
         if (tag.startsWith("sequence-")) {
-            target.performScrollTo()
-            compose.mainClock.advanceTimeBy(500)
-            compose.waitForIdle()
-            return target.assertIsDisplayed()
+            // performScrollTo awaits animated scrolling; a paused Compose clock
+            // cannot complete it. This clock does not drive the real-time ticker.
+            val autoAdvance = compose.mainClock.autoAdvance
+            compose.mainClock.autoAdvance = true
+            try {
+                target.performScrollTo()
+                compose.waitForIdle()
+                return target.assertIsDisplayed()
+            } finally {
+                compose.mainClock.autoAdvance = autoAdvance
+            }
         }
         val container = compose.onNodeWithTag("visual-controls")
         repeat(30) {
