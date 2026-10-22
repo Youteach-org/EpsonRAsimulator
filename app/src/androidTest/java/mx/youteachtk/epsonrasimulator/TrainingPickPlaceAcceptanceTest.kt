@@ -37,6 +37,12 @@ class TrainingPickPlaceAcceptanceTest {
     }
     private fun reveal(tag: String): SemanticsNodeInteraction {
         val target = compose.onNodeWithTag(tag)
+        if (tag.startsWith("sequence-")) {
+            target.performScrollTo()
+            compose.mainClock.advanceTimeBy(500)
+            compose.waitForIdle()
+            return target.assertIsDisplayed()
+        }
         val container = compose.onNodeWithTag("visual-controls")
         repeat(30) {
             val bounds = target.getUnclippedBoundsInRoot()
@@ -263,7 +269,20 @@ class TrainingPickPlaceAcceptanceTest {
         click("training-stop")
         compose.runOnIdle { paused = state(); assertFalse(paused.clockState.running); assertNull(paused.motionOwner) }
         frame(); compose.runOnIdle { assertEquals(paused, state()) }
-        verifyAuthoredSequence()
+        try {
+            verifyAuthoredSequence()
+        } catch (failure: Throwable) {
+            compose.onRoot(useUnmergedTree = true).printToLog("UserSequenceFailure")
+            val instrumentation = InstrumentationRegistry.getInstrumentation()
+            instrumentation.uiAutomation.takeScreenshot()?.let { bitmap ->
+                File(directory(), "user-sequence-failure.png").outputStream().use {
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                }
+                streamAcceptanceScreenshot("user-sequence-failure", bitmap)
+                bitmap.recycle()
+            }
+            throw failure
+        }
         compose.runOnIdle {
             mx.youteachtk.epsonrasimulator.ui.visual.VisualLabPointController(session().bundle.runtime).captureCurrent("TrainingSaved")
             DataOutputStream(File(directory(), "training-expected.bin").outputStream()).use { data ->
