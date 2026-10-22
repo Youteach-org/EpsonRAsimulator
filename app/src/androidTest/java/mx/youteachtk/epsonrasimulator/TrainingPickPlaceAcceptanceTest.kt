@@ -152,10 +152,15 @@ class TrainingPickPlaceAcceptanceTest {
         InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply {
             putString("stream", "\nTRAINING_CROSS_EXPERIENCE_JOG_VERIFIED\n")
         })
+        // The first closing observation also needs a wide real-time window:
+        // host UI work can otherwise skip the entire gripper stroke.
+        compose.runOnIdle { session().bundle.runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.25)) }
         click("training-resume")
         waitState {
-            it.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex == 3 &&
-                it.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm < 55.0
+            val opening = it.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm
+            val closing = it.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex == 3 && opening > 20.0 && opening < 55.0
+            if (closing) session().bundle.runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.01))
+            closing
         }
         click("training-pause")
         compose.runOnIdle {
@@ -167,6 +172,7 @@ class TrainingPickPlaceAcceptanceTest {
         compose.activityRule.scenario.moveToState(Lifecycle.State.RESUMED); frame()
         compose.runOnIdle { assertEquals(paused, state()) }
         screenshot("training-paused-closing")
+        compose.runOnIdle { session().bundle.runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.5)) }
         click("training-resume")
         waitState { TrainingCellFactory.PART_ID in it.workcellState.attachments }
         click("training-pause")
