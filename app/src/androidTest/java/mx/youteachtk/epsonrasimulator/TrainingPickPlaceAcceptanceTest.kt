@@ -337,6 +337,7 @@ class TrainingPickPlaceAcceptanceTest {
             frame()
             compose.onAllNodesWithText("Secuencia terminada").fetchSemanticsNodes().isNotEmpty()
         }
+        reveal("sequence-status").assertTextEquals("Secuencia terminada")
         screenshot("user-sequence-completed")
         InstrumentationRegistry.getInstrumentation().sendStatus(0,android.os.Bundle().apply { putString("stream","\nUSER_SEQUENCE_AUTHORED_VERIFIED\n") })
     }

@@ -62,11 +62,11 @@ fun UserSequencePanel(state: SharedRuntimeState, controller: UserSequenceControl
         OutlinedButton(onClick={perform { controller.capture(captureName).also { if(it) { pointName=captureName.trim();captureName="" } } }},
             enabled=editable && state.trainingCell!=null,modifier=Modifier.testTag("sequence-capture")) { Text("Guardar posición actual") }
         Text("Tipo de paso",style=MaterialTheme.typography.titleSmall)
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
             OutlinedButton(onClick={kind="move"},enabled=editable,modifier=Modifier.testTag("sequence-kind-move")) { Text("Ir a posición") }
             OutlinedButton(onClick={kind="wait"},enabled=editable,modifier=Modifier.testTag("sequence-kind-wait")) { Text("Esperar") }
         }
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
             OutlinedButton(onClick={kind="open"},enabled=editable,modifier=Modifier.testTag("sequence-kind-open")) { Text("Abrir pinza") }
             OutlinedButton(onClick={kind="close"},enabled=editable,modifier=Modifier.testTag("sequence-kind-close")) { Text("Cerrar pinza") }
         }
@@ -86,7 +86,7 @@ fun UserSequencePanel(state: SharedRuntimeState, controller: UserSequenceControl
             singleLine=true,keyboardOptions=KeyboardOptions(imeAction=ImeAction.Done),
             keyboardActions=KeyboardActions(onDone={dismissKeyboard()}),
             modifier=Modifier.fillMaxWidth().testTag("sequence-duration"))
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
             Button(onClick={perform { controller.append(action()) }},enabled=editable && state.userSequence.steps.size<100,
                 modifier=Modifier.testTag("sequence-add")) { Text("Añadir paso") }
             OutlinedButton(onClick={selected?.let { id->perform { controller.replace(id,action()) } }},enabled=editable && index>=0,
@@ -110,16 +110,16 @@ fun UserSequencePanel(state: SharedRuntimeState, controller: UserSequenceControl
                 Text("${if(selected==step.id) "› " else ""}${i+1}. $label")
             }
         }
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
             OutlinedButton(onClick={selected?.let { perform { controller.move(it,-1) } }},enabled=editable && index>0,modifier=Modifier.testTag("sequence-up")) { Text("Subir") }
             OutlinedButton(onClick={selected?.let { perform { controller.move(it,1) } }},enabled=editable && index>=0 && index<state.userSequence.steps.lastIndex,modifier=Modifier.testTag("sequence-down")) { Text("Bajar") }
             OutlinedButton(onClick={selected?.let { perform { controller.remove(it).also { okay->if(okay) selected=null } } }},enabled=editable && index>=0,modifier=Modifier.testTag("sequence-remove")) { Text("Borrar") }
         }
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
             Button(onClick={perform(controller::start)},enabled=editable && state.trainingCell!=null && state.userSequence.steps.isNotEmpty() && state.collisionStop==null,modifier=Modifier.testTag("sequence-start")) { Text("Ejecutar") }
             OutlinedButton(onClick={perform(controller::pause)},enabled=task?.status in listOf(TaskStatus.RUNNING,TaskStatus.WAITING),modifier=Modifier.testTag("sequence-pause")) { Text("Pausar") }
         }
-        Row(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp),verticalArrangement=Arrangement.spacedBy(6.dp)) {
             OutlinedButton(onClick={perform(controller::resume)},enabled=task?.status in listOf(TaskStatus.PAUSED,TaskStatus.HALTED) && state.collisionStop==null,modifier=Modifier.testTag("sequence-resume")) { Text("Continuar") }
             OutlinedButton(onClick={perform(controller::stop)},enabled=state.motionOwner==UserTrainingSequence.TASK_ID,modifier=Modifier.testTag("sequence-stop")) { Text("Detener") }
         }
