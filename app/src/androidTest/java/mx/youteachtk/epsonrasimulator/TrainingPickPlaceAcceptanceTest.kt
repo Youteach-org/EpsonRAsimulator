@@ -37,19 +37,6 @@ class TrainingPickPlaceAcceptanceTest {
     }
     private fun reveal(tag: String): SemanticsNodeInteraction {
         val target = compose.onNodeWithTag(tag)
-        if (tag.startsWith("sequence-")) {
-            // performScrollTo awaits animated scrolling; a paused Compose clock
-            // cannot complete it. This clock does not drive the real-time ticker.
-            val autoAdvance = compose.mainClock.autoAdvance
-            compose.mainClock.autoAdvance = true
-            try {
-                target.performScrollTo()
-                compose.waitForIdle()
-                return target.assertIsDisplayed()
-            } finally {
-                compose.mainClock.autoAdvance = autoAdvance
-            }
-        }
         val container = compose.onNodeWithTag("visual-controls")
         repeat(30) {
             val bounds = target.getUnclippedBoundsInRoot()
@@ -328,7 +315,9 @@ class TrainingPickPlaceAcceptanceTest {
         compose.runOnIdle { assertTrue(state().userSequence.steps.isEmpty()) }
         enterSequenceText("sequence-capture-name", "Mi posición")
         compose.onNodeWithTag("sequence-capture-name").assertIsNotFocused()
+        screenshot("user-sequence-before-capture")
         click("sequence-capture")
+        screenshot("user-sequence-after-capture")
         compose.runOnIdle { assertTrue("Capture must save the authored point",state().teachPoints.containsKey("Mi posición")) }
         compose.onNodeWithTag("sequence-capture-name").assertIsNotFocused()
         click("sequence-kind-move")
