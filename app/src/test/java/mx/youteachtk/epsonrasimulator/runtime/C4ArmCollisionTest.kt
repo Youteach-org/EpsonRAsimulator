@@ -122,16 +122,17 @@ class C4ArmCollisionTest {
         assertFalse(runtime.state.clockState.running)
     }
 
-    @Test fun everyRenderedLinkIsSolidAtZeroAndAtAQuarterTurnOfJ1() {
+    @Test fun everyRenderedLinkDetectsSurfaceContactAtZeroAndAtAQuarterTurnOfJ1() {
+        // Actual triangle centroids, each at least 5 mm outside every other
+        // link's AABB. Arbitrary old box interiors may be empty CAD cavities.
         val points = listOf(
-            "robot:base" to CartesianPose(0.0,-50.0,50.0),
-            "robot:J1" to CartesianPose(0.0,-20.0,280.0),
-            "robot:J2" to CartesianPose(0.0,130.0,440.0),
-            "robot:J3" to CartesianPose(0.0,50.0,630.0),
-            // J4 triangle15651 centroid (10.5,-43,-105) in its local CAD frame.
-            "robot:J4" to CartesianPose(10.5,205.0,527.0),
-            "robot:J5" to CartesianPose(0.0,400.0,570.0),
-            "robot:J6" to CartesianPose(0.0,414.0,570.0))
+            "robot:base" to CartesianPose(-21.0,-157.00001,0.5),
+            "robot:J1" to CartesianPose(-20.0,-55.480992,289.271295),
+            "robot:J2" to CartesianPose(98.990865,60.150943,440.017804),
+            "robot:J3" to CartesianPose(13.56466,13.999997,570.124796),
+            "robot:J4" to CartesianPose(-52.999999,242.389968,578.651977),
+            "robot:J5" to CartesianPose(-11.951643,394.399995,566.456767),
+            "robot:J6" to CartesianPose(-15.379063,414.999998,584.917094))
         for (quarterTurn in listOf(false,true)) for ((id,point) in points) {
             // Literal world coordinates in the shipped CAD; J1 rotates about Z-up.
             val pose = if (quarterTurn && id != "robot:base")
