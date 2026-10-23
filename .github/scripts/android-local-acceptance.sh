@@ -104,8 +104,11 @@ if [ "$result" -eq 0 ] && [ "$stage" = training ]; then
   adb shell screenrecord --time-limit 180 /sdcard/training.mp4 > "$diagnostics/screenrecord.txt" 2>&1 &
   record_pid=$!
   boundary training-start
-  timeout 240s adb shell am instrument -w -e class mx.youteachtk.epsonrasimulator.TrainingPickPlaceAcceptanceTest mx.youteachtk.epsonrasimulator.test/androidx.test.runner.AndroidJUnitRunner > "$diagnostics/training.txt" 2>&1
+  # Includes the original lifecycle/collision exercise and the authored editor flow.
+  timeout 360s adb shell am instrument -w -e class mx.youteachtk.epsonrasimulator.TrainingPickPlaceAcceptanceTest mx.youteachtk.epsonrasimulator.test/androidx.test.runner.AndroidJUnitRunner > "$diagnostics/training.txt" 2>&1
   training_status=$?
+  timeout 10s adb shell screencap -p /sdcard/training-end.png >/dev/null 2>&1 || true
+  timeout 10s adb pull /sdcard/training-end.png "$diagnostics/training-end.png" >/dev/null 2>&1 || true
   boundary training-finished "$training_status"
   [ "$training_status" -eq 0 ] || result=1
   sed '/EVIDENCE_PNG=/d' "$diagnostics/training.txt"

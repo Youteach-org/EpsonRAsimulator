@@ -317,7 +317,14 @@ class TrainingPickPlaceAcceptanceTest {
         }
     }
 
+    private fun sequenceStage(stage: String) {
+        InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply {
+            putString("stream", "\nUSER_SEQUENCE_STAGE=$stage\n")
+        })
+    }
+
     private fun verifyAuthoredSequence() {
+        sequenceStage("authoring-start")
         compose.runOnIdle { assertTrue(state().userSequence.steps.isEmpty()) }
         enterSequenceText("sequence-capture-name", "Mi posición")
         compose.onNodeWithTag("sequence-capture-name").assertIsNotFocused()
@@ -326,6 +333,7 @@ class TrainingPickPlaceAcceptanceTest {
         screenshot("user-sequence-after-capture")
         compose.runOnIdle { assertTrue("Capture must save the authored point",state().teachPoints.containsKey("Mi posición")) }
         compose.onNodeWithTag("sequence-capture-name").assertIsNotFocused()
+        sequenceStage("position-saved")
         click("sequence-kind-move")
         enterSequenceText("sequence-duration", "1000", replace = true)
         click("sequence-add")
@@ -344,6 +352,7 @@ class TrainingPickPlaceAcceptanceTest {
             assertTrue(state().teachPoints.containsKey("Mi posición"))
             assertFalse(state().clockState.running)
         }
+        sequenceStage("steps-edited")
         click("sequence-start")
         reveal("sequence-add").assertIsNotEnabled()
         click("sequence-pause")
@@ -351,7 +360,9 @@ class TrainingPickPlaceAcceptanceTest {
         compose.runOnIdle { paused=state(); assertFalse(paused.clockState.running) }
         compose.activityRule.scenario.recreate(); frame()
         compose.runOnIdle { assertEquals(paused,state()) }
+        sequenceStage("paused-recreated")
         click("sequence-resume")
+        sequenceStage("resumed")
         waitState { it.taskState.tasks.getValue(UserTrainingSequence.TASK_ID).status==TaskStatus.FINISHED }
         compose.runOnIdle { assertNull(state().collisionStop);assertFalse(state().clockState.running) }
         compose.waitUntil(10_000) {
