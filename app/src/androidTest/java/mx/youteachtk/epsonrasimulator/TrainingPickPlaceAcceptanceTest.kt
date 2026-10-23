@@ -124,6 +124,7 @@ class TrainingPickPlaceAcceptanceTest {
         }
         compose.mainClock.autoAdvance = false
         compose.onNodeWithText("Visual Lab").performClick(); frame()
+        verifyJ4SideClearance()
         verifyDeliberateCollision()
         click("training-setup")
         click("training-close")
@@ -391,6 +392,48 @@ class TrainingPickPlaceAcceptanceTest {
         reveal("sequence-status").assertTextEquals("Secuencia terminada")
         screenshot("user-sequence-completed")
         InstrumentationRegistry.getInstrumentation().sendStatus(0,android.os.Bundle().apply { putString("stream","\nUSER_SEQUENCE_AUTHORED_VERIFIED\n") })
+    }
+
+    private fun verifyJ4SideClearance() {
+        compose.runOnIdle {
+            val runtime=session().bundle.runtime
+            runtime.dispatch(RuntimeCommand.SetJointState(List(6) { 0.0 }))
+            runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(TrainingCellConfig()))
+            for(id in listOf("training-source","training-destination","training-part"))
+                runtime.dispatch(RuntimeCommand.RemoveWorkcellEntity(mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntityId(id)))
+            // Full-size destination plate beside the real J4 profile, inside
+            // its old bounding box. Both manual and task moves must stay free.
+            runtime.dispatch(RuntimeCommand.UpsertWorkcellEntity(mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntity(
+                mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntityId("training-destination"),
+                mx.youteachtk.epsonrasimulator.domain.CartesianPose(0.0,320.0,628.0),
+                fixture=mx.youteachtk.epsonrasimulator.runtime.workcell.FixtureComponent,
+                render=mx.youteachtk.epsonrasimulator.runtime.workcell.RenderPrimitiveComponent(
+                    mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellRenderKind.BOX,
+                    mx.youteachtk.epsonrasimulator.kinematics.Vector3(60.0,60.0,10.0)))))
+            assertNull(runtime.state.collisionStop)
+            runtime.dispatch(RuntimeCommand.SetJointValue(3,1.0))
+            assertNull(runtime.state.collisionStop)
+            assertEquals(1.0,runtime.state.jointState[3],0.0)
+            val id=mx.youteachtk.epsonrasimulator.runtime.task.TaskId("j4-clearance-acceptance")
+            val zero=mx.youteachtk.epsonrasimulator.domain.JointState(List(6) { 0.0 })
+            runtime.dispatch(RuntimeCommand.LoadTask(mx.youteachtk.epsonrasimulator.runtime.task.TaskProgram(id,"J4 clearance",
+                listOf(mx.youteachtk.epsonrasimulator.runtime.task.SimAction.MoveJoints(zero,1000)))))
+            runtime.dispatch(RuntimeCommand.StartTask(id));runtime.dispatch(RuntimeCommand.StartClock)
+            runtime.dispatch(RuntimeCommand.AdvanceSimulation(60000));runtime.dispatch(RuntimeCommand.PauseClock)
+            assertNull(runtime.state.collisionStop)
+            assertEquals(TaskStatus.FINISHED,runtime.state.taskState.tasks.getValue(id).status)
+            assertEquals(zero,runtime.state.jointState)
+        }
+        frame()
+        compose.onNode(isDialog()).assertDoesNotExist()
+        screenshot("j4-side-clearance")
+        compose.runOnIdle {
+            session().bundle.runtime.restoreLocalPersistentSession(state().activeRobotId,List(6) { 0.0 },emptyMap())
+        }
+        frame()
+        InstrumentationRegistry.getInstrumentation().sendStatus(0,android.os.Bundle().apply {
+            putString("stream","\nJ4_SIDE_CLEARANCE_VERIFIED\n")
+        })
     }
 
     private fun verifyDeliberateCollision() {

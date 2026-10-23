@@ -80,7 +80,7 @@ internal object TrainingCollisionGuard {
             // Held part/tool move as one rigid body. Certify their relative aperture
             // in the flange frame; otherwise shared rotation needlessly consumes budget.
             val relative = pair.first in toolIds && pair.second in attached
-            val failure = SweptBoxGuard.check({ t ->
+            val failure = SweptBoxGuard.checkWithSeparation({ t ->
                 val (boxes, flange) = sample(t)
                 if (!relative) boxes else boxes.map { it.copy(transform = flange.inverseRigid() * it.transform) }
             }, listOf(pair), { id, lo, hi ->
@@ -102,7 +102,7 @@ internal object TrainingCollisionGuard {
                     maxOf(abs((actuatorPosition(entityId, lo) ?: center) - center), abs((actuatorPosition(entityId, hi) ?: center) - center))
                 } else 0.0
                 rotation + finger + translation
-            })
+            }, C4RobotCollisionGeometry::separation)
             if (failure != null) return CollisionStop(failure.firstId, failure.secondId,
                 before.motionOwner?.let { before.taskState.tasks[it]?.actionIndex }, failure.uncertain)
         }

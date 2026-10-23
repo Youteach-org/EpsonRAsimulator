@@ -8,6 +8,13 @@ object SweptBoxGuard {
         sample: (Double) -> List<WorldBox>,
         pairs: List<Pair<String, String>>,
         bound: (String, Double, Double) -> Double
+    ): SweepFailure? = checkWithSeparation(sample, pairs, bound, BoxSeparation::gap)
+
+    fun checkWithSeparation(
+        sample: (Double) -> List<WorldBox>,
+        pairs: List<Pair<String, String>>,
+        bound: (String, Double, Double) -> Double,
+        gap: (WorldBox, WorldBox) -> Double
     ): SweepFailure? {
         if (pairs.isEmpty()) return null
         var evaluations = 0
@@ -24,7 +31,7 @@ object SweptBoxGuard {
             return indexed
         }
         fun separation(boxes: Map<String, WorldBox>, pair: Pair<String, String>) =
-            BoxSeparation.gap(boxes.getValue(pair.first), boxes.getValue(pair.second))
+            gap(boxes.getValue(pair.first), boxes.getValue(pair.second))
         for (t in listOf(0.0, 1.0)) {
             val boxes = requireNotNull(at(t))
             for (pair in pairs) if (separation(boxes, pair) < -BoxSeparation.TOLERANCE_MM)

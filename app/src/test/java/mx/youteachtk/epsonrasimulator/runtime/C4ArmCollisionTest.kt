@@ -1,7 +1,7 @@
 package mx.youteachtk.epsonrasimulator.runtime
 
 import mx.youteachtk.epsonrasimulator.domain.*
-import mx.youteachtk.epsonrasimulator.kinematics.Vector3
+import mx.youteachtk.epsonrasimulator.kinematics.*
 import mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard
 import mx.youteachtk.epsonrasimulator.runtime.task.*
 import mx.youteachtk.epsonrasimulator.runtime.training.*
@@ -18,6 +18,65 @@ class C4ArmCollisionTest {
         CartesianPose(0.0, 130.0, 440.0), fixture = FixtureComponent,
         render = RenderPrimitiveComponent(WorkcellRenderKind.BOX, Vector3(1.0, 1.0, 1.0)))
 
+    @Test fun emptySpaceBesideJ4DoesNotStopTheRobot() {
+        // This point lies inside the old whole-link box, but at least 35.5 mm
+        // from every triangle AABB in C4_J4.glb; no mesh crosses its Y ray.
+        for (j4 in listOf(0.0, 60.0)) {
+            val q = JointState(listOf(0.0, 0.0, 0.0, j4, 0.0, 0.0))
+            val frame = SimulationFrames.cadToSimulationTransform * C4Kinematics.forward(q.values).baseToJointFrames[3]
+            val pose = SimulationPoseTransforms.toPose(frame * Matrix4.translation(Vector3(0.0,58.0,-220.0)))
+            val fixture = obstacle().copy(pose=pose)
+            val state = SimulationDomainState(jointState=q,collisionGuardEnabled=true,
+                workcellState=WorkcellState(order=listOf(fixture.id),entities=mapOf(fixture.id to fixture)))
+            assertNull("Free space beside the J4 CAD must remain free at J4=$j4",TrainingCollisionGuard.check(state,state))
+        }
+    }
+
+    private fun j4Fixture(local: Vector3): WorkcellEntity {
+        val q = List(6) { 0.0 }
+        val frame = SimulationFrames.cadToSimulationTransform * C4Kinematics.forward(q).baseToJointFrames[3]
+        return obstacle().copy(pose=SimulationPoseTransforms.toPose(frame*Matrix4.translation(local)))
+    }
+
+    @Test fun manualJ4MoveCanPassThroughClearanceBesideTheCad() {
+        val runtime=runtime(JointState(List(6) { 0.0 }),j4Fixture(Vector3(0.0,58.0,-220.0)))
+        runtime.dispatch(RuntimeCommand.SetJointValue(3,5.0))
+        assertNull(runtime.state.collisionStop)
+        assertEquals(5.0,runtime.state.jointState[3],0.0)
+    }
+
+    @Test fun taskJ4MoveCanPassThroughClearanceWithALargeTimeStep() {
+        val runtime=runtime(JointState(List(6) { 0.0 }),j4Fixture(Vector3(0.0,58.0,-220.0)))
+        val id=TaskId("j4-clearance")
+        val target=JointState(listOf(0.0,0.0,0.0,5.0,0.0,0.0))
+        runtime.dispatch(RuntimeCommand.LoadTask(TaskProgram(id,"Clear J4",listOf(SimAction.MoveJoints(target,1000)))))
+        runtime.dispatch(RuntimeCommand.StartTask(id));runtime.dispatch(RuntimeCommand.StartClock)
+        runtime.dispatch(RuntimeCommand.AdvanceSimulation(60000))
+        assertNull(runtime.state.collisionStop)
+        assertEquals(TaskStatus.FINISHED,runtime.state.taskState.tasks.getValue(id).status)
+        assertEquals(target,runtime.state.jointState)
+    }
+
+    @Test fun fullSizeDestinationPlateCanClearTheJ4Side() {
+        val small=j4Fixture(Vector3(0.0,58.0,-220.0))
+        val fixture=small.copy(id=WorkcellEntityId("training-destination"),
+            pose=CartesianPose(small.pose.x,small.pose.y,small.pose.z),
+            render=RenderPrimitiveComponent(WorkcellRenderKind.BOX,Vector3(60.0,60.0,10.0)))
+        val state=SimulationDomainState(collisionGuardEnabled=true,
+            workcellState=WorkcellState(order=listOf(fixture.id),entities=mapOf(fixture.id to fixture)))
+        assertNull(TrainingCollisionGuard.check(state,state))
+    }
+
+    @Test fun j4StillStopsAtAnActualCadSurface() {
+        // Centroid of triangle15651, not an arbitrary point inside the old box.
+        val fixture=j4Fixture(Vector3(10.5,-43.0,-105.0))
+        val state=SimulationDomainState(collisionGuardEnabled=true,
+            workcellState=WorkcellState(order=listOf(fixture.id),entities=mapOf(fixture.id to fixture)))
+        val stop=TrainingCollisionGuard.check(state,state)
+        assertNotNull(stop)
+        assertEquals("robot:J4",stop!!.firstId)
+    }
+
     @Test fun upperArmSweepIsCheckedEvenWithoutAnActiveTool() {
         val fixture = obstacle()
         val before = SimulationDomainState(jointState = begin, collisionGuardEnabled = true,
@@ -31,12 +90,12 @@ class C4ArmCollisionTest {
         assertEquals("arm-obstacle", stop.secondId)
     }
 
-    private fun runtime(): SharedRuntime = AppRuntimeFactory.createDefault().runtime.also { runtime ->
-        runtime.dispatch(RuntimeCommand.SetJointState(begin.values))
+    private fun runtime(joints: JointState = begin, fixture: WorkcellEntity = obstacle()): SharedRuntime = AppRuntimeFactory.createDefault().runtime.also { runtime ->
+        runtime.dispatch(RuntimeCommand.SetJointState(joints.values))
         runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(TrainingCellConfig()))
         for (id in listOf("training-source", "training-destination", "training-part"))
             runtime.dispatch(RuntimeCommand.RemoveWorkcellEntity(WorkcellEntityId(id)))
-        runtime.dispatch(RuntimeCommand.UpsertWorkcellEntity(obstacle()))
+        runtime.dispatch(RuntimeCommand.UpsertWorkcellEntity(fixture))
     }
 
     @Test fun manualJointChangeKeepsLastSafePostureWhenOnlyTheArmHits() {
@@ -69,7 +128,8 @@ class C4ArmCollisionTest {
             "robot:J1" to CartesianPose(0.0,-20.0,280.0),
             "robot:J2" to CartesianPose(0.0,130.0,440.0),
             "robot:J3" to CartesianPose(0.0,50.0,630.0),
-            "robot:J4" to CartesianPose(0.0,240.0,570.0),
+            // J4 triangle15651 centroid (10.5,-43,-105) in its local CAD frame.
+            "robot:J4" to CartesianPose(10.5,205.0,527.0),
             "robot:J5" to CartesianPose(0.0,400.0,570.0),
             "robot:J6" to CartesianPose(0.0,414.0,570.0))
         for (quarterTurn in listOf(false,true)) for ((id,point) in points) {
