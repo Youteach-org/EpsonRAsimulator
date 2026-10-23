@@ -62,4 +62,52 @@ class C4ArmCollisionTest {
         assertEquals("robot:J2", runtime.state.collisionStop!!.firstId)
         assertFalse(runtime.state.clockState.running)
     }
+
+    @Test fun everyRenderedLinkIsSolidAtZeroAndAtAQuarterTurnOfJ1() {
+        val points = listOf(
+            "robot:base" to CartesianPose(0.0,-50.0,50.0),
+            "robot:J1" to CartesianPose(0.0,-20.0,280.0),
+            "robot:J2" to CartesianPose(0.0,130.0,440.0),
+            "robot:J3" to CartesianPose(0.0,50.0,630.0),
+            "robot:J4" to CartesianPose(0.0,240.0,570.0),
+            "robot:J5" to CartesianPose(0.0,400.0,570.0),
+            "robot:J6" to CartesianPose(0.0,414.0,570.0))
+        for (quarterTurn in listOf(false,true)) for ((id,point) in points) {
+            // Literal world coordinates in the shipped CAD; J1 rotates about Z-up.
+            val pose = if (quarterTurn && id != "robot:base")
+                CartesianPose(-point.y,point.x,point.z) else point
+            val fixture = obstacle().copy(pose=pose)
+            val q = JointState(listOf(if(quarterTurn)90.0 else 0.0,0.0,0.0,0.0,0.0,0.0))
+            val state = SimulationDomainState(jointState=q,collisionGuardEnabled=true,
+                workcellState=WorkcellState(order=listOf(fixture.id),entities=mapOf(fixture.id to fixture)))
+            val stop = TrainingCollisionGuard.check(state,state)
+            assertNotNull("$id quarterTurn=$quarterTurn must be solid",stop)
+            assertEquals(id,stop!!.firstId)
+        }
+    }
+
+    @Test fun upperArmEnvelopeFollowsJ2InsteadOfStayingInItsZeroPose() {
+        val fixture = obstacle().copy(pose=CartesianPose(90.0,-160.0,320.0))
+        val state = SimulationDomainState(jointState=JointState(listOf(0.0,90.0,0.0,0.0,0.0,0.0)),
+            collisionGuardEnabled=true,
+            workcellState=WorkcellState(order=listOf(fixture.id),entities=mapOf(fixture.id to fixture)))
+        val stop = TrainingCollisionGuard.check(state,state)
+        assertNotNull(stop)
+        assertEquals("robot:J2",stop!!.firstId)
+    }
+
+    @Test fun movingFixtureCannotCrossAStationaryUpperArm() {
+        val fixture = obstacle().copy(pose=CartesianPose(-200.0,130.0,440.0),
+            actuator=LinearActuatorComponent(Vector3.X,400.0,1000.0),
+            actuatorState=LinearActuatorState(0.0))
+        val before = SimulationDomainState(collisionGuardEnabled=true,
+            workcellState=WorkcellState(order=listOf(fixture.id),entities=mapOf(fixture.id to fixture)))
+        val after = before.copy(workcellState=before.workcellState.copy(entities=mapOf(
+            fixture.id to fixture.copy(actuatorState=LinearActuatorState(400.0)))))
+        assertNull(TrainingCollisionGuard.check(before,before))
+        assertNull(TrainingCollisionGuard.check(after,after))
+        val stop = TrainingCollisionGuard.check(before,after,400)
+        assertNotNull(stop)
+        assertEquals("robot:J2",stop!!.firstId)
+    }
 }

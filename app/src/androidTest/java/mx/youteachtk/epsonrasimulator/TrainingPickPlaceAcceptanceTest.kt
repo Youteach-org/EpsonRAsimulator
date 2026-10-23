@@ -395,7 +395,7 @@ class TrainingPickPlaceAcceptanceTest {
             // ConfigureTrainingCell already loaded this task. The default transfer
             // from lift to approachPlace crosses the deliberately placed support.
         }
-        val contentBeforeStop = compose.onNodeWithTag("experience-back").getUnclippedBoundsInRoot()
+        val contentBeforeStop = compose.onNodeWithText("New project").getUnclippedBoundsInRoot()
         click("training-start")
         waitState { it.collisionStop != null }
         // The ticker can publish the stop after the frame driven by waitState.
@@ -410,7 +410,7 @@ class TrainingPickPlaceAcceptanceTest {
         compose.onNode(isDialog()).assertIsDisplayed()
         compose.onNodeWithTag("collision-message").assertIsDisplayed()
         assertEquals("The dialog must not move the page",contentBeforeStop,
-            compose.onNodeWithTag("experience-back").getUnclippedBoundsInRoot())
+            compose.onNodeWithText("New project").getUnclippedBoundsInRoot())
         compose.runOnIdle {
             assertFalse(state().clockState.running)
             assertEquals(TaskStatus.PAUSED, state().taskState.tasks.getValue(TrainingSequence.TASK_ID).status)

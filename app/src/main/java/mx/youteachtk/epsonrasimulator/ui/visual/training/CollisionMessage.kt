@@ -5,6 +5,8 @@ import mx.youteachtk.epsonrasimulator.runtime.motion.CollisionStop
 fun collisionMessage(stop: CollisionStop): String {
     fun label(id: String) = when {
         id.startsWith("tool:") -> "pinza"
+        id == "robot:base" -> "base del robot"
+        id.startsWith("robot:J") -> "brazo (${id.substringAfter(':')})"
         id == "training-part" -> "pieza"
         id == "training-source" -> "base de recogida"
         id == "training-destination" -> "base de destino"

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import mx.youteachtk.epsonrasimulator.AppExperience
 import mx.youteachtk.epsonrasimulator.AppSessionViewModel
 import mx.youteachtk.epsonrasimulator.ui.rcplus.RcTrainerScreen
@@ -47,17 +49,6 @@ fun AppExperienceRoot(
                 Text("← Volver al inicio")
             }
         }
-        runtimeState.collisionStop?.let { collision ->
-            Text(
-                mx.youteachtk.epsonrasimulator.ui.visual.training.collisionMessage(collision),
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 16.dp).testTag("collision-message")
-            )
-            OutlinedButton(onClick = {
-                session.bundle.runtime.dispatch(mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand.StopTask(
-                    runtimeState.motionOwner ?: mx.youteachtk.epsonrasimulator.runtime.training.TrainingSequence.TASK_ID))
-            }, modifier = Modifier.padding(horizontal = 16.dp).testTag("collision-stop")) { Text("Detener") }
-        }
         ProjectPersistenceBar(
             state = session.persistenceState,
             available = session.persistence != null,
@@ -78,6 +69,30 @@ fun AppExperienceRoot(
                 PersistenceStartupStatus.READY -> ExperienceContent(session, Modifier.fillMaxSize())
             }
         }
+    }
+    runtimeState.collisionStop?.let { collision ->
+        val acknowledgeStop = {
+            session.bundle.runtime.dispatch(mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand.StopTask(
+                runtimeState.motionOwner ?: mx.youteachtk.epsonrasimulator.runtime.training.TrainingSequence.TASK_ID))
+            Unit
+        }
+        AlertDialog(
+            onDismissRequest = acknowledgeStop,
+            modifier = Modifier.testTag("collision-dialog"),
+            properties = DialogProperties(dismissOnClickOutside = false),
+            title = { Text("Simulación detenida") },
+            text = {
+                Text(
+                    mx.youteachtk.epsonrasimulator.ui.visual.training.collisionMessage(collision),
+                    modifier = Modifier.testTag("collision-message")
+                )
+            },
+            confirmButton = {
+                Button(onClick = acknowledgeStop, modifier = Modifier.testTag("collision-stop")) {
+                    Text("Detener")
+                }
+            }
+        )
     }
 }
 
