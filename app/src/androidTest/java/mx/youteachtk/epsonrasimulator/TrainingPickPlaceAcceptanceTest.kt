@@ -313,8 +313,11 @@ class TrainingPickPlaceAcceptanceTest {
     private fun enterSequenceText(tag: String, value: String, replace: Boolean = false) {
         reveal(tag).apply {
             if (replace) performTextReplacement(value) else performTextInput(value)
-            performImeAction()
         }
+        // Commit the edited value to the text-field composition before asking
+        // Android's IME to finish that edit (the test clock is paused).
+        frame()
+        compose.onNodeWithTag(tag).assertTextContains(value).performImeAction()
         // Done clears focus immediately; Android's IME window closes asynchronously.
         // Wait for the actual window before injecting a touch into the resized panel.
         compose.waitUntil(10_000) {
@@ -326,6 +329,7 @@ class TrainingPickPlaceAcceptanceTest {
             }
             hidden
         }
+        compose.onNodeWithTag(tag).assertTextContains(value)
     }
 
     private fun sequenceStage(stage: String) {
