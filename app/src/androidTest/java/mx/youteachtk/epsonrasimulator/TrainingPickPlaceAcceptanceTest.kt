@@ -395,6 +395,7 @@ class TrainingPickPlaceAcceptanceTest {
             // ConfigureTrainingCell already loaded this task. The default transfer
             // from lift to approachPlace crosses the deliberately placed support.
         }
+        val contentBeforeStop = compose.onNodeWithTag("experience-back").getUnclippedBoundsInRoot()
         click("training-start")
         waitState { it.collisionStop != null }
         // The ticker can publish the stop after the frame driven by waitState.
@@ -406,8 +407,10 @@ class TrainingPickPlaceAcceptanceTest {
                 true
             } catch (_: AssertionError) { false }
         }
+        compose.onNode(isDialog()).assertIsDisplayed()
         compose.onNodeWithTag("collision-message").assertIsDisplayed()
-        reveal("training-resume").assertIsNotEnabled()
+        assertEquals("The dialog must not move the page",contentBeforeStop,
+            compose.onNodeWithTag("experience-back").getUnclippedBoundsInRoot())
         compose.runOnIdle {
             assertFalse(state().clockState.running)
             assertEquals(TaskStatus.PAUSED, state().taskState.tasks.getValue(TrainingSequence.TASK_ID).status)
@@ -416,6 +419,8 @@ class TrainingPickPlaceAcceptanceTest {
         compose.onNodeWithTag("collision-stop").performClick(); frame()
         compose.runOnIdle {
             assertNull(state().collisionStop)
+            assertFalse(state().clockState.running)
+            assertNull(state().motionOwner)
             session().bundle.runtime.restoreLocalPersistentSession(state().activeRobotId, List(6) { 0.0 }, emptyMap())
         }
         frame()
