@@ -22,10 +22,11 @@ internal object TrainingCollisionGuard {
             val travelledTime = minOf(elapsedMillis.toDouble(), saturationMillis)
             return if (travelledTime <= 0.0) 0.0 else minOf(elapsedMillis.toDouble() * t, saturationMillis) / travelledTime
         }
-        fun joints(t: Double): JointState {
+        val jointSamples = mutableMapOf<Double, JointState>()
+        fun joints(t: Double): JointState = jointSamples.getOrPut(t) {
             val motion = before.motion
             val fraction = if (motion == null) t else progress(t, (motion.durationMillis - motion.elapsedMillis).toDouble())
-            return JointState(before.jointState.values.zip(after.jointState.values).map { (a, b) -> a + (b - a) * fraction })
+            JointState(before.jointState.values.zip(after.jointState.values).map { (a, b) -> a + (b - a) * fraction })
         }
         fun opening(t: Double): Double? {
             if (beginOpening == null || endOpening == null || spec == null) return null
@@ -41,7 +42,10 @@ internal object TrainingCollisionGuard {
             val speed = actuator.speedMmPerSecond
             return begin + (end - begin) * progress(t, abs(end - begin) / speed * 1000)
         }
-        fun sample(t: Double): Pair<List<WorldBox>, Matrix4> {
+        // Every pair visits the same interval endpoints and midpoints. Share
+        // their FK/geometry within this query; never retain state across ticks.
+        val worldSamples = mutableMapOf<Double, Pair<List<WorldBox>, Matrix4>>()
+        fun sample(t: Double): Pair<List<WorldBox>, Matrix4> = worldSamples.getOrPut(t) {
             val fk = C4Kinematics.forward(joints(t).values)
             val flange = SimulationFrames.cadToSimulationTransform * fk.baseToTcp
             val aperture = opening(t)
@@ -53,7 +57,7 @@ internal object TrainingCollisionGuard {
                 if (position == null) entity else entity.copy(actuatorState = LinearActuatorState(position))
             }
             val workcell = WorkcellRuntime.followAttachments(before.workcellState.copy(entities = entities), tools)
-            return (WorkcellGeometry.boxes(workcell, tools) + C4RobotCollisionGeometry.boxes(fk.baseToJointFrames)) to flange
+            (WorkcellGeometry.boxes(workcell, tools) + C4RobotCollisionGeometry.boxes(fk.baseToJointFrames)) to flange
         }
         val initial = sample(0.0)
         val toolIds = initial.first.filter { it.id.startsWith("tool:") }.map { it.id }

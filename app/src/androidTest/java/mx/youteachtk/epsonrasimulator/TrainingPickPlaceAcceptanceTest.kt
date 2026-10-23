@@ -30,7 +30,18 @@ class TrainingPickPlaceAcceptanceTest {
     private fun state() = session().bundle.runtime.state
     private fun frame() { compose.mainClock.advanceTimeBy(100); compose.waitForIdle() }
     private fun waitState(predicate: (SharedRuntimeState) -> Boolean) {
-        compose.waitUntil(40_000) { frame(); var done = false; compose.runOnIdle { done = predicate(state()) }; done }
+        try {
+            compose.waitUntil(40_000) { frame(); var done = false; compose.runOnIdle { done = predicate(state()) }; done }
+        } catch (failure: ComposeTimeoutException) {
+            compose.runOnIdle {
+                val s = state()
+                InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply {
+                    putString("stream", "\nTRAINING_WAIT_TIMEOUT clock=${s.clockState} owner=${s.motionOwner} joints=${s.jointState} " +
+                        "tasks=${s.taskState.tasks} grippers=${s.toolState.gripperStates} collision=${s.collisionStop}\n")
+                })
+            }
+            throw failure
+        }
     }
     private fun click(tag: String) {
         reveal(tag).performClick(); frame()
