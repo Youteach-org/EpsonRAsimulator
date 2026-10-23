@@ -163,16 +163,7 @@ class TrainingPickPlaceAcceptanceTest {
         InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply {
             putString("stream", "\nTRAINING_CROSS_EXPERIENCE_JOG_VERIFIED\n")
         })
-        // The first closing observation also needs a wide real-time window:
-        // host UI work can otherwise skip the entire gripper stroke.
-        compose.runOnIdle { session().bundle.runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.25)) }
-        click("training-resume")
-        waitState {
-            val opening = it.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm
-            val closing = it.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex == 3 && opening > 20.0 && opening < 55.0
-            if (closing) session().bundle.runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.01))
-            closing
-        }
+        startAtClosing("training-resume")
         click("training-pause")
         compose.runOnIdle {
             paused = state()
@@ -234,18 +225,7 @@ class TrainingPickPlaceAcceptanceTest {
         screenshot("training-empty-grasp")
 
         resetCell()
-        // Reset restores speed=1. Give lifecycle/scroll work a four-second
-        // closing window so slow emulators can observe the in-flight gripper.
-        compose.runOnIdle { session().bundle.runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.25)) }
-        click("training-start")
-        waitState {
-            val opening = it.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm
-            val closing = it.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex == 3 && opening > 20.0 && opening < 55.0
-            // This predicate runs on the UI thread. Widen the remaining window
-            // atomically before ActivityScenario waits for the scene transition.
-            if (closing) session().bundle.runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.01))
-            closing
-        }
+        startAtClosing("training-start")
         // Background while actively closing: lifecycle must pause without a click.
         compose.activityRule.scenario.moveToState(Lifecycle.State.CREATED)
         compose.runOnIdle {
@@ -308,6 +288,30 @@ class TrainingPickPlaceAcceptanceTest {
         compose.waitUntil(30_000) { frame(); session().persistenceState.saveStatus == PersistenceSaveStatus.SAVED }
         screenshot("training-saved-stopped")
         InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply { putString("stream", "\nTRAINING_UI_VERIFIED\n") })
+    }
+
+    private fun startAtClosing(buttonTag: String) {
+        val start = reveal(buttonTag).assertIsEnabled().fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        compose.runOnUiThread {
+            val runtime = session().bundle.runtime
+            runtime.dispatch(RuntimeCommand.SetClockSpeedScale(1.0))
+            assertTrue(start())
+            // Arrange the transient closing phase using the canonical clock on
+            // this UI turn. A busy emulator may skip the whole stroke between
+            // test observations, even though it completes the task correctly.
+            fun closing(): Boolean {
+                val s = state()
+                val opening = s.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm
+                return s.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex == 3 && opening > 20.0 && opening < 55.0
+            }
+            var ticks = 0
+            while (!closing() && ticks++ < 240) runtime.dispatch(RuntimeCommand.AdvanceSimulation(25))
+            assertNull(state().collisionStop)
+            assertTrue("Must enter closing before testing pause/lifecycle", closing())
+            assertTrue(state().clockState.running)
+            runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.01))
+        }
+        frame()
     }
 
     private fun enterSequenceText(tag: String, value: String, replace: Boolean = false) {
