@@ -12,6 +12,7 @@ import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntity
 import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntityId
 
 sealed interface RuntimeCommand {
+    data class ConfigureTrainingCell(val config: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig) : RuntimeCommand
     data class SelectRobot(val robotId: String) : RuntimeCommand
     data class SetJointValue(val index: Int, val value: Double) : RuntimeCommand
     data class SetJointState(val values: List<Double>) : RuntimeCommand
@@ -45,6 +46,10 @@ sealed interface RuntimeCommand {
         val address: DigitalIoAddress,
         val label: String?
     ) : RuntimeCommand
+
+    data class SetUserSequence(val sequence: mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence) : RuntimeCommand
+    data object LoadUserSequenceExample : RuntimeCommand
+    data object StartUserSequence : RuntimeCommand
 
     data class LoadTask(val program: TaskProgram) : RuntimeCommand
     data class StartTask(val id: TaskId) : RuntimeCommand

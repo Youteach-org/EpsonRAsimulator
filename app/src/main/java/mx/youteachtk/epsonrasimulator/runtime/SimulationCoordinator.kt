@@ -1,6 +1,15 @@
 package mx.youteachtk.epsonrasimulator.runtime
 
 import mx.youteachtk.epsonrasimulator.domain.CartesianPose
+import mx.youteachtk.epsonrasimulator.domain.JointState
+import mx.youteachtk.epsonrasimulator.domain.EpsonRobotCatalog
+import mx.youteachtk.epsonrasimulator.kinematics.C4Kinematics
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationFrames
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationPoseTransforms
+import mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard
+import mx.youteachtk.epsonrasimulator.runtime.motion.CollisionStop
+import mx.youteachtk.epsonrasimulator.runtime.motion.JointMotion
+import mx.youteachtk.epsonrasimulator.runtime.motion.TrainingMotionRuntime
 import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClock
 import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClockState
 import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
@@ -26,7 +35,14 @@ data class SimulationDomainState(
     val ioState: IoState = IoState(),
     val taskState: TaskRuntimeState = TaskRuntimeState(),
     val workcellState: WorkcellState = WorkcellState(),
-    val toolState: ToolRuntimeState = ToolRuntimeState()
+    val toolState: ToolRuntimeState = ToolRuntimeState(),
+    val robotId: String = EpsonRobotCatalog.C4_A601S.id,
+    val jointState: JointState = EpsonRobotCatalog.C4_A601S.zeroState(),
+    val motion: JointMotion? = null,
+    val motionOwner: TaskId? = null,
+    val motionSingleStep: Boolean = false,
+    val collisionGuardEnabled: Boolean = false,
+    val collisionStop: CollisionStop? = null
 ) {
     init {
         WorkcellRuntime.validateAttachments(workcellState, toolState)
@@ -36,10 +52,16 @@ data class SimulationDomainState(
 object SimulationCoordinator {
     fun startClock(
         state: SimulationDomainState
-    ): SimulationDomainState =
-        state.copy(
+    ): SimulationDomainState {
+        require(state.collisionStop == null) { "Stop and correct the blocked movement before continuing" }
+        val ownerStatus = state.motionOwner?.let { state.taskState.tasks.getValue(it).status }
+        require(ownerStatus != TaskStatus.PAUSED && ownerStatus != TaskStatus.HALTED) {
+            "Resume or step the owning task before starting the clock"
+        }
+        return state.copy(
             clockState = SimulationClock.start(state.clockState)
         )
+    }
 
     fun pauseClock(
         state: SimulationDomainState
@@ -77,7 +99,8 @@ object SimulationCoordinator {
         val elapsedSimulationMillis =
             nextClock.timeMillis - state.clockState.timeMillis
 
-        val advanced = state.copy(
+        val moved = TrainingMotionRuntime.advance(state, elapsedSimulationMillis)
+        val advanced = moved.copy(
             clockState = nextClock,
             workcellState = WorkcellRuntime.advanceActuators(
                 state.workcellState,
@@ -85,13 +108,51 @@ object SimulationCoordinator {
                 elapsedSimulationMillis
             ),
             toolState = ToolRuntime.advance(
-                state.toolState,
+                moved.toolState,
                 state.ioState,
                 elapsedSimulationMillis
             )
         )
 
+        if (elapsedSimulationMillis > 0) {
+            val collision = TrainingCollisionGuard.check(state, advanced, elapsedSimulationMillis)
+            if (collision != null) return collisionStopped(state, collision)
+        }
         return evaluateWorkcellAndTasks(advanced)
+    }
+
+    internal fun collisionStopped(state: SimulationDomainState, collision: CollisionStop): SimulationDomainState {
+        val owner = state.motionOwner
+        val tasks = if (owner != null) TaskRuntime.pause(state.taskState, owner) else state.taskState
+        return state.copy(clockState = SimulationClock.pause(state.clockState), taskState = tasks,
+            collisionStop = collision, motionSingleStep = false)
+    }
+
+    /** Keep the certified safe prefix of a manual slider jump, not its unsafe endpoint. */
+    internal fun collisionStoppedAfterManualApproach(
+        before: SimulationDomainState, attempted: SimulationDomainState, collision: CollisionStop
+    ): SimulationDomainState {
+        TrainingCollisionGuard.check(before,before)?.let { return collisionStopped(before,it) }
+        var lo=0.0
+        var hi=1.0
+        var safe=before.jointState
+        var blocking=collision
+        repeat(16) {
+            val fraction=(lo+hi)/2
+            val joints=JointState(before.jointState.values.zip(attempted.jointState.values).map { (a,b) -> a+(b-a)*fraction })
+            val failure=TrainingCollisionGuard.check(before,before.copy(jointState=joints))
+            if (failure==null) { lo=fraction;safe=joints }
+            else { hi=fraction;blocking=failure }
+        }
+        val tools=if (before.toolState.activeToolId==null) before.toolState else before.toolState.copy(
+            mountPose=SimulationPoseTransforms.toPose(SimulationFrames.cadToSimulationTransform *
+                C4Kinematics.forward(safe.values).baseToTcp))
+        // Follow held parts at the accepted posture; never grasp or execute task
+        // outputs from the rejected endpoint while stopping a manual movement.
+        val followed=WorkcellRuntime.followAttachments(before.workcellState,tools)
+        val sensors=WorkcellRuntime.evaluateSensors(followed,before.ioState)
+        return collisionStopped(before.copy(jointState=safe,toolState=tools,
+            workcellState=sensors.workcellState,ioState=sensors.ioState),blocking)
     }
 
     fun setInput(
@@ -113,8 +174,14 @@ object SimulationCoordinator {
         state: SimulationDomainState,
         address: DigitalIoAddress,
         value: Boolean
-    ): SimulationDomainState =
-        reconcileOutputs(
+    ): SimulationDomainState {
+        val reservedOutput = state.toolState.activeToolId?.let {
+            state.toolState.definitions.getValue(it).gripper?.closeOutput
+        }
+        require(state.motionOwner == null || address != reservedOutput) {
+            "The training task owns the gripper output"
+        }
+        return reconcileOutputs(
             state.copy(
                 ioState = IoRuntime.setOutput(
                     state.ioState,
@@ -123,6 +190,7 @@ object SimulationCoordinator {
                 )
             )
         )
+    }
 
     fun setInputLabel(
         state: SimulationDomainState,
@@ -165,7 +233,9 @@ object SimulationCoordinator {
         state: SimulationDomainState,
         id: TaskId
     ): SimulationDomainState {
-        val started = state.copy(
+        require(state.collisionStop == null) { "Stop and correct the blocked movement before continuing" }
+        val reserved = TrainingMotionRuntime.reserve(state, id)
+        val started = reserved.copy(
             taskState = TaskRuntime.start(
                 state.taskState,
                 id
@@ -182,20 +252,26 @@ object SimulationCoordinator {
             taskState = TaskRuntime.pause(
                 state.taskState,
                 id
-            )
+            ),
+            clockState = if (state.motionOwner == id) SimulationClock.pause(state.clockState) else state.clockState
         )
 
     fun resumeTask(
         state: SimulationDomainState,
         id: TaskId
     ): SimulationDomainState {
+        require(state.collisionStop == null) { "Stop and correct the blocked movement before continuing" }
+        TrainingMotionRuntime.validateOutputAccess(state, id)
         val resumedTasks = TaskRuntime.resume(
             state.taskState,
             id,
             state.ioState,
             state.clockState.timeMillis
         )
-        val resumed = state.copy(taskState = resumedTasks)
+        val resumed = state.copy(taskState = resumedTasks,
+            motionSingleStep = if (state.motionOwner == id) false else state.motionSingleStep,
+            clockState = if (state.motionOwner == id) SimulationClock.start(state.clockState) else state.clockState)
+        if (state.motionOwner == id) return evaluateTasksAndReconcile(resumed)
         val evaluated =
             if (
                 resumed.taskState.tasks.getValue(id).status ==
@@ -216,30 +292,48 @@ object SimulationCoordinator {
             taskState = TaskRuntime.halt(
                 state.taskState,
                 id
-            )
+            ),
+            clockState = if (state.motionOwner == id) SimulationClock.pause(state.clockState) else state.clockState
         )
 
     fun stopTask(
         state: SimulationDomainState,
         id: TaskId
-    ): SimulationDomainState =
-        state.copy(
-            taskState = TaskRuntime.stop(
+    ): SimulationDomainState {
+        val acknowledgeCollision = state.collisionStop != null &&
+            (state.motionOwner == null || state.motionOwner == id)
+        val terminal = state.taskState.tasks[id]?.status in setOf(TaskStatus.ABORTED, TaskStatus.FINISHED)
+        return state.copy(
+            collisionStop = if (state.motionOwner == null || state.motionOwner == id) null else state.collisionStop,
+            taskState = if (acknowledgeCollision && terminal) state.taskState else TaskRuntime.stop(
                 state.taskState,
                 id
-            )
+            ),
+            motion = if (state.motionOwner == id) null else state.motion,
+            motionOwner = if (state.motionOwner == id) null else state.motionOwner,
+            motionSingleStep = if (state.motionOwner == id) false else state.motionSingleStep,
+            clockState = if (acknowledgeCollision || state.motionOwner == id) SimulationClock.pause(state.clockState) else state.clockState
         )
+    }
 
     fun stepTask(
         state: SimulationDomainState,
         id: TaskId
     ): SimulationDomainState {
+        require(state.collisionStop == null) { "Stop and correct the blocked movement before continuing" }
+        TrainingMotionRuntime.validateOutputAccess(state, id)
         val result = TaskRuntime.step(
             state.taskState,
             id,
             state.ioState,
             state.clockState.timeMillis
         )
+        if (state.motionOwner == id) {
+            return evaluateTasksAndReconcile(state.copy(
+                taskState = result.taskState, ioState = result.ioState,
+                motionSingleStep = true, clockState = SimulationClock.start(state.clockState)
+            ))
+        }
         return reconcileOutputs(
             state.copy(
                 taskState = result.taskState,
@@ -359,12 +453,15 @@ object SimulationCoordinator {
 
     fun selectFunctionalTool(
         state: SimulationDomainState,
-        id: ToolRuntimeId
+        id: ToolRuntimeId,
+        mountPose: CartesianPose? = null
     ): SimulationDomainState {
         if (state.toolState.activeToolId == id) {
             return evaluateWorkcellAndTasks(
                 state.copy(
-                    toolState = ToolRuntime.select(state.toolState, id)
+                    toolState = ToolRuntime.select(state.toolState, id).let {
+                        if (mountPose == null) it else ToolRuntime.setMountPose(it, mountPose)
+                    }
                 )
             )
         }
@@ -373,7 +470,9 @@ object SimulationCoordinator {
             state.workcellState,
             state.toolState
         )
-        val selectedTool = ToolRuntime.select(state.toolState, id)
+        val selectedTool = ToolRuntime.select(state.toolState, id).let {
+            if (mountPose == null) it else ToolRuntime.setMountPose(it, mountPose)
+        }
         val releasedWorkcell = settledWorkcell.copy(
             attachments = emptyMap()
         )
@@ -401,17 +500,7 @@ object SimulationCoordinator {
 
     private fun evaluateTasks(
         state: SimulationDomainState
-    ): SimulationDomainState {
-        val result = TaskRuntime.evaluate(
-            state.taskState,
-            state.ioState,
-            state.clockState.timeMillis
-        )
-        return state.copy(
-            taskState = result.taskState,
-            ioState = result.ioState
-        )
-    }
+    ): SimulationDomainState = TrainingMotionRuntime.evaluate(state)
 
     private fun evaluateTasksAndReconcile(
         state: SimulationDomainState
@@ -444,11 +533,7 @@ object SimulationCoordinator {
             followedBeforeSensors,
             state.ioState
         )
-        val taskResult = TaskRuntime.evaluate(
-            state.taskState,
-            sensorResult.ioState,
-            state.clockState.timeMillis
-        )
+        val taskResult = evaluateTasks(state.copy(ioState = sensorResult.ioState))
         val grasped = WorkcellRuntime.reconcileGrasp(
             sensorResult.workcellState,
             state.toolState,
@@ -459,7 +544,7 @@ object SimulationCoordinator {
             state.toolState
         )
 
-        return state.copy(
+        return taskResult.copy(
             ioState = taskResult.ioState,
             taskState = taskResult.taskState,
             workcellState = followedAfterGrasp

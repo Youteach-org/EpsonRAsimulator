@@ -7,13 +7,13 @@ import mx.youteachtk.epsonrasimulator.runtime.tool.FunctionalToolDefinition
 
 /** UI-thread owner. Workers receive value snapshots and never access the runtime. */
 class TcpPreviewController(private val runtime: SharedRuntime, private val execution: TcpPreviewExecution) {
-    private data class Baseline(val robotId: String, val joints: JointState, val tool: FunctionalToolDefinition?) {
+    private data class Baseline(val robotId: String, val joints: JointState, val tool: FunctionalToolDefinition?, val motionOwner: mx.youteachtk.epsonrasimulator.runtime.task.TaskId?) {
         val tcp get() = tool?.tool?.tcp ?: CartesianPose(0.0, 0.0, 0.0)
     }
     private fun baseline(): Baseline {
         val s = runtime.state
         return Baseline(s.activeRobotId, JointState(s.jointState.values.toList()),
-            s.toolState.activeToolId?.let { s.toolState.definitions.getValue(it) })
+            s.toolState.activeToolId?.let { s.toolState.definitions.getValue(it) }, s.motionOwner)
     }
     private var baseline = baseline()
     private var generation = 0L
@@ -37,6 +37,7 @@ class TcpPreviewController(private val runtime: SharedRuntime, private val execu
 
     fun setTargetSimulationMm(target: Vector3) {
         if (closed) return
+        if (runtime.state.motionOwner != null) { invalidate(); return }
         val request = ++generation
         execution.cancel()
         val base = baseline
@@ -67,6 +68,7 @@ class TcpPreviewController(private val runtime: SharedRuntime, private val execu
     }
 
     fun apply(): Boolean {
+        if (runtime.state.motionOwner != null) { invalidate(); return false }
         if (closed || state.status != TcpPreviewStatus.READY || baseline != baseline()) return false
         val candidate = state.candidate ?: return false
         val target = state.targetSimulationMm ?: return false

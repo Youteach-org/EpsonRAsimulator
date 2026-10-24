@@ -29,6 +29,22 @@ import org.junit.Test
 class AppProjectSessionPersistenceTest {
     private val codec = ProjectSessionCodec()
 
+    @Test fun trainingConfigurationMarksDirtyAndRestoresInFreshSession() {
+        val first = harness()
+        var notifications = 0
+        val subscription = first.persistence.subscribe { notifications++ }
+        first.bundle.runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(
+            mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig()))
+        assertEquals(1, notifications)
+        val snapshot = projectSnapshot(name = "Training", sidecar = first.persistence.capture(), resources = emptyMap())
+        val fresh = harness()
+        fresh.persistence.prepareRestore(snapshot).apply()
+        assertEquals(first.bundle.runtime.state.trainingCell, fresh.bundle.runtime.state.trainingCell)
+        assertFalse(fresh.bundle.runtime.state.clockState.running)
+        assertNull(fresh.bundle.runtime.state.motionOwner)
+        subscription.cancel()
+    }
+
     @Test fun captureRestoresFrameAndPreferredJointsIntoFreshRuntime() {
         val first = harness()
         first.bundle.runtime.dispatch(RuntimeCommand.SetJointValue(0, 45.0))

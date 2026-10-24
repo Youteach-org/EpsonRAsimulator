@@ -53,6 +53,9 @@ fun C4RobotScene(
         }
     }
     val targetMaterial = remember(materialLoader) { materialLoader.createUnlitColorInstance(Color(0xFFFFC107)) }
+    val partMaterial = remember(materialLoader) { materialLoader.createUnlitColorInstance(Color(0xFFFF9F1C)) }
+    val toolMaterial = remember(materialLoader) { materialLoader.createUnlitColorInstance(Color(0xFF00BCD4)) }
+    val fixtureMaterial = remember(materialLoader) { materialLoader.createUnlitColorInstance(Color(0xFF607D8B)) }
     val eye = Position(1.1f, 0.8f, 1.1f)
     val center = Position(0f, 0.3f, -0.15f)
     val camera = rememberCameraNode(engine) { position = eye; lookAt(center) }
@@ -197,18 +200,23 @@ fun C4RobotScene(
                     materialInstance = targetMaterial)
             }
             workcellBoxes.forEach { box ->
-                CubeNode(
-                    size = Size(
-                        x = box.sizeMeters.x,
-                        y = box.sizeMeters.y,
-                        z = box.sizeMeters.z
-                    ),
-                    position = Position(
-                        x = box.centerMeters.x,
-                        y = box.centerMeters.y,
-                        z = box.centerMeters.z
-                    )
-                )
+                // Explicit nesting preserves the simulation convention Rz * Ry * Rx.
+                Node(
+                    position = Position(box.centerMeters.x, box.centerMeters.y, box.centerMeters.z),
+                    rotation = Rotation(z = box.rotationDegrees.z)
+                ) {
+                    Node(rotation = Rotation(y = box.rotationDegrees.y)) {
+                        CubeNode(
+                            size = Size(box.sizeMeters.x, box.sizeMeters.y, box.sizeMeters.z),
+                            rotation = Rotation(x = box.rotationDegrees.x),
+                            materialInstance = when {
+                                box.id.startsWith("tool:") -> toolMaterial
+                                box.kind == mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellRenderKind.PART -> partMaterial
+                                else -> fixtureMaterial
+                            }
+                        )
+                    }
+                }
             }
         }
 

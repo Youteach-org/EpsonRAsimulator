@@ -1,6 +1,8 @@
 package mx.youteachtk.epsonrasimulator.runtime.task
 
 import mx.youteachtk.epsonrasimulator.programming.SourceRange
+import mx.youteachtk.epsonrasimulator.domain.JointState
+import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeId
 import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
 import mx.youteachtk.epsonrasimulator.runtime.io.IoState
 
@@ -31,6 +33,19 @@ data class DebugSourceLocation(
 
 sealed interface SimAction {
     val sourceRange: SourceRange?
+
+    data class WaitForGripper(
+        val toolId: ToolRuntimeId,
+        val closed: Boolean,
+        override val sourceRange: SourceRange? = null
+    ) : SimAction
+
+    /** Local joint interpolation; not a SPEL+ Go/Move instruction. */
+    data class MoveJoints(
+        val target: JointState,
+        val durationMillis: Long,
+        override val sourceRange: SourceRange? = null
+    ) : SimAction
 
     data class WaitForInput(
         val address: DigitalIoAddress,
@@ -130,6 +145,8 @@ data class TaskProgram(
 }
 
 sealed interface TaskWaitingReason {
+    data class Gripper(val toolId: ToolRuntimeId, val closed: Boolean) : TaskWaitingReason
+    data object Motion : TaskWaitingReason
     data class Input(
         val address: DigitalIoAddress,
         val expected: Boolean
@@ -153,7 +170,8 @@ data class SimTaskState(
     val waitingReason: TaskWaitingReason? = null,
     val delayDeadlineMillis: Long? = null,
     val breakpoints: Set<Int> = emptySet(),
-    val statusBeforePause: TaskStatus? = null
+    val statusBeforePause: TaskStatus? = null,
+    val suppressBreakpointOnce: Int? = null
 ) {
     init {
         require(actionIndex in 0..program.actions.size) {
@@ -244,6 +262,7 @@ private fun TaskAction.toSimAction(
 
 private fun SimAction.toLegacyTaskAction(): TaskAction =
     when (this) {
+        is SimAction.MoveJoints, is SimAction.WaitForGripper -> throw IllegalArgumentException("Training actions have no legacy SPEL+ equivalent")
         is SimAction.SetOutput ->
             TaskAction.SetOutput(
                 index = address.value,

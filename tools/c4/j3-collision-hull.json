@@ -1,0 +1,17 @@
+{
+  "source": "C4_J3.glb",
+  "sourceSha256": "1d0875d8f9ccfadb220436b4361d0ba219c0f99a6308cac3ef80133e074708f1",
+  "cellMm": 2.0,
+  "origin": [
+    -74.0,
+    -82.0,
+    -66.0
+  ],
+  "gridSize": 128,
+  "occupiedCells": 107504,
+  "surfaceCells": 51331,
+  "treeBytes": 72425,
+  "compressedBytes": 6972,
+  "maxSurfaceExpansionMm": 3.4641016151377544,
+  "treeSha256": "18419a261f97ca54ce724126e79b2186768b48e64c8afbb45d73b9580413cef0"
+}

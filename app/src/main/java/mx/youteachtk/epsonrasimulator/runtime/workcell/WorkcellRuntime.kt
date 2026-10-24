@@ -2,6 +2,7 @@ package mx.youteachtk.epsonrasimulator.runtime.workcell
 
 import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import mx.youteachtk.epsonrasimulator.kinematics.Vector3
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationPoseTransforms
 import mx.youteachtk.epsonrasimulator.runtime.io.IoRuntime
 import mx.youteachtk.epsonrasimulator.runtime.io.IoState
 import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntime
@@ -65,7 +66,7 @@ object WorkcellRuntime {
         }
         val box = entity.collision?.box ?: return null
         val pose = entityPose(state, id)
-        return box.translated(pose.translationVector())
+        return box.transformed(pose)
     }
 
     fun evaluateSensors(
@@ -80,7 +81,7 @@ object WorkcellRuntime {
                 val sensorPose = entityPose(state, binding.sensorId)
                 val detectionBox = sensorEntity.sensor!!
                     .detectionBox
-                    .translated(sensorPose.translationVector())
+                    .transformed(sensorPose)
 
                 val detected = state.order.any { candidateId ->
                     if (candidateId == binding.sensorId) {
@@ -213,15 +214,21 @@ object WorkcellRuntime {
         if (candidateId != null) {
             val partPose = entityPose(nextState, candidateId)
             val mountPose = toolState.mountPose
+            val relative = SimulationPoseTransforms.toPose(
+                SimulationPoseTransforms.fromPose(mountPose).inverseRigid() *
+                    SimulationPoseTransforms.fromPose(partPose)
+            )
+            fun canonicalZero(value: Double) = if (value == 0.0) 0.0 else value
             nextState = nextState.copy(
                 attachments = nextState.attachments + (
                     candidateId to GraspAttachment(
                         partId = candidateId,
                         toolId = activeToolId,
                         offsetFromToolMm = Vector3(
-                            partPose.x - mountPose.x,
-                            partPose.y - mountPose.y,
-                            partPose.z - mountPose.z
+                            relative.x, relative.y, relative.z
+                        ),
+                        rotationFromToolDegrees = Vector3(
+                            canonicalZero(relative.rx), canonicalZero(relative.ry), canonicalZero(relative.rz)
                         )
                     )
                 )
@@ -258,17 +265,19 @@ object WorkcellRuntime {
                     )
                 } ?: Vector3.ZERO
                 val mountPose = toolState.mountPose
+                val offset = attachment.offsetFromToolMm
+                val rotation = attachment.rotationFromToolDegrees
+                val worldPose = SimulationPoseTransforms.toPose(
+                    SimulationPoseTransforms.fromPose(mountPose) *
+                        SimulationPoseTransforms.fromPose(CartesianPose(
+                            offset.x, offset.y, offset.z, rotation.x, rotation.y, rotation.z
+                        ))
+                )
                 entity.copy(
-                    pose = entity.pose.copy(
-                        x = mountPose.x +
-                            attachment.offsetFromToolMm.x -
-                            actuatorDisplacement.x,
-                        y = mountPose.y +
-                            attachment.offsetFromToolMm.y -
-                            actuatorDisplacement.y,
-                        z = mountPose.z +
-                            attachment.offsetFromToolMm.z -
-                            actuatorDisplacement.z
+                    pose = worldPose.copy(
+                        x = worldPose.x - actuatorDisplacement.x,
+                        y = worldPose.y - actuatorDisplacement.y,
+                        z = worldPose.z - actuatorDisplacement.z
                     )
                 ).also { followedEntity ->
                     entities = entities + (entity.id to followedEntity)
