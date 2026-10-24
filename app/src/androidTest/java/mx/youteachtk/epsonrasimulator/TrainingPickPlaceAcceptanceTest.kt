@@ -125,6 +125,7 @@ class TrainingPickPlaceAcceptanceTest {
         compose.mainClock.autoAdvance = false
         compose.onNodeWithText("Visual Lab").performClick(); frame()
         verifyJ4SideClearance()
+        verifyReportedManualApproach()
         verifyDeliberateCollision()
         click("training-setup")
         click("training-close")
@@ -433,6 +434,41 @@ class TrainingPickPlaceAcceptanceTest {
         frame()
         InstrumentationRegistry.getInstrumentation().sendStatus(0,android.os.Bundle().apply {
             putString("stream","\nJ4_SIDE_CLEARANCE_VERIFIED\n")
+        })
+    }
+
+    private fun verifyReportedManualApproach() {
+        compose.runOnIdle {
+            val runtime=session().bundle.runtime
+            runtime.dispatch(RuntimeCommand.SetJointState(listOf(10.4,-54.1,21.2,0.0,-77.7,0.0)))
+            runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(TrainingCellConfig()))
+            runtime.dispatch(RuntimeCommand.SetJointValue(0,15.0))
+            assertEquals("robot:J4",runtime.state.collisionStop!!.firstId)
+            assertEquals("training-source",runtime.state.collisionStop!!.secondId)
+            assertTrue(runtime.state.jointState[0] in 11.0..12.0)
+            assertFalse(runtime.state.clockState.running)
+        }
+        frame()
+        compose.onNode(isDialog()).assertIsDisplayed()
+        screenshot("reported-j4-manual-stop")
+        compose.onNodeWithTag("collision-stop").performClick();frame()
+        compose.runOnIdle {
+            val runtime=session().bundle.runtime
+            assertNull(runtime.state.collisionStop)
+            assertFalse(runtime.state.clockState.running)
+            // Restoration independently rejects penetrating postures. This
+            // accepted manual prefix must remain valid after acknowledgement.
+            runtime.restoreLocalPersistentSession(state().activeRobotId,state().jointState.values,
+                emptyMap(),TrainingCellConfig())
+        }
+        frame()
+        screenshot("reported-j4-manual-safe-posture")
+        compose.runOnIdle {
+            session().bundle.runtime.restoreLocalPersistentSession(state().activeRobotId,List(6) { 0.0 },emptyMap())
+        }
+        frame()
+        InstrumentationRegistry.getInstrumentation().sendStatus(0,android.os.Bundle().apply {
+            putString("stream","\nREPORTED_J4_MANUAL_APPROACH_VERIFIED\n")
         })
     }
 

@@ -57,8 +57,7 @@ class TrainingCollisionGuardTest {
         val runtime = prepared()
         val before = runtime.state
         runtime.dispatch(RuntimeCommand.SetJointState(target.values))
-        assertEquals(before.jointState, runtime.state.jointState)
-        assertEquals(before.workcellState, runtime.state.workcellState)
+        assertSafeManualPrefix(before,runtime.state)
         assertNotNull(runtime.state.collisionStop)
         assertFalse(runtime.state.clockState.running)
         val message = mx.youteachtk.epsonrasimulator.ui.visual.training.collisionMessage(runtime.state.collisionStop!!)
@@ -156,7 +155,9 @@ class TrainingCollisionGuardTest {
             fixture = FixtureComponent, render = RenderPrimitiveComponent(WorkcellRenderKind.BOX, Vector3(1.0, 1.0, 0.5)))))
         val before = runtime.state
         runtime.dispatch(RuntimeCommand.SetJointState(config.approachPlace.values))
-        assertEquals(before.workcellState, runtime.state.workcellState)
+        assertEquals(before.workcellState.attachments,runtime.state.workcellState.attachments)
+        assertNotEquals(before.workcellState,runtime.state.workcellState)
+        assertSafeManualPrefix(before,runtime.state)
         assertEquals("training-part", runtime.state.collisionStop!!.firstId)
         assertEquals("part-obstacle", runtime.state.collisionStop!!.secondId)
     }
@@ -187,5 +188,13 @@ class TrainingCollisionGuardTest {
             runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(config))
         }
         assertEquals(before, runtime.state)
+    }
+
+    private fun assertSafeManualPrefix(before: SharedRuntimeState, after: SharedRuntimeState) {
+        assertNotEquals("A blocked manual command must retain its safe approach",before.jointState,after.jointState)
+        val start=SimulationDomainState(jointState=before.jointState,collisionGuardEnabled=true,
+            workcellState=before.workcellState,toolState=before.toolState)
+        assertNull(mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(
+            start,start.copy(jointState=after.jointState)))
     }
 }

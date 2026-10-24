@@ -375,7 +375,10 @@ class SharedRuntime(
                 if (current.collisionStop != null) return current
                 val collision = mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(
                     if (manualMotion) current.simulationDomain() else next.simulationDomain(), next.simulationDomain())
-                if (collision != null) next = current.withSimulation(SimulationCoordinator.collisionStopped(current.simulationDomain(), collision))
+                if (collision != null) next = current.withSimulation(
+                    if (manualMotion) SimulationCoordinator.collisionStoppedAfterManualApproach(
+                        current.simulationDomain(),next.simulationDomain(),collision)
+                    else SimulationCoordinator.collisionStopped(current.simulationDomain(),collision))
             }
         }
 

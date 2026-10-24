@@ -3,6 +3,9 @@ package mx.youteachtk.epsonrasimulator.runtime
 import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import mx.youteachtk.epsonrasimulator.domain.JointState
 import mx.youteachtk.epsonrasimulator.domain.EpsonRobotCatalog
+import mx.youteachtk.epsonrasimulator.kinematics.C4Kinematics
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationFrames
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationPoseTransforms
 import mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard
 import mx.youteachtk.epsonrasimulator.runtime.motion.CollisionStop
 import mx.youteachtk.epsonrasimulator.runtime.motion.JointMotion
@@ -123,6 +126,33 @@ object SimulationCoordinator {
         val tasks = if (owner != null) TaskRuntime.pause(state.taskState, owner) else state.taskState
         return state.copy(clockState = SimulationClock.pause(state.clockState), taskState = tasks,
             collisionStop = collision, motionSingleStep = false)
+    }
+
+    /** Keep the certified safe prefix of a manual slider jump, not its unsafe endpoint. */
+    internal fun collisionStoppedAfterManualApproach(
+        before: SimulationDomainState, attempted: SimulationDomainState, collision: CollisionStop
+    ): SimulationDomainState {
+        TrainingCollisionGuard.check(before,before)?.let { return collisionStopped(before,it) }
+        var lo=0.0
+        var hi=1.0
+        var safe=before.jointState
+        var blocking=collision
+        repeat(16) {
+            val fraction=(lo+hi)/2
+            val joints=JointState(before.jointState.values.zip(attempted.jointState.values).map { (a,b) -> a+(b-a)*fraction })
+            val failure=TrainingCollisionGuard.check(before,before.copy(jointState=joints))
+            if (failure==null) { lo=fraction;safe=joints }
+            else { hi=fraction;blocking=failure }
+        }
+        val tools=if (before.toolState.activeToolId==null) before.toolState else before.toolState.copy(
+            mountPose=SimulationPoseTransforms.toPose(SimulationFrames.cadToSimulationTransform *
+                C4Kinematics.forward(safe.values).baseToTcp))
+        // Follow held parts at the accepted posture; never grasp or execute task
+        // outputs from the rejected endpoint while stopping a manual movement.
+        val followed=WorkcellRuntime.followAttachments(before.workcellState,tools)
+        val sensors=WorkcellRuntime.evaluateSensors(followed,before.ioState)
+        return collisionStopped(before.copy(jointState=safe,toolState=tools,
+            workcellState=sensors.workcellState,ioState=sensors.ioState),blocking)
     }
 
     fun setInput(
