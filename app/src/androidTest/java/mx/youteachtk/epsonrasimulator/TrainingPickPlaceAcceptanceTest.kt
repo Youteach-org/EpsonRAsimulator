@@ -133,8 +133,7 @@ class TrainingPickPlaceAcceptanceTest {
         click("training-open")
         waitState { it.toolState.gripperStates.getValue(TrainingCellFactory.TOOL_ID).openingWidthMm == 60.0 }
         compose.runOnIdle { session().bundle.runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.5)) }
-        click("training-start")
-        waitState { it.jointState[0] > 1.0 && it.jointState[0] < 20.0 }
+        startAtFirstApproach()
         click("training-pause")
         lateinit var paused: SharedRuntimeState
         compose.runOnIdle { paused = state() }
@@ -292,6 +291,26 @@ class TrainingPickPlaceAcceptanceTest {
         InstrumentationRegistry.getInstrumentation().sendStatus(0, android.os.Bundle().apply { putString("stream", "\nTRAINING_UI_VERIFIED\n") })
     }
 
+    private fun startAtFirstApproach() {
+        val start=reveal("training-start").assertIsEnabled().fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        compose.runOnUiThread {
+            val runtime=session().bundle.runtime
+            assertTrue(start())
+            fun approaching(): Boolean {
+                val s=state()
+                return s.taskState.tasks.getValue(TrainingSequence.TASK_ID).actionIndex==0 &&
+                    s.jointState[0]>1.0 && s.jointState[0]<20.0
+            }
+            var ticks=0
+            while (!approaching() && ticks++<240) runtime.dispatch(RuntimeCommand.AdvanceSimulation(25))
+            assertTrue("Pause must begin in the first approach: ${state()}",approaching())
+            // Keep this phase available while the test scrolls to the real
+            // Pause button. J1 also crosses this range later during transfer.
+            runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.01))
+        }
+        frame()
+    }
+
     private fun startAtClosing(buttonTag: String) {
         val start = reveal(buttonTag).assertIsEnabled().fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
         compose.runOnUiThread {
@@ -309,7 +328,7 @@ class TrainingPickPlaceAcceptanceTest {
             var ticks = 0
             while (!closing() && ticks++ < 240) runtime.dispatch(RuntimeCommand.AdvanceSimulation(25))
             assertNull(state().collisionStop)
-            assertTrue("Must enter closing before testing pause/lifecycle", closing())
+            assertTrue("Must enter closing before testing pause/lifecycle: ${state()}", closing())
             assertTrue(state().clockState.running)
             runtime.dispatch(RuntimeCommand.SetClockSpeedScale(0.01))
         }
