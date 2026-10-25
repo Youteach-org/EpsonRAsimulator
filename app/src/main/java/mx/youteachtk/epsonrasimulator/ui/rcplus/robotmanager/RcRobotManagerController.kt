@@ -78,12 +78,18 @@ class RcRobotManagerController(
             )
         }
 
-        runtime.dispatch(
-            RuntimeCommand.SetJointValue(
-                index = index,
-                value = target
+        return try {
+            runtime.dispatch(
+                RuntimeCommand.SetJointValue(
+                    index = index,
+                    value = target
+                )
             )
-        )
-        return RcRobotManagerResult.Applied
+            RcRobotManagerResult.Applied
+        } catch (failure: IllegalArgumentException) {
+            RcRobotManagerResult.Rejected(
+                failure.message ?: "Joint jog could not run"
+            )
+        }
     }
 }

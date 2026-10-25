@@ -53,13 +53,12 @@ object ToolRuntime {
 
     fun activeCollisionBoxes(state: ToolRuntimeState): List<AxisAlignedBox> {
         val definition = activeDefinition(state) ?: return emptyList()
-        val translation = state.mountPose.translationVector()
-        return definition.collisionBoxes.map { it.translated(translation) }
+        return definition.collisionBoxes.map { it.transformed(state.mountPose) }
     }
 
     fun activeGraspBox(state: ToolRuntimeState): AxisAlignedBox? {
         val graspBox = activeDefinition(state)?.gripper?.graspBox ?: return null
-        return graspBox.translated(state.mountPose.translationVector())
+        return graspBox.transformed(state.mountPose)
     }
 
     fun advance(

@@ -1,10 +1,11 @@
 package mx.youteachtk.epsonrasimulator.ui
 
 import mx.youteachtk.epsonrasimulator.kinematics.Vector3
-import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntime
+import mx.youteachtk.epsonrasimulator.kinematics.Matrix4
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationFrames
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationPoseTransforms
 import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeState
 import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellRenderKind
-import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellRuntime
 import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellState
 
 data class WorkcellSceneVector3(
@@ -17,7 +18,8 @@ data class WorkcellSceneBox(
     val id: String,
     val centerMeters: WorkcellSceneVector3,
     val sizeMeters: WorkcellSceneVector3,
-    val kind: WorkcellRenderKind
+    val kind: WorkcellRenderKind,
+    val rotationDegrees: WorkcellSceneVector3 = WorkcellSceneVector3(0f, 0f, 0f)
 )
 
 object WorkcellSceneProjection {
@@ -27,50 +29,18 @@ object WorkcellSceneProjection {
         workcellState: WorkcellState,
         toolState: ToolRuntimeState
     ): List<WorkcellSceneBox> {
-        val workcellBoxes = workcellState.order.mapNotNull { id ->
-            val entity = workcellState.entities.getValue(id)
-            val render = entity.render ?: return@mapNotNull null
-            val pose = WorkcellRuntime.entityPose(workcellState, id)
+        return mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellGeometry.boxes(workcellState, toolState)
+            .map { project(it.id, it.transform, it.sizeMm, it.kind) }
+    }
 
-            WorkcellSceneBox(
-                id = id.value,
-                centerMeters = WorkcellSceneVector3(
-                    x = millimetresToMeters(pose.x),
-                    y = millimetresToMeters(pose.y),
-                    z = millimetresToMeters(pose.z)
-                ),
-                sizeMeters = render.sizeMm.toMeters(),
-                kind = render.kind
-            )
-        }
-
-        val activeToolId = toolState.activeToolId
-        val toolBoxes =
-            if (activeToolId == null) {
-                emptyList()
-            } else {
-                ToolRuntime.activeCollisionBoxes(toolState)
-                    .mapIndexed { index, box ->
-                        WorkcellSceneBox(
-                            id = "tool:${activeToolId.value}:collision:$index",
-                            centerMeters = box.center.toMeters(),
-                            sizeMeters = WorkcellSceneVector3(
-                                x = millimetresToMeters(
-                                    box.halfExtents.x * 2.0
-                                ),
-                                y = millimetresToMeters(
-                                    box.halfExtents.y * 2.0
-                                ),
-                                z = millimetresToMeters(
-                                    box.halfExtents.z * 2.0
-                                )
-                            ),
-                            kind = WorkcellRenderKind.BOX
-                        )
-                    }
-            }
-
-        return workcellBoxes + toolBoxes
+    private fun project(id: String, worldTransform: Matrix4, sizeMm: Vector3, kind: WorkcellRenderKind): WorkcellSceneBox {
+        val pose = SimulationPoseTransforms.toPose(
+            SimulationFrames.cadToSimulationTransform.inverseRigid() * worldTransform
+        )
+        return WorkcellSceneBox(
+            id, Vector3(pose.x, pose.y, pose.z).toMeters(), sizeMm.toMeters(), kind,
+            WorkcellSceneVector3(pose.rx.toFloat(), pose.ry.toFloat(), pose.rz.toFloat())
+        )
     }
 
     private fun Vector3.toMeters(): WorkcellSceneVector3 =

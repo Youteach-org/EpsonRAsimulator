@@ -19,6 +19,22 @@ class TcpPreviewControllerTest {
     }
     private val target = SimulationFrames.cadToSimulation(C4Kinematics.tcpCadMm(C4Kinematics.calibrationPoseDegrees))
 
+    @Test fun motionOwnershipInvalidatesCandidateAndApplyReturnsFalse() {
+        val runtime = AppRuntimeFactory.createDefault().runtime
+        val execution = Queued()
+        val controller = TcpPreviewController(runtime, execution)
+        controller.setTargetSimulationMm(target)
+        execution.finish()
+        assertNotNull(controller.state.candidate)
+        val id = mx.youteachtk.epsonrasimulator.runtime.task.TaskId("owner")
+        runtime.dispatch(RuntimeCommand.LoadTask(mx.youteachtk.epsonrasimulator.runtime.task.TaskProgram(id, "Owner", listOf(
+            mx.youteachtk.epsonrasimulator.runtime.task.SimAction.MoveJoints(JointState(C4Kinematics.calibrationPoseDegrees), 2000)))))
+        runtime.dispatch(RuntimeCommand.StartTask(id))
+        assertNull(controller.state.candidate)
+        assertFalse(controller.apply())
+        controller.close()
+    }
+
     @Test fun candidateDoesNotMoveUntilApplyAndAppliesOnlyOnce() {
         val runtime = AppRuntimeFactory.createDefault().runtime
         val execution = Queued(); val c = TcpPreviewController(runtime, execution)

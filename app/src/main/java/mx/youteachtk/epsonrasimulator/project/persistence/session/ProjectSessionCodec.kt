@@ -66,6 +66,8 @@ class ProjectSessionCodec(
             data.optionalText(snapshot.visualSourcePath, limits.maxSelectionBytes)
             data.writeByte(robotManagerPageMarker(snapshot.robotManagerPage, decoding = false))
             data.writeDouble(snapshot.robotManagerTrainingStepDegrees)
+            TrainingCellCodec.write(data, snapshot.trainingCell)
+            UserSequenceCodec.write(data, snapshot.userSequence)
         }
 
         val bytes = output.toByteArray()
@@ -145,6 +147,9 @@ class ProjectSessionCodec(
                 val visualSourcePath = data.optionalText(limits.maxSelectionBytes)
                 val robotManagerPage = robotManagerPage(data.readUnsignedByte())
                 val trainingStep = data.readDouble()
+                val trainingCell = if (schema >= 3) TrainingCellCodec.read(data) else null
+
+                val userSequence = if (schema >= 4) UserSequenceCodec.read(data) else mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence()
 
                 if (data.available() != 0) {
                     fail(PersistenceFailure.CORRUPT, "Trailing project session data")
@@ -160,7 +165,9 @@ class ProjectSessionCodec(
                     selectedProjectNodeId = selectedProjectNodeId,
                     visualSourcePath = visualSourcePath,
                     robotManagerPage = robotManagerPage,
-                    robotManagerTrainingStepDegrees = trainingStep
+                    robotManagerTrainingStepDegrees = trainingStep,
+                    trainingCell = trainingCell,
+                    userSequence = userSequence
                 )
                 validate(snapshot, decoding = true)
                 return snapshot.copy(
@@ -177,6 +184,14 @@ class ProjectSessionCodec(
         snapshot: ProjectSessionSnapshot,
         decoding: Boolean
     ) {
+        try { snapshot.userSequence.snapshot() } catch(error: IllegalArgumentException) { invalid(decoding, "Invalid sequence: ${error.message}") }
+        snapshot.trainingCell?.let {
+            try {
+                mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellFactory.build(it)
+            } catch (error: IllegalArgumentException) {
+                invalid(decoding, "Invalid training configuration: ${error.message}")
+            }
+        }
         if (snapshot.jointValues.isEmpty()) {
             invalid(decoding, "Persisted V1 joint state must not be empty")
         }
@@ -405,7 +420,7 @@ class ProjectSessionCodec(
 
     companion object {
         private val MAGIC = "EPSSES01".toByteArray(Charsets.US_ASCII)
-        private const val SCHEMA_VERSION = 2
+        private const val SCHEMA_VERSION = 4
         private val ROBOT_MANAGER_PAGES = listOf(
             "CONTROL_PANEL",
             "JOG_TEACH",

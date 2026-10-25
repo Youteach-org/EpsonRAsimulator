@@ -1,0 +1,117 @@
+{
+  "unit": "millimetre",
+  "links": [
+    {
+      "id": "robot:base",
+      "joints": 0,
+      "minimumMm": [
+        -90.001,
+        0.0,
+        -90.001
+      ],
+      "maximumMm": [
+        90.001,
+        196.501,
+        199.501
+      ],
+      "source": "C4_BASE.glb",
+      "sha256": "dd2a3d6b95aeca63902321c3b5d70f01f6bcdbbd5c32295d5d033ae7a6718218"
+    },
+    {
+      "id": "robot:J1",
+      "joints": 1,
+      "minimumMm": [
+        -99.0,
+        197.627,
+        -158.36
+      ],
+      "maximumMm": [
+        99.0,
+        378.327,
+        80.0
+      ],
+      "source": "C4_J1.glb",
+      "sha256": "c7de47f01892f1c1a884da5356413b105cf7611265f364ea8a3658e0df746881"
+    },
+    {
+      "id": "robot:J2",
+      "joints": 2,
+      "minimumMm": [
+        -99.0,
+        -58.914,
+        -59.001
+      ],
+      "maximumMm": [
+        99.0,
+        299.0,
+        59.0
+      ],
+      "source": "C4_J2.glb",
+      "sha256": "f4c956de5ac3aa733243ecc8ee391c7538bc8645b1b6aaec58827e10c774ad4e"
+    },
+    {
+      "id": "robot:J3",
+      "joints": 3,
+      "minimumMm": [
+        -69.0,
+        -77.9,
+        -62.0
+      ],
+      "maximumMm": [
+        65.0,
+        70.501,
+        86.001
+      ],
+      "source": "C4_J3.glb",
+      "sha256": "1d0875d8f9ccfadb220436b4361d0ba219c0f99a6308cac3ef80133e074708f1"
+    },
+    {
+      "id": "robot:J4",
+      "joints": 4,
+      "minimumMm": [
+        -55.501,
+        -47.0,
+        -281.451
+      ],
+      "maximumMm": [
+        55.501,
+        63.501,
+        -63.0
+      ],
+      "source": "C4_J4.glb",
+      "sha256": "4a6571e3eb09deeb7e0c93e097a376dc49490aeb201d0fd16184cc2a1370b3e9"
+    },
+    {
+      "id": "robot:J5",
+      "joints": 5,
+      "minimumMm": [
+        -30.0,
+        -31.425,
+        -60.0
+      ],
+      "maximumMm": [
+        30.0,
+        31.493,
+        31.501
+      ],
+      "source": "C4_J5.glb",
+      "sha256": "644af1def32cae8a4a0cd74f7ec27a02619094540ea3c2b44ea9166df54e534e"
+    },
+    {
+      "id": "robot:J6",
+      "joints": 6,
+      "minimumMm": [
+        -30.0,
+        -29.977,
+        -65.0
+      ],
+      "maximumMm": [
+        30.0,
+        29.977,
+        -55.799
+      ],
+      "source": "C4_J6.glb",
+      "sha256": "4d4f5efffc3191c4fad0a00de3d7312777b717d037c20c7ad38fc385dc85c5d2"
+    }
+  ]
+}

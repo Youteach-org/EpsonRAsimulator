@@ -12,6 +12,17 @@ import org.junit.Test
 
 class WorkcellRuntimeTest {
     @Test
+    fun rotatedSensorDetectsPartAtRotatedLocalOffset() {
+        val sensor = sensorEntity().copy(
+            pose = CartesianPose(10.0, 20.0, 30.0, rz = 90.0),
+            sensor = PresenceSensorComponent(AxisAlignedBox(Vector3(40.0, 0.0, 0.0), Vector3(2.0, 2.0, 2.0)))
+        )
+        val part = partEntity(x = 10.0).copy(pose = CartesianPose(10.0, 60.0, 30.0))
+        val input = DigitalIoAddress(3)
+        assertTrue(IoRuntime.input(WorkcellRuntime.evaluateSensors(state(sensor, part, input), IoState()).ioState, input))
+    }
+
+    @Test
     fun presenceSensorWritesTheCanonicalInputFromOverlap() {
         val sensor = sensorEntity()
         val part = partEntity(x = 5.0)
