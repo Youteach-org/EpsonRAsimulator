@@ -2,8 +2,8 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
 $pkg = 'com.avstaim.listai.tablet.armando.smart'
-$apkUrl = 'https://raw.githubusercontent.com/Youteach-org/EpsonRAsimulator/4ace76e43a33e2e701ce0cdccc89ad8f7cc4b64e/apk/TurnThePage_Tablet_ArmandoAnota_Smart.apk'
-$expectedSha = 'ddd6af5581130a08952140a01494e4ac4872b8c800f304b3aa6544bfa5a5c4a7'
+$apkUrl = 'https://raw.githubusercontent.com/Youteach-org/EpsonRAsimulator/0753dc152d468b142579bceb4c9d6310a2943daa/apk/TurnThePage_Tablet_ArmandoAnota_Smart.apk'
+$expectedSha = '49387f6979c0eafc28adafae5bb9cc6e0076135668f5181da247e3c7d1759835'
 
 $cmd = Get-Command adb.exe -ErrorAction SilentlyContinue
 $adb = if ($cmd) { $cmd.Source } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe' }
