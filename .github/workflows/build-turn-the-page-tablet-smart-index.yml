@@ -90,6 +90,21 @@ jobs:
           f.write_text(s)
           PY
 
+      - name: Documentar los dos componentes originales del índice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .github/reference
+          cp lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/PdfIndexPanel.kt .github/reference/PdfIndexPanel.kt
+          cp lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/PdfSmartIndex.kt .github/reference/PdfSmartIndex.kt
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add .github/reference/PdfIndexPanel.kt .github/reference/PdfSmartIndex.kt
+          if ! git diff --staged --quiet; then
+            git commit -m "Preserve original editable smart PDF index source"
+            git push origin HEAD:build/turn-the-page-tablet-armando-anota
+          fi
+
       - name: Habilitar zoom PDF dentro del libro y paso sin cerrar visor
         shell: bash
         run: |
