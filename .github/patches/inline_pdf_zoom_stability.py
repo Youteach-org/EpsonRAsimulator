@@ -40,7 +40,7 @@ insert='''        val pageZoomModifier = if (inlinePdfZoom && fixedPdfBook) {
                     translate(left = stablePan.x, top = stablePan.y)
                     scale(scaleX = stableScale, scaleY = stableScale,
                         pivot = Offset(size.width / 2f, size.height / 2f))
-                }) { drawContent() }
+                }) { this@drawWithContent.drawContent() }
             }
         } else {
             Modifier.drawWithContent {
