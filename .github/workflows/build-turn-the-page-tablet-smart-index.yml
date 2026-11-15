@@ -99,6 +99,13 @@ jobs:
           grep -q "inlinePdfZoom" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
           grep -q "onPdfPageZoom = null" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
 
+      - name: Ajustar PDF a hoja completa sin bordes ni franja gris
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/pdf_fullbleed_layout.py lector
+          grep -q 'pdfFullBleed = fixedPdfDocument' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
