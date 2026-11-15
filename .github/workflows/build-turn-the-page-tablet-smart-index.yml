@@ -187,6 +187,21 @@ jobs:
           python3 .github/patches/pdf_contents_safe_margins.py lector
           grep -q "val edgeInset = if (key.pdfFullBleed)" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalContentsLayout.kt
 
+      - name: Elegir una o dos páginas en horizontal junto al botón de índice
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/pdf_landscape_single_spread_toggle.py lector
+          grep -q 'reader_top_toggle_page_layout' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderTopControls.kt
+          grep -q 'forcedPresentation = layoutPresentation' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
+
+      - name: Restaurar el índice editable original con corrección de numeración
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/restore_original_editable_index.py lector
+          grep -q 'Editar índice · Ajustar inicio de numeración' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
