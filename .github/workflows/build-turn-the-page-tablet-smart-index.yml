@@ -187,7 +187,7 @@ jobs:
           python3 .github/patches/pdf_contents_safe_margins.py lector
           grep -q "val edgeInset = if (key.pdfFullBleed)" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalContentsLayout.kt
 
-      # Keep all existing toolbar icons while inserting the adjacent 1/2-page control.
+      # Keep toolbar icons and support the current icon palette when adding the 1/2-page switch.
       - name: Elegir una o dos páginas en horizontal junto al botón de índice
         shell: bash
         run: |
