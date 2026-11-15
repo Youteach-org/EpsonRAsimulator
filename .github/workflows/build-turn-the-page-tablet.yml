@@ -90,7 +90,9 @@ jobs:
 
       - name: Compilar APK Android para tablet
         working-directory: lector
-        run: gradle --no-daemon --stacktrace :app:assembleDebug
+        run: |
+          printf 'sdk.dir=/usr/local/lib/android/sdk\n' > local.properties
+          gradle --no-daemon --stacktrace :app:assembleDebug
 
       - name: Preparar instalador
         shell: bash
