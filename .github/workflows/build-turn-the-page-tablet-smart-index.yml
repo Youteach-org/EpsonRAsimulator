@@ -187,7 +187,7 @@ jobs:
           python3 .github/patches/pdf_contents_safe_margins.py lector
           grep -q "val edgeInset = if (key.pdfFullBleed)" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalContentsLayout.kt
 
-      # Landscape-only switch must not affect the original portrait clock or bookmarks.
+      # Extra landscape control preserves clock position and reserves the bookmark ribbon.
       - name: Elegir una o dos páginas en horizontal junto al botón de índice
         shell: bash
         run: |
