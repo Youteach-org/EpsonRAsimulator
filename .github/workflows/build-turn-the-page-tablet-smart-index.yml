@@ -195,6 +195,13 @@ jobs:
           grep -q 'reader_top_toggle_page_layout' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderTopControls.kt
           grep -q 'forcedPresentation = layoutPresentation' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
 
+      - name: Permitir mover el PDF ampliado con un dedo hasta los bordes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/pdf_free_pan.py lector
+          grep -q 'TEMPORARY_ZOOM || inlinePdfZoom' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
+
       - name: Restaurar el índice editable original con corrección de numeración
         shell: bash
         run: |
