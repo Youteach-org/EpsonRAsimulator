@@ -82,6 +82,7 @@ jobs:
               'val parsed = extractIndexLines(listOf(if (seenIndex) "Índice\\n$words" else words))')
           s=s.replace('val target = runCatching { item.findDestinationPage(document) }.getOrNull()',
               'val current = item\n                        val target = runCatching { current.findDestinationPage(document) }.getOrNull()')
+          s=s.replace('inferShiftFromText(textPages, pages)', 'inferShiftFromText(textPages ?: emptyList(), pages)')
           f.write_text(s)
           PY
 
