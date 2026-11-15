@@ -1,0 +1,101 @@
+name: Turn the Page Tablet - APK instalable
+on:
+  push:
+    branches: [build/turn-the-page-tablet-armando-anota]
+    paths:
+      - .github/workflows/build-turn-the-page-tablet.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Descargar codigo original de F-Droid
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-all-errors             https://f-droid.org/repo/com.avstaim.listai_35_src.tar.gz -o libro-origen.tar.gz
+          mkdir -p lector
+          tar -xzf libro-origen.tar.gz -C lector --strip-components=1
+
+      - name: Modificar orientacion y agregar credito
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          root = Path("lector")
+          layout = root / "feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/AdaptiveBookLayout.kt"
+          s = layout.read_text(encoding="utf-8")
+          token = "    // Width alone is not enough: an extremely short multi-window"
+          assert s.count(token) == 1, "No se encontro el punto de adaptacion de pagina"
+          s = s.replace(token,
+              "    // Tablets in portrait should show one full page, not two narrow strips.\n"
+              "    if (canvasHeight > canvasWidth) return BookPresentation.SINGLE\n\n" + token)
+          layout.write_text(s, encoding="utf-8")
+
+          config = root / "app/build.gradle.kts"
+          s = config.read_text(encoding="utf-8")
+          token = 'applicationId = "com.avstaim.listai"'
+          assert s.count(token) == 1, "No se encontro el identificador original"
+          config.write_text(s.replace(token, 'applicationId = "com.avstaim.listai.tablet.armando"'), encoding="utf-8")
+
+          # Visible credit in settings, while keeping a short home-screen label.
+          settings = root / "feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/PaperReaderInsert.kt"
+          s = settings.read_text(encoding="utf-8")
+          token = '                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {'
+          assert s.count(token) >= 1, "No se encontro la pantalla de ajustes"
+          s = s.replace(token,
+              token + '\n                    Text("por Armando Anota", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)\n',
+              1)
+          settings.write_text(s, encoding="utf-8")
+
+          # Identificador de la app en la biblioteca de Android.
+          for resource in (root / "app/src/main/res").glob("values*/strings.xml"):
+              s = resource.read_text(encoding="utf-8")
+              s, num = re.subn(r'<string name="app_name">[^<]*</string>',
+                  '<string name="app_name">Turn the Page Tablet</string>', s)
+              assert num == 1, f"No se encontro app_name: {resource}"
+              resource.write_text(s, encoding="utf-8")
+          print("Orientacion y credito aplicados a la fuente original")
+          PY
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar Android SDK 36
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.1'
+          cache-disabled: true
+
+      - name: Compilar APK Android para tablet
+        working-directory: lector
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
+
+      - name: Preparar instalador
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s lector/app/build/outputs/apk/debug/app-debug.apk
+          cp lector/app/build/outputs/apk/debug/app-debug.apk TurnThePage_Tablet_ArmandoAnota.apk
+          sha256sum TurnThePage_Tablet_ArmandoAnota.apk
+
+      - name: Descargar APK desde GitHub Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: TurnThePage-Tablet-ArmandoAnota-APK
+          path: TurnThePage_Tablet_ArmandoAnota.apk
+          if-no-files-found: error
+          retention-days: 30
