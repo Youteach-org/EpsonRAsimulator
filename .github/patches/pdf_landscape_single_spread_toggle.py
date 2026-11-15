@@ -81,7 +81,7 @@ if 'OnePage' not in match.group(2):
     body=match.group(2).rstrip()
     s=s[:match.start()]+match.group(1)+body+', OnePage, TwoPages '+match.group(3)+s[match.end():]
 p.write_text(s)
-edit(file,'        when (icon) {\n            PaperIcon.Settings -> {',
+edit(file,'        when (icon) {',
 '''        when (icon) {
             PaperIcon.OnePage -> {
                 outline(4f to 3f, 20f to 3f, 20f to 21f, 4f to 21f, closed = true)
@@ -92,7 +92,7 @@ edit(file,'        when (icon) {\n            PaperIcon.Settings -> {',
                 outline(13f to 4f, 22f to 4f, 22f to 20f, 13f to 20f, closed = true)
                 line(5f, 10f, 8f, 10f); line(16f, 10f, 19f, 10f)
             }
-            PaperIcon.Settings -> {''')
+''')
 
 file='ReaderDemoScreen.kt'
 edit(file,'    val context = LocalContext.current\n',
