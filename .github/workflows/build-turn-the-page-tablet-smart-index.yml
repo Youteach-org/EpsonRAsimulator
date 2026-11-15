@@ -147,6 +147,15 @@ jobs:
           cp .github/patches/PdfBookIndexChoiceTest.kt lector/feature/reader/src/test/kotlin/com/avstaim/listai/feature/reader/PdfBookIndexChoiceTest.kt
           grep -q "contentsOverride = embeddedIndex" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
 
+      - name: Integrar diseño visual por libro y botón de índice reversible
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/visual_toc_toggle.py lector
+          grep -q 'visualContentsDesign = visualIndexStyle' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
+          grep -q 'navigationRequest?.progress?.tocEntryIndex' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
+          grep -q 'contents.visualDesign' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/AndroidContentsRasterizer.kt
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
