@@ -138,6 +138,15 @@ jobs:
           PY
           grep -q 'pdfFullBleed = fixedPdfDocument' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
 
+      - name: Integrar elección de índice por libro con acceso rápido
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/pdf_embedded_book_index.py lector
+          mkdir -p lector/feature/reader/src/test/kotlin/com/avstaim/listai/feature/reader
+          cp .github/patches/PdfBookIndexChoiceTest.kt lector/feature/reader/src/test/kotlin/com/avstaim/listai/feature/reader/PdfBookIndexChoiceTest.kt
+          grep -q "contentsOverride = embeddedIndex" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -159,7 +168,7 @@ jobs:
         working-directory: lector
         run: |
           printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
-          gradle --no-daemon --stacktrace :app:assembleDebug
+          gradle --no-daemon --stacktrace :feature:reader:testDebugUnitTest :app:assembleDebug
 
       - name: Publicar APK para instalacion automatica
         shell: bash
