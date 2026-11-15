@@ -156,6 +156,21 @@ jobs:
           grep -q 'navigationRequest?.progress?.tocEntryIndex' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
           grep -q 'contents.visualDesign' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/AndroidContentsRasterizer.kt
 
+      - name: Evitar desaparición al ampliar PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/inline_pdf_zoom_stability.py lector
+          grep -q "val fixedPdfBook = remember(document)" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
+          grep -q "readerPdfVisiblePan" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
+
+      - name: Respetar los márgenes de los índices sin añadir marco al PDF
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/pdf_contents_safe_margins.py lector
+          grep -q "val edgeInset = if (key.pdfFullBleed)" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalContentsLayout.kt
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
