@@ -124,16 +124,9 @@ jobs:
 
           engine=root/"reader/pagination/src/main/kotlin/com/avstaim/listai/reader/pagination/IncrementalPaginationEngine.kt"
           s=engine.read_text()
-          marker="                fragments += PageBlockLayout("
-          assert s.count(marker)==1
-          s=s.replace(marker,"""                // Keep the whole PDF page and its printed folio; balance the
-                // unused space above and below rather than leaving it all below.
-                val pdfVerticalOffset = if (block.source is BookBlock.FixedPage)
-                    ((layoutKey.contentHeight - height) / 2f).coerceAtLeast(0f) else 0f
-"""+marker,1)
           marker="layoutKey.contentTop + y, measured.width * scale, height,"
           assert s.count(marker)==1
-          s=s.replace(marker,"layoutKey.contentTop + y + pdfVerticalOffset, measured.width * scale, height,",1)
+          s=s.replace(marker,"layoutKey.contentTop + y + (if (block.source is BookBlock.FixedPage) ((layoutKey.contentHeight - height) / 2f).coerceAtLeast(0f) else 0f), measured.width * scale, height,",1)
           engine.write_text(s)
 
           tests=root/"reader/pagination/src/test/kotlin/com/avstaim/listai/reader/pagination/FixedPagePaginationTest.kt"
