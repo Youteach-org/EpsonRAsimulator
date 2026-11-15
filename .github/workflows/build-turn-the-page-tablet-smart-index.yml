@@ -65,7 +65,7 @@ jobs:
               assert token in s
               import re
               res.write_text(re.sub(r'<string name="app_name">[^<]*</string>',
-                '<string name="app_name">Turn the Page Armando Anota</string>',s,count=1))
+                '<string name="app_name">Turn the Page by Armando Anota</string>',s,count=1))
           PY
 
       - name: Aplicar indice inteligente y colores invertidos
