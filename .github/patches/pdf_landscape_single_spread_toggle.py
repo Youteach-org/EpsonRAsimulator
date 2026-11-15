@@ -23,9 +23,10 @@ edit(file,'    val buttons = if (slots.size >= 5) slots.take(2) + slots.takeLast
 '''    val buttons = if (slots.size >= 5) slots.take(2) + slots.takeLast(3) else emptyList()
     // Preserve the five legacy actions; take a free spot just after Contents.
     // The generated index and a PDF still have the original navigation controls.
-    // Preserve portrait clock and bookmark geometry. Show the extra slot only on wide leaves.
+    // Do not reserve this optional slot in portrait; the original clock and
+    // bookmark spacing must remain identical on phones and vertical tablets.
     val hasLandscapePaper = width > paperBounds.maxOf { it.bottom } - paperBounds.minOf { it.top }
-    val toggleBounds = if (buttons.size == 5 && hasLandscapePaper) {
+    val toggleCandidate = if (buttons.size == 5 && hasLandscapePaper) {
         val toc = buttons[1]
         val candidate = Rect(toc.right + gap, toc.top, toc.right + gap + touch, toc.bottom)
         candidate.takeIf { proposed ->
@@ -36,8 +37,11 @@ edit(file,'    val buttons = if (slots.size >= 5) slots.take(2) + slots.takeLast
         }
     } else null
 ''')
-edit(file,'        (buttons + insets.cutouts).filter { it.bottom > clockTop && it.top < clockTop + clockHeight }',
-     '        (buttons + listOfNotNull(toggleBounds) + insets.cutouts).filter { it.bottom > clockTop && it.top < clockTop + clockHeight }')
+# The optional switch never shifts the original clock. When space is tight,
+# omit the switch rather than moving the clock or clipping its touch target.
+edit(file,'    // A small invisible allowance makes the ink easier to tap without moving it,',
+'''    val toggleBounds = toggleCandidate?.takeIf { candidate -> clock?.overlaps(candidate) != true }
+    // A small invisible allowance makes the ink easier to tap without moving it,''')
 edit(file,'        val obstacles = buttons.filter { it != button } + insets.cutouts + listOfNotNull(clock)',
      '        val obstacles = buttons.filter { it != button } + insets.cutouts + listOfNotNull(clock, toggleBounds)')
 edit(file,'    return ReaderTopControlLayout(contentTop, buttons, clockBounds = clock, touchBounds = touchBounds)',
@@ -95,6 +99,13 @@ edit(file,'        when (icon) {',
                 line(5f, 10f, 8f, 10f); line(16f, 10f, 19f, 10f)
             }
 ''')
+
+# In one-page landscape mode the bookmark ribbon is normally placed just
+# after the index button. Include the new slot as an obstacle so the ribbon
+# cannot cover the 1/2-page switch or intercept its taps.
+edit('bookview/PhysicalBookView.kt',
+    'controlBounds = initialPageControlsLayout.buttons,',
+    'controlBounds = initialPageControlsLayout.buttons + listOfNotNull(initialPageControlsLayout.pageLayoutToggleBounds),')
 
 file='ReaderDemoScreen.kt'
 edit(file,'    val context = LocalContext.current\n',
