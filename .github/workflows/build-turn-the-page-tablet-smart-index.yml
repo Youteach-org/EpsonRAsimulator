@@ -156,6 +156,7 @@ jobs:
           grep -q 'navigationRequest?.progress?.tocEntryIndex' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
           grep -q 'contents.visualDesign' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/AndroidContentsRasterizer.kt
 
+      # Compose DrawScope explicit receiver to keep PDF pages visible during pinch.
       - name: Evitar desaparición al ampliar PDFs
         shell: bash
         run: |
