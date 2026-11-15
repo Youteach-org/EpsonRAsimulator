@@ -69,8 +69,18 @@ edit(file,'        layout.buttons.forEachIndexed { index, bounds ->',
 
 # Ink icons are dedicated and unambiguous, instead of a two-label button.
 file='PaperReaderInsert.kt'
-edit(file,'enum class PaperIcon { Bookmarks, Appearance, Contents, Description, Shelf, Settings, Type, Close, Back, Forward, Plus, Minus, Check, Return, Start, End }',
-     'enum class PaperIcon { Bookmarks, Appearance, Contents, Description, Shelf, Settings, Type, Close, Back, Forward, Plus, Minus, Check, Return, Start, End, OnePage, TwoPages }')
+# Other app patches may already append icons. Extend the actual enum rather
+# than expecting the unpatched exact list of variants.
+import re
+p=base/file
+s=p.read_text()
+pattern=r'(enum class PaperIcon\s*\{)([^}]*)(\})'
+match=re.search(pattern,s)
+if not match: raise RuntimeError('PaperIcon enum not found')
+if 'OnePage' not in match.group(2):
+    body=match.group(2).rstrip()
+    s=s[:match.start()]+match.group(1)+body+', OnePage, TwoPages '+match.group(3)+s[match.end():]
+p.write_text(s)
 edit(file,'        when (icon) {\n            PaperIcon.Settings -> {',
 '''        when (icon) {
             PaperIcon.OnePage -> {
