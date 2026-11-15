@@ -23,7 +23,9 @@ edit(file,'    val buttons = if (slots.size >= 5) slots.take(2) + slots.takeLast
 '''    val buttons = if (slots.size >= 5) slots.take(2) + slots.takeLast(3) else emptyList()
     // Preserve the five legacy actions; take a free spot just after Contents.
     // The generated index and a PDF still have the original navigation controls.
-    val toggleBounds = if (buttons.size == 5) {
+    // Preserve portrait clock and bookmark geometry. Show the extra slot only on wide leaves.
+    val hasLandscapePaper = width > paperBounds.maxOf { it.bottom } - paperBounds.minOf { it.top }
+    val toggleBounds = if (buttons.size == 5 && hasLandscapePaper) {
         val toc = buttons[1]
         val candidate = Rect(toc.right + gap, toc.top, toc.right + gap + touch, toc.bottom)
         candidate.takeIf { proposed ->
