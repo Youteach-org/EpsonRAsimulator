@@ -104,6 +104,15 @@ jobs:
         run: |
           set -euo pipefail
           python3 .github/patches/pdf_fullbleed_layout.py lector
+          # A PDF's original folio must not be obscured by an extra reader footer.
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PaginatedPageSurface.kt")
+          s=p.read_text()
+          old="if (kind != PageKind.TEXT) return this"
+          assert s.count(old)==1
+          p.write_text(s.replace(old,"if (kind != PageKind.TEXT || fixedPages.isNotEmpty()) return this",1))
+          PY
           grep -q 'pdfFullBleed = fixedPdfDocument' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
 
       - uses: actions/setup-java@v4
