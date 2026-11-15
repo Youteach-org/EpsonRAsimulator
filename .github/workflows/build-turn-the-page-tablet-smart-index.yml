@@ -23,7 +23,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --location --retry 3 --retry-all-errors \
+          curl --fail --location --connect-timeout 12 --max-time 100 \
+            https://codeload.sourcecraft.tech/avstaim/listai/tarball/refs/heads/main -o src.tar.gz || \
+          curl --fail --location --retry 2 --retry-all-errors \
             https://f-droid.org/repo/com.avstaim.listai_35_src.tar.gz -o src.tar.gz
           mkdir -p lector
           tar -xzf src.tar.gz -C lector --strip-components=1
@@ -69,6 +71,8 @@ jobs:
           mkdir -p stage
           base64 --decode .github/patches/turnthepage_v2_patch.b64 | xz -d > stage/smart.tar
           tar -xf stage/smart.tar -C stage
+          sed -i "s@Path(__file__).resolve().parent / 'PdfSmartIndex.kt'.read_bytes()@(Path(__file__).resolve().parent / 'PdfSmartIndex.kt').read_bytes()@" stage/apply_v2.py
+          sed -i "s@Path(__file__).resolve().parent / 'PdfIndexPanel.kt'.read_bytes()@(Path(__file__).resolve().parent / 'PdfIndexPanel.kt').read_bytes()@" stage/apply_v2.py
           python3 stage/apply_v2.py lector
           python3 - <<'PY'
           from pathlib import Path
