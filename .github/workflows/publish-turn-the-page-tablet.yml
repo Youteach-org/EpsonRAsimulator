@@ -1,0 +1,38 @@
+name: Publicar APK para instalacion automatica por USB
+on:
+  push:
+    branches: [build/turn-the-page-tablet-armando-anota]
+    paths:
+      - .github/workflows/publish-turn-the-page-tablet.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Recuperar la APK ya compilada
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 43739295011 -R Youteach-org/EpsonRAsimulator -n TurnThePage-Tablet-ArmandoAnota-APK -D stage
+          test -s stage/TurnThePage_Tablet_ArmandoAnota.apk
+          mkdir -p apk
+          cp stage/TurnThePage_Tablet_ArmandoAnota.apk apk/TurnThePage_Tablet_ArmandoAnota.apk
+          sha256sum apk/TurnThePage_Tablet_ArmandoAnota.apk
+      - name: Publicar archivo binario en rama independiente
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apk/TurnThePage_Tablet_ArmandoAnota.apk
+          git commit -m "Publish TurnThePage Tablet APK for direct USB installation"
+          git push origin HEAD:build/turn-the-page-tablet-armando-anota
+      - name: Confirmar publicacion
+        run: |
+          test -s apk/TurnThePage_Tablet_ArmandoAnota.apk
+          echo "Public URL: https://raw.githubusercontent.com/Youteach-org/EpsonRAsimulator/build/turn-the-page-tablet-armando-anota/apk/TurnThePage_Tablet_ArmandoAnota.apk"
