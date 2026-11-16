@@ -237,6 +237,8 @@ try {
 catch {
     $message = $_.Exception.Message
     if ($installedNew) { Invoke-ADB "-d uninstall $newPackage" | Out-Null }
+    # Incluso si el error surge tras ocultar el icono, reactivar la app original.
+    Invoke-ADB "-d shell pm enable --user 0 $oldPackage" | Out-Null
     Write-Host 'Se conservo intacto el lector anterior.' -ForegroundColor Yellow
     Write-Host ('Respaldo: ' + $folder)
     throw "La migracion se detuvo sin eliminar tus libros: $message"
