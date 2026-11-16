@@ -1,0 +1,254 @@
+name: Turn the Page safe migration V3
+
+on:
+  push:
+    branches: [build/turn-the-page-tablet-armando-anota]
+    paths:
+      - .github/workflows/build-turnthepage-safe-migration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      - name: Recuperar fuente original publicada en F-Droid
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --connect-timeout 12 --max-time 100 \
+            https://codeload.sourcecraft.tech/avstaim/listai/tarball/refs/heads/main -o src.tar.gz || \
+          curl --fail --location --retry 2 --retry-all-errors \
+            https://f-droid.org/repo/com.avstaim.listai_35_src.tar.gz -o src.tar.gz
+          mkdir -p lector
+          tar -xzf src.tar.gz -C lector --strip-components=1
+
+      - name: Restaurar correccion de orientacion y autoria
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path("lector")
+          layout=root/"feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/AdaptiveBookLayout.kt"
+          s=layout.read_text()
+          token="    // Width alone is not enough: an extremely short multi-window"
+          assert s.count(token)==1
+          layout.write_text(s.replace(token,
+            "    if (canvasHeight > canvasWidth) return BookPresentation.SINGLE\n\n"+token))
+          app=root/"app/build.gradle.kts"
+          s=app.read_text()
+          token='applicationId = "com.avstaim.listai"'
+          assert s.count(token)==1
+          # A distinct package is necessary because the former debug build was signed
+          # with an ephemeral key. Do not delete the original reader or its local books.
+          app.write_text(s.replace(token,'applicationId = "com.avstaim.listai.tablet.armando.v3"'))
+          manifest=root/"app/src/main/AndroidManifest.xml"
+          ms=manifest.read_text()
+          assert ms.count('android:launchMode="singleTop"') == 1
+          manifest.write_text(ms.replace('android:launchMode="singleTop"', 'android:launchMode="singleTask"', 1))
+          settings=root/"feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/PaperReaderInsert.kt"
+          s=settings.read_text()
+          token="                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {"
+          assert token in s
+          settings.write_text(s.replace(token, token+
+             '\n                    Text("por Armando Anota", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)\n',1))
+          for res in (root/"app/src/main/res").glob("values*/strings.xml"):
+              s=res.read_text()
+              token='<string name="app_name">'
+              assert token in s
+              import re
+              res.write_text(re.sub(r'<string name="app_name">[^<]*</string>',
+                '<string name="app_name">Turn the Page by Armando Anota</string>',s,count=1))
+          PY
+
+      - name: Aplicar indice inteligente y colores invertidos
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p stage
+          base64 --decode .github/patches/turnthepage_v2_patch.b64 | xz -d > stage/smart.tar
+          tar -xf stage/smart.tar -C stage
+          sed -i "s@Path(__file__).resolve().parent / 'PdfSmartIndex.kt'.read_bytes()@(Path(__file__).resolve().parent / 'PdfSmartIndex.kt').read_bytes()@" stage/apply_v2.py
+          sed -i "s@Path(__file__).resolve().parent / 'PdfIndexPanel.kt'.read_bytes()@(Path(__file__).resolve().parent / 'PdfIndexPanel.kt').read_bytes()@" stage/apply_v2.py
+          python3 stage/apply_v2.py lector
+          python3 - <<'PY'
+          from pathlib import Path
+          f=Path("lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/PdfSmartIndex.kt")
+          s=f.read_text()
+          s=s.replace('val parsed = extractIndexLines(listOf(words))',
+              'val parsed = extractIndexLines(listOf(if (seenIndex) "Índice\\n$words" else words))')
+          s=s.replace('val target = runCatching { item.findDestinationPage(document) }.getOrNull()',
+              'val current = item\n                        val target = runCatching { current.findDestinationPage(document) }.getOrNull()')
+          s=s.replace('inferShiftFromText(textPages, pages)', 'inferShiftFromText(textPages ?: emptyList(), pages)')
+          f.write_text(s)
+          PY
+
+      - name: Documentar los dos componentes originales del índice
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .github/reference
+          cp lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/PdfIndexPanel.kt .github/reference/PdfIndexPanel.kt
+          cp lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/PdfSmartIndex.kt .github/reference/PdfSmartIndex.kt
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add .github/reference/PdfIndexPanel.kt .github/reference/PdfSmartIndex.kt
+          if ! git diff --staged --quiet; then
+            git commit -m "Preserve original editable smart PDF index source"
+            git push origin HEAD:build/turn-the-page-tablet-armando-anota
+          fi
+
+      - name: Habilitar zoom PDF dentro del libro y paso sin cerrar visor
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode .github/patches/inline_pdf_zoom_patch.gz.b64 | gzip -d > stage/inline_zoom.py
+          python3 stage/inline_zoom.py lector
+          grep -q "inlinePdfZoom" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
+          grep -q "onPdfPageZoom = null" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
+
+      - name: Ajustar PDF a hoja completa sin bordes ni franja gris
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/pdf_fullbleed_layout.py lector
+          # Keep original PDF pixels intact and restore a separately reserved reader folio.
+          python3 - <<'PY'
+          from pathlib import Path
+          root=Path("lector")
+          model=root/"reader/pagination/src/main/kotlin/com/avstaim/listai/reader/pagination/PaginationModels.kt"
+          s=model.read_text()
+          old="val footerHeight: Float get() = if (pdfFullBleed) 0f else (24f * density).coerceAtMost(pageHeightPx * .12f)"
+          assert s.count(old)==1
+          model.write_text(s.replace(old,"val footerHeight: Float get() = (24f * density).coerceAtMost(pageHeightPx * .12f)",1))
+
+          surface=root/"feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PaginatedPageSurface.kt"
+          s=surface.read_text()
+          old="PreparedPageReadingFooter(value, layoutKey, darkTheme, typefaces)"
+          assert s.count(old)==1
+          # Inverting the source paper changes the footer contrast, regardless of UI theme.
+          s=s.replace(old,"PreparedPageReadingFooter(value, layoutKey, if (fixedPages.isNotEmpty()) layoutKey.invertPdfColors else darkTheme, typefaces)",1)
+          surface.write_text(s)
+
+          engine=root/"reader/pagination/src/main/kotlin/com/avstaim/listai/reader/pagination/IncrementalPaginationEngine.kt"
+          s=engine.read_text()
+          marker="layoutKey.contentTop + y, measured.width * scale, height,"
+          assert s.count(marker)==1
+          s=s.replace(marker,"layoutKey.contentTop + y + (if (block.source is BookBlock.FixedPage) ((layoutKey.contentHeight - height) / 2f).coerceAtLeast(0f) else 0f), measured.width * scale, height,",1)
+          engine.write_text(s)
+
+          tests=root/"reader/pagination/src/test/kotlin/com/avstaim/listai/reader/pagination/FixedPagePaginationTest.kt"
+          s=tests.read_text()
+          old="assertEquals(key.contentTop, page.blocks.single().y, .001f)"
+          new="assertEquals(key.contentTop + (key.contentHeight - page.blocks.single().height) / 2f, page.blocks.single().y, .001f)"
+          assert s.count(old)==1
+          tests.write_text(s.replace(old,new,1))
+          PY
+          grep -q 'pdfFullBleed = fixedPdfDocument' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
+
+      - name: Integrar elección de índice por libro con acceso rápido
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/pdf_embedded_book_index.py lector
+          mkdir -p lector/feature/reader/src/test/kotlin/com/avstaim/listai/feature/reader
+          cp .github/patches/PdfBookIndexChoiceTest.kt lector/feature/reader/src/test/kotlin/com/avstaim/listai/feature/reader/PdfBookIndexChoiceTest.kt
+          grep -q "contentsOverride = embeddedIndex" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
+
+      - name: Integrar diseño visual por libro y botón de índice reversible
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/visual_toc_toggle.py lector
+          grep -q 'visualContentsDesign = visualIndexStyle' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
+          grep -q 'navigationRequest?.progress?.tocEntryIndex' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
+          grep -q 'contents.visualDesign' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/AndroidContentsRasterizer.kt
+
+      # Compose DrawScope explicit receiver to keep PDF pages visible during pinch.
+      - name: Evitar desaparición al ampliar PDFs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/inline_pdf_zoom_stability.py lector
+          grep -q "val fixedPdfBook = remember(document)" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
+          grep -q "readerPdfVisiblePan" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
+
+      - name: Respetar los márgenes de los índices sin añadir marco al PDF
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/pdf_contents_safe_margins.py lector
+          grep -q "val edgeInset = if (key.pdfFullBleed)" lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalContentsLayout.kt
+
+      # Extra landscape control preserves clock position and reserves the bookmark ribbon.
+      - name: Elegir una o dos páginas en horizontal junto al botón de índice
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/pdf_landscape_single_spread_toggle.py lector
+          grep -q 'reader_top_toggle_page_layout' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderTopControls.kt
+          grep -q 'forcedPresentation = layoutPresentation' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
+
+      - name: Permitir mover el PDF ampliado con un dedo hasta los bordes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/pdf_free_pan.py lector
+          grep -q 'TEMPORARY_ZOOM || inlinePdfZoom' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
+
+      - name: Restaurar el índice editable original con corrección de numeración
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/restore_original_editable_index.py lector
+          grep -q 'Editar índice · Ajustar inicio de numeración' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
+
+      - name: Instalar SDK Android
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.5.1'
+          cache-disabled: true
+
+      - name: Compilar APK
+        working-directory: lector
+        run: |
+          printf 'sdk.dir=%s\n' "$ANDROID_HOME" > local.properties
+          gradle --no-daemon --stacktrace :feature:reader:testDebugUnitTest :app:assembleDebug
+
+      - name: Publicar APK para instalacion automatica
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s lector/app/build/outputs/apk/debug/app-debug.apk
+          mkdir -p apk
+          cp lector/app/build/outputs/apk/debug/app-debug.apk apk/TurnThePage_By_Armando_Anota_V3.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apk/TurnThePage_By_Armando_Anota_V3.apk
+          git commit -m "Publish safe migration V3 APK"
+          git push origin HEAD:build/turn-the-page-tablet-armando-anota
+          sha256sum apk/TurnThePage_By_Armando_Anota_V3.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TurnThePage-Tablet-Smart-APK
+          path: apk/TurnThePage_By_Armando_Anota_V3.apk
+          if-no-files-found: error
