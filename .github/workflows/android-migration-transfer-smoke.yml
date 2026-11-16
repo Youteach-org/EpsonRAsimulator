@@ -1,0 +1,53 @@
+name: Android migration binary SHA smoke test
+on:
+  push:
+    branches: [build/turn-the-page-tablet-armando-anota]
+    paths:
+      - .github/workflows/android-migration-transfer-smoke.yml
+  workflow_dispatch:
+jobs:
+  binary-transfer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download the same verified V3 APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail -L --retry 3 \
+            https://raw.githubusercontent.com/Youteach-org/EpsonRAsimulator/b20216728a1714820dd762f4bf74bb57a7fd8ce7/apk/TurnThePage_By_Armando_Anota_V3.apk \
+            -o /tmp/reader-v3.apk
+          echo "a0da60831efa324b93e10549370797774a9038360dd4272a10e8b58f654fa6ad  /tmp/reader-v3.apk" | sha256sum -c -
+      - name: Emulator binary transfer via app-owned staging
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            pkg="com.avstaim.listai.tablet.armando.v3"
+            adb install /tmp/reader-v3.apk
+            adb shell run-as "$pkg" pwd
+            dd if=/dev/urandom of=/tmp/ttpprobe.bin bs=65536 count=16 status=none
+            expected="$(sha256sum /tmp/ttpprobe.bin | cut -d ' ' -f 1)"
+            work="/sdcard/Android/data/$pkg/files/.migrate_smoke"
+            adb shell mkdir -p "$work" || true
+            adb push /tmp/ttpprobe.bin "$work/transfer.bin"
+            accessible="$(adb shell run-as "$pkg" sha256sum "$work/transfer.bin" 2>/dev/null | awk '{print $1}' | tr -d '\r' || true)"
+            if [[ "$accessible" != "$expected" ]]; then
+              work="/data/local/tmp/ttpprobe_migrate"
+              adb shell mkdir -p "$work"
+              adb shell chmod 755 "$work"
+              adb push /tmp/ttpprobe.bin "$work/transfer.bin"
+              adb shell chmod 644 "$work/transfer.bin"
+              accessible="$(adb shell run-as "$pkg" sha256sum "$work/transfer.bin" 2>/dev/null | awk '{print $1}' | tr -d '\r' || true)"
+            fi
+            test "$accessible" = "$expected"
+            adb shell run-as "$pkg" mkdir -p databases
+            adb shell run-as "$pkg" cp "$work/transfer.bin" databases/migration_smoke.bin
+            actual="$(adb shell run-as "$pkg" sha256sum databases/migration_smoke.bin | awk '{print $1}' | tr -d '\r')"
+            test "$actual" = "$expected"
+            echo "PASS: binary adb push -> run-as cp -> private database file SHA256 verified"
