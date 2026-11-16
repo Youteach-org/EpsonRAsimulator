@@ -4,8 +4,8 @@ $ProgressPreference = 'SilentlyContinue'
 # Nunca desinstala la aplicacion actual. Instala y verifica la V3 por separado.
 $oldPackage = 'com.avstaim.listai.tablet.armando.smart'
 $newPackage = 'com.avstaim.listai.tablet.armando.v3'
-$apkUrl = 'https://raw.githubusercontent.com/Youteach-org/EpsonRAsimulator/b20216728a1714820dd762f4bf74bb57a7fd8ce7/apk/TurnThePage_By_Armando_Anota_V3.apk'
-$expectedSha256 = 'a0da60831efa324b93e10549370797774a9038360dd4272a10e8b58f654fa6ad'
+$apkUrl = 'https://raw.githubusercontent.com/Youteach-org/EpsonRAsimulator/0f230d54a1f8ce513469633034be243ce433489f/apk/TurnThePage_By_Armando_Anota_V3.apk'
+$expectedSha256 = '10cf5a2c2a3d9af9948a07d68283538ff488156ecd5940357a23cd3d20b9ae10'
 
 $adbCommand = Get-Command adb.exe -ErrorAction SilentlyContinue
 $adb = if ($adbCommand) { $adbCommand.Source } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe' }
