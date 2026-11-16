@@ -4,8 +4,8 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $oldPackage = 'com.avstaim.listai.tablet.armando.smart'
 $newPackage = 'com.avstaim.listai.tablet.armando.v4'
-$apkUrl = 'REEMPLAZAR_URL_APK_COMPILADA'
-$expectedSha = 'REEMPLAZAR_SHA256_COMPILADA'
+$apkUrl = 'https://raw.githubusercontent.com/Youteach-org/EpsonRAsimulator/54e23517c65ed9e2cdd88df1190d5a49d9f19ce6/apk/TurnThePage_By_Armando_Anota_V4_ZoomFocal.apk'
+$expectedSha = 'a9e43dc5e2d7b7d73cb5c21297b99690cb5b9e2a9dc9feaddebb2f73063aa186'
 $cmd = Get-Command adb.exe -ErrorAction SilentlyContinue
 $adb = if ($cmd) { $cmd.Source } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe' }
 if (!(Test-Path $adb)) { throw 'No se encontro adb.exe de Android SDK.' }
