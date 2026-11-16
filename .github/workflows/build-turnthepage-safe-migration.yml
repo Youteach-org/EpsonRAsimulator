@@ -210,6 +210,14 @@ jobs:
           python3 .github/patches/restore_original_editable_index.py lector
           grep -q 'Editar índice · Ajustar inicio de numeración' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/ReaderDemoScreen.kt
 
+      - name: Anclar zoom al punto entre los dedos sin reacomodar la hoja
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/patches/pdf_pinch_focal_point.py lector
+          grep -q 'readerPdfPanForFocalPoint(' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
+          grep -q 'previousCentroid = event.calculateCentroid(useCurrent = false)' lector/feature/reader/src/main/kotlin/com/avstaim/listai/feature/reader/bookview/PhysicalBookView.kt
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
