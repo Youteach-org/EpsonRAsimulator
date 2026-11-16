@@ -5,7 +5,7 @@ on:
       - build/turn-the-page-tablet-armando-anota
     paths:
       - .github/workflows/validate-turnthepage-migration.ps1.yml
-      - scripts/instalar_turnthepage_seguro_v3.ps1
+      - scripts/instalar_turnthepage_migracion_push_sha.ps1
   workflow_dispatch:
 jobs:
   parse-installer:
@@ -25,4 +25,11 @@ jobs:
             $parseErrors | Format-List | Out-String | Write-Error
             exit 1
           }
-          Write-Host "PowerShell syntax parsed successfully."
+          $code = Get-Content "scripts/instalar_turnthepage_migracion_push_sha.ps1" -Raw
+          if ($code.Contains("dd of=") -or $code.Contains('uninstall $oldPackage') -or
+              -not $code.Contains('-d push') -or
+              -not $code.Contains('Device-Sha') -or
+              -not $code.Contains('exec-out run-as')) {
+            throw "Missing safe transfer/verification or unsafe removal of old app."
+          }
+          Write-Host "PowerShell syntax and safe-migration checks passed."
