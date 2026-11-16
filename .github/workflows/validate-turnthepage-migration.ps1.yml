@@ -1,0 +1,28 @@
+name: Validate TurnThePage migration PowerShell
+on:
+  push:
+    branches:
+      - build/turn-the-page-tablet-armando-anota
+    paths:
+      - .github/workflows/validate-turnthepage-migration.ps1.yml
+      - scripts/instalar_turnthepage_seguro_v3.ps1
+  workflow_dispatch:
+jobs:
+  parse-installer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse without executing installation
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+            "scripts/instalar_turnthepage_seguro_v3.ps1",
+            [ref]$tokens, [ref]$parseErrors
+          )
+          if ($null -eq $ast -or $parseErrors.Count -ne 0) {
+            $parseErrors | Format-List | Out-String | Write-Error
+            exit 1
+          }
+          Write-Host "PowerShell syntax parsed successfully."
