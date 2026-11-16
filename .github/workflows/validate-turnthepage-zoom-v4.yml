@@ -1,0 +1,48 @@
+name: Validate Turn the Page V4 USB installer
+on:
+  push:
+    branches: [build/turn-the-page-tablet-armando-anota]
+    paths:
+      - tools/instalar_turnthepage_zoom_focal_v4.ps1
+      - .github/workflows/validate-turnthepage-zoom-v4.yml
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse PowerShell 7 and check non-destructive migration
+        shell: pwsh
+        run: |
+          $scriptPath = 'tools/instalar_turnthepage_zoom_focal_v4.ps1'
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path $scriptPath).Path, [ref]$tokens, [ref]$errors
+          )
+          if ($errors.Count -gt 0) {
+            $errors | Format-List | Out-String | Write-Host
+            throw "PowerShell parser found $($errors.Count) errors"
+          }
+          $s = Get-Content $scriptPath -Raw
+          $required = @(
+            "com.avstaim.listai.tablet.armando.v4",
+            "com.avstaim.listai.tablet.armando.smart",
+            "TurnThePage_By_Armando_Anota_V4_ZoomFocal.apk",
+            "a9e43dc5e2d7b7d73cb5c21297b99690cb5b9e2a9dc9feaddebb2f73063aa186",
+            "CheckAndroidFile",
+            "Get-FileHash",
+            "Biblioteca.tar",
+            "NuevaInstalacion_AntesDeMigrar.tar",
+            "push"
+          )
+          foreach ($needle in $required) {
+            if (!$s.Contains($needle)) { throw "Missing: $needle" }
+          }
+          if ($s.Contains('uninstall $oldPackage') -or
+              $s.Contains('uninstall $newPackage') -or
+              $s.Contains('disable-user')) {
+            throw "An unsafe remove/disable operation was detected."
+          }
+          Write-Host 'PowerShell syntax and non-destructive V4 migration checks passed.'
