@@ -252,6 +252,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add apk/TurnThePage_By_Armando_Anota_V3.apk
           git commit -m "Publish safe migration V3 APK"
+          git pull --rebase origin build/turn-the-page-tablet-armando-anota
           git push origin HEAD:build/turn-the-page-tablet-armando-anota
           sha256sum apk/TurnThePage_By_Armando_Anota_V3.apk
 
