@@ -53,6 +53,13 @@ new='''                                    val nextPan = if (zoomingPdf && oldSc
                                         )
                                     } else previewPan + event.calculatePan()'''
 patch(old,new)
+# Do not process the final one-finger/zero-finger release as if it were a new
+# zoom event. Its centroid can be completely different from the two-finger
+# centroid and is the source of the visible jump after lifting the fingers.
+patch('''                                if (textZoomAllowed) previewScale = when (gestureMode) {''',
+      '''                                if (textZoomAllowed && !(zoomingPdf && pinchUpdate.finished)) previewScale = when (gestureMode) {''')
+patch('''                                if (gestureMode == ReaderPinchMode.TEMPORARY_ZOOM) {''',
+      '''                                if (gestureMode == ReaderPinchMode.TEMPORARY_ZOOM && !(zoomingPdf && pinchUpdate.finished)) {''')
 # A pointer-up may be marked consumed by another recognizer, but it must not
 # restore the old scale and shift the PDF away from the user's selected point.
 patch('''                                    if (pinchUpdate.cancelled || (pinchUpdate.completedFactor == null &&
