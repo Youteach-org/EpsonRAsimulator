@@ -4,6 +4,7 @@ on:
     branches: [build/turn-the-page-tablet-armando-anota]
     paths:
       - tools/instalar_turnthepage_zoom_focal_v4.ps1
+      - tools/turnthepage_v4_auto_usb.ps1
       - .github/workflows/validate-turnthepage-zoom-v4.yml
   workflow_dispatch:
 jobs:
@@ -45,4 +46,20 @@ jobs:
               $s.Contains('disable-user')) {
             throw "An unsafe remove/disable operation was detected."
           }
-          Write-Host 'PowerShell syntax and non-destructive V4 migration checks passed.'
+          $wrapperErrors = $null
+          $wrapperTokens = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path 'tools/turnthepage_v4_auto_usb.ps1').Path,
+            [ref]$wrapperTokens, [ref]$wrapperErrors
+          )
+          if ($wrapperErrors.Count -gt 0) {
+            $wrapperErrors | Format-List | Out-String | Write-Host
+            throw "USB autorun wrapper has parsing errors"
+          }
+          $wrapper = Get-Content 'tools/turnthepage_v4_auto_usb.ps1' -Raw
+          if (!$wrapper.Contains('turnthepage_zoom_focal_v4.ps1') -or
+              !$wrapper.Contains('$i -lt 12') -or
+              !$wrapper.Contains('Test-AdbUsb')) {
+            throw 'Automatic USB detection is missing or potentially unbounded.'
+          }
+          Write-Host 'PowerShell syntax, USB autorun and migration checks passed.'
