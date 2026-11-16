@@ -8,10 +8,10 @@ $cmd = Get-Command adb.exe -ErrorAction SilentlyContinue
 $adb = if ($cmd) { $cmd.Source } else { Join-Path $env:LOCALAPPDATA 'Android\Sdk\platform-tools\adb.exe' }
 if (!(Test-Path $adb)) { throw 'No se encontro adb.exe de Android SDK.' }
 
-function A([string]$args) {
+function A([string]$arguments) {
     $p = New-Object System.Diagnostics.Process
     $p.StartInfo.FileName = $adb
-    $p.StartInfo.Arguments = "-d $args"
+    $p.StartInfo.Arguments = "-d $arguments"
     $p.StartInfo.UseShellExecute = $false
     $p.StartInfo.RedirectStandardOutput = $true
     $p.StartInfo.RedirectStandardError = $true
@@ -19,13 +19,13 @@ function A([string]$args) {
     $stdout = $p.StandardOutput.ReadToEnd()
     $stderr = $p.StandardError.ReadToEnd()
     $p.WaitForExit()
-    if ($p.ExitCode -ne 0) { throw "ADB $args : $stdout $stderr" }
+    if ($p.ExitCode -ne 0) { throw "ADB $arguments : $stdout $stderr" }
     return $stdout.Trim()
 }
-function BinaryFromAndroid([string]$args, [string]$destination) {
+function BinaryFromAndroid([string]$arguments, [string]$destination) {
     $p = New-Object System.Diagnostics.Process
     $p.StartInfo.FileName = $adb
-    $p.StartInfo.Arguments = "-d exec-out $args"
+    $p.StartInfo.Arguments = "-d exec-out $arguments"
     $p.StartInfo.UseShellExecute = $false
     $p.StartInfo.RedirectStandardOutput = $true
     $p.StartInfo.RedirectStandardError = $true
