@@ -12,11 +12,13 @@ Earlier accumulated work includes the school gripper and enclosure, manual fuse 
 - 752 JVM tests, zero failures, errors or skipped tests. Includes open-jaw entry in all six outlets, pickup at fuse-centre TCP height 40.225 mm, closing and lifting 20 mm with collision protection active; support/cache regressions pass.
 - Six outlet exact-contact volumes match modified BRep at approximately 12789 mm3 each. Geometry evidence and opening comparison are in evidence/2026-11-22.
 - APK SHA256: 09952abe7467a0c11b4a04b0084edf4877a31f94fa8afbdcd8037a1452d75a60.
-- No fresh Android instrumented test or installation: both the ADB socket and SDK client return an empty device list. Do not claim this APK is installed.
+- ADB detection recovered after restarting the server with the tablet connected and unlocked. Both APKs installed with install -r: Success; app data preserved. OutletJawPerformanceTest passed both tests on SM-T970 in 15.536 s, including fuse-centre pickup and 20 mm lift with collision checks enabled.
+- APK signing certificate verified: 688255ded2d52a9cb6d9b392395c43144f01e9d01afd4d8db81158ca1910ec6a, matching the prior installation.
+- USB disconnected again after instrumentation; collecting RA_PERF logs and relaunching returned device not found. No new performance figure or visual UI confirmation is claimed.
 - The previous installed APK recorded by the earlier session was 7190cc7d36359741ae060affce094f29ab7396e71043cfe473b3c20ed19457f8, before widening. Historical tablet performance of ~900.7 ms / 20 contact queries is not a benchmark of this build or all XYZ interaction.
 
 ## Next action
-Reconnect and authorize the tablet; confirm it appears as device. Verify matching signing certificate, install with adb install -r (preserve user data; never uninstall or clear data), run OutletJawPerformanceTest and check the visible refill button and widened opening. Record actual results here. No additional CAD change is needed merely to retry USB detection.
+The APK is installed and both Android regressions pass. Reopen the app on the tablet and visually check the visible refill button and widened opening. If automating further checks, reconnect USB first: the device disappeared again after instrumentation. Never uninstall or clear user data. No additional CAD change is needed merely to retry USB detection.
 
 ## Local build context
 Checkout: C:/Users/BATMAN/Documents/Codex/ra-local-release. Historical output directory: C:/Users/BATMAN/Documents/Codex/2026-10-08/ontin-a-desde-pr-25-commit/outputs. Build used Build-LowMemory.ps1 there, Gradle 9.6.0, Android Studio JBR, SDK 37, offline cached dependencies, one worker and serial GC. Signing validation tasks were excluded to use the already configured local debug signing setup; verify the produced APK signature separately before install. No signing keys or local SDK settings are committed.
