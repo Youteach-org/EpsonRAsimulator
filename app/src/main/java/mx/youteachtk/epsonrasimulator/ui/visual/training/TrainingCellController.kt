@@ -27,9 +27,13 @@ class TrainingCellController(private val runtime: SharedRuntime) {
         return "${task.status} · action ${task.actionIndex + 1}/${task.program.actions.size} · $grasp"
     }
 
-    fun setup(config: TrainingCellConfig = TrainingCellConfig(), replaceExisting: Boolean = false): Boolean = attempt {
+    fun setup(config: TrainingCellConfig = SchoolGripper.config(), replaceExisting: Boolean = false): Boolean = attempt {
         require(runtime.state.trainingCell == null || replaceExisting) { "Confirm resetting the existing training cell" }
         runtime.dispatch(RuntimeCommand.ConfigureTrainingCell(config))
+    }
+    fun remove(): Boolean = attempt {
+        require(stop()) { error ?: "No se pudo detener la demostración" }
+        runtime.dispatch(RuntimeCommand.RemoveTrainingCell)
     }
     fun start(): Boolean = attempt {
         runtime.dispatch(RuntimeCommand.StartTask(TrainingSequence.TASK_ID))
@@ -37,7 +41,13 @@ class TrainingCellController(private val runtime: SharedRuntime) {
     }
     fun pause(): Boolean = attempt { runtime.dispatch(RuntimeCommand.PauseTask(TrainingSequence.TASK_ID)) }
     fun resume(): Boolean = attempt { runtime.dispatch(RuntimeCommand.ResumeTask(TrainingSequence.TASK_ID)) }
-    fun stop(): Boolean = attempt { runtime.dispatch(RuntimeCommand.StopTask(TrainingSequence.TASK_ID)) }
+    fun stop(): Boolean = attempt {
+        val state=runtime.state
+        val task=state.taskState.tasks[TrainingSequence.TASK_ID]
+        if(state.collisionStop!=null || task?.status in listOf(TaskStatus.READY,TaskStatus.RUNNING,TaskStatus.WAITING,TaskStatus.PAUSED,TaskStatus.HALTED))
+            runtime.dispatch(RuntimeCommand.StopTask(TrainingSequence.TASK_ID))
+        if(runtime.state.motionOwner==null) runtime.dispatch(RuntimeCommand.PauseClock)
+    }
     fun setGripperClosed(closed: Boolean): Boolean = attempt {
         val config = requireNotNull(runtime.state.trainingCell) { "Set up the training cell first" }
         runtime.dispatch(RuntimeCommand.SetDigitalOutput(config.closeOutput, closed))

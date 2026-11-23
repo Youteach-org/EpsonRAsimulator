@@ -16,6 +16,7 @@ import mx.youteachtk.epsonrasimulator.runtime.io.DigitalIoAddress
 import mx.youteachtk.epsonrasimulator.runtime.io.IoRuntime
 import mx.youteachtk.epsonrasimulator.runtime.io.IoState
 import mx.youteachtk.epsonrasimulator.runtime.task.TaskId
+import mx.youteachtk.epsonrasimulator.runtime.task.SimAction
 import mx.youteachtk.epsonrasimulator.runtime.task.TaskProgram
 import mx.youteachtk.epsonrasimulator.runtime.task.TaskRuntime
 import mx.youteachtk.epsonrasimulator.runtime.task.TaskRuntimeState
@@ -98,6 +99,26 @@ object SimulationCoordinator {
         )
         val elapsedSimulationMillis =
             nextClock.timeMillis - state.clockState.timeMillis
+
+        // Preserve segment boundaries, including collision checks, when a frame spans
+        // several short Cartesian interpolation segments. Do not discard leftover time.
+        val currentAction=state.motion?.let {state.taskState.tasks[it.owner]?.program?.actions?.getOrNull(it.actionIndex)}
+        if (currentAction is SimAction.MoveJoints && currentAction.cartesianContinuation && state.motion != null && elapsedSimulationMillis > state.motion.durationMillis-state.motion.elapsedMillis) {
+            var current=state
+            var remaining=elapsedSimulationMillis
+            while(remaining>0 && current.clockState.running && current.collisionStop==null) {
+                val segment=current.motion?.let {it.durationMillis-it.elapsedMillis} ?: remaining
+                val step=minOf(remaining,segment.coerceAtLeast(1))
+                current=advanceSimulationSlice(current,step,current.clockState.copy(timeMillis=current.clockState.timeMillis+step))
+                remaining-=step
+            }
+            return current.copy(clockState=current.clockState.copy(fractionalMillisRemainder=nextClock.fractionalMillisRemainder))
+        }
+        return advanceSimulationSlice(state,elapsedSimulationMillis,nextClock)
+    }
+
+    private fun advanceSimulationSlice(state: SimulationDomainState, elapsedSimulationMillis: Long,
+        nextClock: mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClockState): SimulationDomainState {
 
         val moved = TrainingMotionRuntime.advance(state, elapsedSimulationMillis)
         val advanced = moved.copy(
@@ -183,6 +204,9 @@ object SimulationCoordinator {
         }
         return reconcileOutputs(
             state.copy(
+                toolState=if(address==reservedOutput) state.toolState.copy(gripperStates=state.toolState.gripperStates.mapValues { (id,g) ->
+                    if(id==state.toolState.activeToolId) g.copy(targetOpeningMm=null,targetClosed=null) else g
+                }) else state.toolState,
                 ioState = IoRuntime.setOutput(
                     state.ioState,
                     address,
@@ -305,7 +329,7 @@ object SimulationCoordinator {
         val terminal = state.taskState.tasks[id]?.status in setOf(TaskStatus.ABORTED, TaskStatus.FINISHED)
         return state.copy(
             collisionStop = if (state.motionOwner == null || state.motionOwner == id) null else state.collisionStop,
-            taskState = if (acknowledgeCollision && terminal) state.taskState else TaskRuntime.stop(
+            taskState = if (acknowledgeCollision && (terminal || id !in state.taskState.tasks)) state.taskState else TaskRuntime.stop(
                 state.taskState,
                 id
             ),

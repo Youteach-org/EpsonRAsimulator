@@ -20,6 +20,10 @@ internal object TrainingMotionRuntime {
         var start = state.jointState
         task.program.actions.forEachIndexed { index, action ->
             if (action is SimAction.WaitForGripper) {
+                action.openingMm?.let { mm ->
+                    val spec=requireNotNull(state.toolState.definitions[action.toolId]?.gripper)
+                    require(mm.isFinite() && mm in spec.minimumOpeningWidthMm..spec.openWidthMm)
+                }
                 require(action.toolId == state.toolState.activeToolId &&
                     state.toolState.definitions[action.toolId]?.gripper != null) {
                     "Gripper wait requires the active functional gripper"
@@ -98,7 +102,11 @@ internal object TrainingMotionRuntime {
         val action = task.program.actions.getOrNull(task.actionIndex)
         if (task.status == TaskStatus.WAITING && action is SimAction.WaitForGripper) {
             val spec = next.toolState.definitions.getValue(action.toolId).gripper!!
-            val endpoint = if (action.closed) spec.closedWidthMm else spec.openWidthMm
+            val endpoint = action.openingMm ?: if (action.closed) spec.closedWidthMm else spec.openWidthMm
+            require(endpoint.isFinite() && endpoint in spec.minimumOpeningWidthMm..spec.openWidthMm)
+            val g=next.toolState.gripperStates.getValue(action.toolId)
+            next=next.copy(toolState=next.toolState.copy(gripperStates=next.toolState.gripperStates+
+                (action.toolId to g.copy(targetOpeningMm=endpoint,targetClosed=action.closed))))
             if (next.toolState.gripperStates.getValue(action.toolId).openingWidthMm == endpoint) {
                 val completed = task.copy(
                     actionIndex = task.actionIndex + 1,

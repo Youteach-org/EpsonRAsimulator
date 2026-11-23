@@ -13,7 +13,7 @@ internal object TrainingCellCodec {
     fun write(data: DataOutputStream, config: TrainingCellConfig?) {
         data.writeByte(if (config == null) 0 else 1)
         if (config == null) return
-        data.writeByte(1) // c4-pick-place-v1
+        data.writeByte(if(config.presetId == SchoolGripper.PRESET) 2 else 1)
         listOf(config.approachPick, config.pick, config.lift, config.approachPlace, config.place)
             .forEach { it.values.forEach(data::writeDouble) }
         data.writeLong(config.segmentDurationMillis)
@@ -29,10 +29,15 @@ internal object TrainingCellCodec {
             1 -> Unit
             else -> fail(PersistenceFailure.CORRUPT, "Invalid training configuration marker")
         }
-        if (data.readUnsignedByte() != 1) fail(PersistenceFailure.CORRUPT, "Unsupported training preset")
+        val preset = when(data.readUnsignedByte()) {
+            1 -> "c4-pick-place-v1"
+            2 -> SchoolGripper.PRESET
+            else -> fail(PersistenceFailure.CORRUPT, "Unsupported training preset")
+        }
         fun joints() = JointState(List(6) { data.readDouble() })
         try {
             val config = TrainingCellConfig(
+                presetId = preset,
                 approachPick = joints(), pick = joints(), lift = joints(), approachPlace = joints(), place = joints(),
                 segmentDurationMillis = data.readLong(),
                 toolTcp = CartesianPose(data.readDouble(), data.readDouble(), data.readDouble(), data.readDouble(), data.readDouble(), data.readDouble()),

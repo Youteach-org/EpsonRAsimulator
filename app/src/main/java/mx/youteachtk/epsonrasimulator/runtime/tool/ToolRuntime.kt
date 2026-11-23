@@ -77,16 +77,12 @@ object ToolRuntime {
         val gripperState = state.gripperStates[activeToolId] ?: return state
         val spec = state.definitions.getValue(activeToolId).gripper!!
         val travel = spec.speedMmPerSecond * deltaMillis.toDouble() / 1000.0
-        val nextOpeningWidth =
-            if (IoRuntime.output(ioState, spec.closeOutput)) {
-                max(gripperState.openingWidthMm - travel, spec.closedWidthMm)
-            } else {
-                min(gripperState.openingWidthMm + travel, spec.openWidthMm)
-            }
-        val nextGripperStates = state.gripperStates + (
-            activeToolId to TwoFingerGripperState(nextOpeningWidth)
-        )
-
+        val closed=IoRuntime.output(ioState,spec.closeOutput)
+        val override=gripperState.targetOpeningMm.takeIf {gripperState.targetClosed==closed}
+        val target=override ?: if(closed) spec.closedWidthMm else spec.openWidthMm
+        val nextOpeningWidth=if(target<gripperState.openingWidthMm) max(gripperState.openingWidthMm-travel,target)
+            else min(gripperState.openingWidthMm+travel,target)
+        val nextGripperStates=state.gripperStates+(activeToolId to TwoFingerGripperState(nextOpeningWidth,override,if(override!=null) closed else null))
         return state.copy(gripperStates = nextGripperStates)
     }
 

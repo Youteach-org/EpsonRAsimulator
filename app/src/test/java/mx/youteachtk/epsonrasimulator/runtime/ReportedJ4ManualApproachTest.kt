@@ -16,7 +16,7 @@ class ReportedJ4ManualApproachTest {
         val before=runtime.state
         runtime.dispatch(RuntimeCommand.SetJointValue(0,15.0))
         assertNotNull(runtime.state.collisionStop)
-        assertTrue(runtime.state.jointState[0]>10.9)
+        assertEquals(before.jointState,runtime.state.jointState)
         val mount=SimulationPoseTransforms.fromPose(runtime.state.toolState.mountPose)
         val flange=SimulationFrames.cadToSimulationTransform*C4Kinematics.forward(runtime.state.jointState.values).baseToTcp
         assertEquals(flange.translation.x,mount.translation.x,1e-8)
@@ -25,7 +25,7 @@ class ReportedJ4ManualApproachTest {
         assertEquals(before.ioState.outputs,runtime.state.ioState.outputs)
         assertEquals(before.workcellState.attachments,runtime.state.workcellState.attachments)
     }
-    @Test fun manualApproachStopsNearThePickupBaseInsteadOfReturningToTheOldPosture() {
+    @Test fun manualCollisionRestoresPreviousSafePosture() {
         val bundle=AppRuntimeFactory.createDefault()
         val q=JointState(listOf(10.4,-54.1,21.2,0.0,-77.7,0.0))
         val config=TrainingCellConfig()
@@ -35,15 +35,14 @@ class ReportedJ4ManualApproachTest {
         runtime.dispatch(RuntimeCommand.SetJointValue(0,15.0))
         assertNotNull(runtime.state.collisionStop)
         assertEquals("robot:J4",runtime.state.collisionStop!!.firstId)
-        assertTrue("A colliding slider jump must keep its safe approach, not roll it all back",
-            runtime.state.jointState[0]>10.9)
+        assertEquals("A colliding slider jump restores the last accepted frame",q,runtime.state.jointState)
         assertTrue(runtime.state.jointState[0]<15.0)
         assertEquals(q.values.drop(1),runtime.state.jointState.values.drop(1))
         val fixture=WorkcellGeometry.boxes(runtime.state.workcellState,runtime.state.toolState).single()
         val j4=C4RobotCollisionGeometry.boxes(C4Kinematics.forward(runtime.state.jointState.values).baseToJointFrames)
             .single { it.id=="robot:J4" }
         val gap=C4RobotCollisionGeometry.separation(j4,fixture)
-        assertTrue("Stop must approach the collision boundary; gap=$gap",gap in -BoxSeparation.TOLERANCE_MM..0.1)
+        assertTrue("Restored frame must remain clear; gap=$gap",gap>0.0)
         println("REPORTED_J4_MANUAL_STOP joints=${runtime.state.jointState.values} gapMm=$gap")
         assertFalse(runtime.state.clockState.running)
     }

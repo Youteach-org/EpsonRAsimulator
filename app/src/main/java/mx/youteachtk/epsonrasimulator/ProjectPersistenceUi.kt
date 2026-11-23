@@ -1,6 +1,15 @@
 package mx.youteachtk.epsonrasimulator
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,49 +48,36 @@ fun ProjectPersistenceBar(
     onExport: () -> Unit,
     onDismissMessage: () -> Unit,
     onReplacement: (ProjectReplacementDecision) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null
 ) {
     var creating by remember { mutableStateOf(false) }
     var projectName by remember { mutableStateOf("") }
     var createSubmitted by remember { mutableStateOf(false) }
     var exportDetails by remember { mutableStateOf(false) }
     val ready = available && state.startup == PersistenceStartupStatus.READY
-    Surface(modifier = modifier.fillMaxWidth(), tonalElevation = 2.dp) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(
-                text = "${state.projectName ?: "No project"} · ${persistenceStatusLabel(state)}",
-                style = MaterialTheme.typography.titleSmall
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(onClick = { projectName = ""; createSubmitted = false; creating = true },
-                    enabled = ready && !state.replacementDecisionRequired) { Text("New project") }
-                OutlinedButton(onClick = onImport, enabled = ready && !state.replacementDecisionRequired) {
-                    Text("Import folder")
-                }
-                Button(onClick = onSave, enabled = ready && state.canSave && !state.replacementDecisionRequired) {
-                    Text("Save")
-                }
-                OutlinedButton(onClick = onExport, enabled = ready && state.canExport && !state.replacementDecisionRequired) {
-                    Text("Export")
-                }
-                if (state.lastExport != null) {
-                    TextButton(onClick = { exportDetails = true }) { Text("Export details") }
+    var menu by remember { mutableStateOf(false) }
+    var messageDetails by remember { mutableStateOf(false) }
+    Surface(modifier = modifier, shape=androidx.compose.foundation.shape.RoundedCornerShape(24.dp), tonalElevation = 4.dp) {
+        Row(Modifier.height(40.dp),verticalAlignment=Alignment.CenterVertically) {
+            if(onBack!=null) IconButton(onClick=onBack,modifier=Modifier.testTag("experience-back").semantics {contentDescription="Volver al inicio"}) {Text("\u2190")}
+            Box {
+                IconButton(onClick={menu=true},modifier=Modifier.testTag("project-menu").semantics {contentDescription="Menu de proyecto"}) {Text("\u2630")}
+                DropdownMenu(expanded=menu,onDismissRequest={menu=false}) {
+                    DropdownMenuItem(text={Text("${state.projectName ?: "Sin proyecto"} · ${persistenceStatusLabel(state)}")},enabled=false,onClick={})
+                    DropdownMenuItem(text={Text("New project")},enabled=ready && !state.replacementDecisionRequired,onClick={menu=false;projectName="";createSubmitted=false;creating=true})
+                    DropdownMenuItem(text={Text("Import folder")},enabled=ready && !state.replacementDecisionRequired,onClick={menu=false;onImport()})
+                    DropdownMenuItem(text={Text("Save")},enabled=ready && state.canSave && !state.replacementDecisionRequired,onClick={menu=false;onSave()})
+                    DropdownMenuItem(text={Text("Export")},enabled=ready && state.canExport && !state.replacementDecisionRequired,onClick={menu=false;onExport()})
+                    if(state.lastExport!=null) DropdownMenuItem(text={Text("Export details")},onClick={menu=false;exportDetails=true})
+                    if(state.message!=null) DropdownMenuItem(text={Text("Aviso del proyecto")},onClick={menu=false;messageDetails=true})
                 }
             }
-            state.message?.let { message ->
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(message, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
-                    TextButton(onClick = onDismissMessage) { Text("Dismiss") }
-                }
-            }
+
         }
     }
+    if(messageDetails && state.message!=null) AlertDialog(onDismissRequest={messageDetails=false;onDismissMessage()},
+        title={Text("Proyecto")},text={Text(state.message)},confirmButton={TextButton(onClick={messageDetails=false;onDismissMessage()}) {Text("Aceptar")}})
 
     if (creating) {
         AlertDialog(

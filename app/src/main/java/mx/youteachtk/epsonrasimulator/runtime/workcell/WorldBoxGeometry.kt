@@ -2,6 +2,7 @@ package mx.youteachtk.epsonrasimulator.runtime.workcell
 
 import mx.youteachtk.epsonrasimulator.kinematics.*
 import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeState
+import mx.youteachtk.epsonrasimulator.runtime.training.SchoolGripper
 
 /** Oriented physical/render box in simulation coordinates, millimetres. */
 data class WorldBox(val id: String, val transform: Matrix4, val sizeMm: Vector3, val kind: WorkcellRenderKind) {
@@ -40,6 +41,7 @@ object WorkcellGeometry {
 
         val gripperBoxes = activeToolId?.let { id ->
             val definition = toolState.definitions.getValue(id)
+            if (definition.tool.modelAsset == SchoolGripper.MODEL) return@let SchoolGripper.boxes(toolState)
             val spec = definition.gripper ?: return@let emptyList()
             val opening = toolState.gripperStates.getValue(id).openingWidthMm
             val tcpTransform = SimulationPoseTransforms.fromPose(toolState.mountPose) *

@@ -35,7 +35,8 @@ data class ProjectSessionSnapshot(
     val robotManagerPage: String,
     val robotManagerTrainingStepDegrees: Double,
     val userSequence: mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence = mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence(),
-    val trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null
+    val trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null,
+    val enclosureEnabled: Boolean = false
 ) {
     companion object {
         fun neutral() = ProjectSessionSnapshot(

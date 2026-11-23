@@ -1,0 +1,38 @@
+[
+  {
+    "tower": 216,
+    "cadVolume": 12788.999999999834,
+    "boxesVolume": 12789.000000000007,
+    "commonVolume": 12788.999999999967
+  },
+  {
+    "tower": 196,
+    "cadVolume": 12788.99999999987,
+    "boxesVolume": 12789.000000000007,
+    "commonVolume": 12788.999999999975
+  },
+  {
+    "tower": 199,
+    "cadVolume": 12788.999999999889,
+    "boxesVolume": 12789.000000000007,
+    "commonVolume": 12788.999999999976
+  },
+  {
+    "tower": 197,
+    "cadVolume": 12788.999999999836,
+    "boxesVolume": 12789.00000000001,
+    "commonVolume": 12788.999999999969
+  },
+  {
+    "tower": 233,
+    "cadVolume": 12788.999999999864,
+    "boxesVolume": 12789.000000000007,
+    "commonVolume": 12788.999999999975
+  },
+  {
+    "tower": 198,
+    "cadVolume": 12788.99999999987,
+    "boxesVolume": 12789.000000000007,
+    "commonVolume": 12788.99999999997
+  }
+]

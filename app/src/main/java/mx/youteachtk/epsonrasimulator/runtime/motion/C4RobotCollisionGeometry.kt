@@ -13,6 +13,18 @@ internal object C4RobotCollisionGeometry {
 
     fun jointCount(id: String): Int? = jointCounts[id]
 
+    fun selfPairs(boxes: List<WorldBox>): List<Pair<String,String>> = boxes.filter { it.id in jointCounts }.let { robot ->
+        robot.flatMapIndexed { i,a -> robot.drop(i+1).filter { b ->
+            kotlin.math.abs(jointCounts.getValue(a.id)-jointCounts.getValue(b.id))>1
+        }.map { b -> a.id to b.id } }
+    }
+
+    fun solid(box: WorldBox): Pair<CadVoxelHull,Matrix4>? {
+        val link=linksById[box.id] ?: return null
+        val center=(link.minimum+link.maximum)*0.5
+        return hulls.getValue(box.id).value to (box.transform*Matrix4.translation(center*(-1.0)))
+    }
+
     private fun hull(id: String, encoded: String, origin: Vector3, cell: Double, grid: Int): CadVoxelHull {
         val link = linksById.getValue(id)
         return CadVoxelHull(encoded,origin,cell,grid,link.minimum,link.maximum)
@@ -38,6 +50,11 @@ internal object C4RobotCollisionGeometry {
     fun separation(a: WorldBox, b: WorldBox): Double {
         val broadGap = BoxSeparation.gap(a,b)
         if (broadGap > 0.0) return broadGap
+        if(a.id in linksById && b.id in linksById) {
+            val (ha,fa)=requireNotNull(solid(a))
+            val (hb,fb)=requireNotNull(solid(b))
+            return ha.gap(hb,fa,fb)
+        }
         val robot = when { a.id in linksById -> a; b.id in linksById -> b; else -> return broadGap }
         val link = linksById.getValue(robot.id)
         val fixture = if (robot === a) b else a

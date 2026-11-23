@@ -68,6 +68,7 @@ class ProjectSessionCodec(
             data.writeDouble(snapshot.robotManagerTrainingStepDegrees)
             TrainingCellCodec.write(data, snapshot.trainingCell)
             UserSequenceCodec.write(data, snapshot.userSequence)
+            data.writeBoolean(snapshot.enclosureEnabled)
         }
 
         val bytes = output.toByteArray()
@@ -149,7 +150,9 @@ class ProjectSessionCodec(
                 val trainingStep = data.readDouble()
                 val trainingCell = if (schema >= 3) TrainingCellCodec.read(data) else null
 
-                val userSequence = if (schema >= 4) UserSequenceCodec.read(data) else mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence()
+                val userSequence = if (schema >= 4) UserSequenceCodec.read(data, schema) else mx.youteachtk.epsonrasimulator.runtime.training.UserTrainingSequence()
+
+                val enclosureEnabled = if(schema>=6) data.marker() else false
 
                 if (data.available() != 0) {
                     fail(PersistenceFailure.CORRUPT, "Trailing project session data")
@@ -167,7 +170,8 @@ class ProjectSessionCodec(
                     robotManagerPage = robotManagerPage,
                     robotManagerTrainingStepDegrees = trainingStep,
                     trainingCell = trainingCell,
-                    userSequence = userSequence
+                    userSequence = userSequence,
+                    enclosureEnabled = enclosureEnabled
                 )
                 validate(snapshot, decoding = true)
                 return snapshot.copy(
@@ -420,7 +424,7 @@ class ProjectSessionCodec(
 
     companion object {
         private val MAGIC = "EPSSES01".toByteArray(Charsets.US_ASCII)
-        private const val SCHEMA_VERSION = 4
+        private const val SCHEMA_VERSION = 8
         private val ROBOT_MANAGER_PAGES = listOf(
             "CONTROL_PANEL",
             "JOG_TEACH",

@@ -76,11 +76,13 @@ class LocalProjectUiAcceptanceTest {
 
     @Test(timeout = 240_000) fun createCaptureReplaceCancelSaveAndRecreate() {
         compose.waitUntil(30_000) { session().persistenceState.startup == PersistenceStartupStatus.READY }
+        compose.onNodeWithTag("project-menu").performClick()
         compose.onNodeWithText("New project").performClick()
         compose.onNodeWithText("Project name").performTextInput("Cancelled")
         compose.onNodeWithText("Cancel").performClick()
         compose.runOnIdle { assertNull(session().persistenceState.projectName) }
 
+        compose.onNodeWithTag("project-menu").performClick()
         compose.onNodeWithText("New project").performClick()
         compose.onNodeWithText("Project name").performTextInput("Acceptance cell")
         compose.onNodeWithText("Create").performClick()
@@ -131,6 +133,7 @@ class LocalProjectUiAcceptanceTest {
         frame()
         reveal("Capture current posture").performClick()
         frame()
+        compose.onNodeWithTag("project-menu").performClick()
         compose.onNodeWithText("New project").performClick()
         frame()
         compose.onNodeWithText("Project name").performTextInput("Replacement cancelled")
@@ -153,6 +156,7 @@ class LocalProjectUiAcceptanceTest {
         }
         reveal("ZERO JOINTS").performClick()
         frame()
+        compose.onNodeWithTag("project-menu").performClick()
         compose.onNodeWithText("Save", useUnmergedTree = false).performClick()
         frame()
         compose.waitUntil(30_000) { session().persistenceState.saveStatus == PersistenceSaveStatus.SAVED }

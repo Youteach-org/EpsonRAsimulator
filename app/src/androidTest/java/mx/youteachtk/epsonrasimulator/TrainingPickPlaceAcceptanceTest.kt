@@ -47,7 +47,16 @@ class TrainingPickPlaceAcceptanceTest {
         reveal(tag).performClick(); frame()
     }
     private fun reveal(tag: String): SemanticsNodeInteraction {
+        val menu = when {
+            tag.startsWith("training-") -> "Demostración"
+            tag.startsWith("sequence-") -> "Mover y enseñar"
+            tag.startsWith("jog-") -> "Mover y enseñar"
+            else -> null
+        }
+        menu?.let { compose.onNodeWithText(it).performClick(); frame() }
+
         val target = compose.onNodeWithTag(tag)
+        if(tag in setOf("sequence-start","sequence-pause","sequence-resume","sequence-stop","sequence-status")) return target.assertIsDisplayed()
         val container = compose.onNodeWithTag("visual-controls")
         repeat(30) {
             val bounds = target.getUnclippedBoundsInRoot()
@@ -114,6 +123,7 @@ class TrainingPickPlaceAcceptanceTest {
 
     @Test(timeout = 240_000) fun controlsCarryReleasePauseRecreateAndSave() {
         compose.waitUntil(30_000) { session().persistenceState.startup == PersistenceStartupStatus.READY }
+        compose.onNodeWithTag("project-menu").performClick()
         compose.onNodeWithText("New project").performClick()
         compose.onNodeWithText("Project name").performTextInput("Training acceptance")
         compose.onNodeWithText("Create").performClick()
@@ -366,31 +376,26 @@ class TrainingPickPlaceAcceptanceTest {
     private fun verifyAuthoredSequence() {
         sequenceStage("authoring-start")
         compose.runOnIdle { assertTrue(state().userSequence.steps.isEmpty()) }
-        enterSequenceText("sequence-capture-name", "Mi posición")
-        compose.onNodeWithTag("sequence-capture-name").assertIsNotFocused()
-        screenshot("user-sequence-before-capture")
-        click("sequence-capture")
-        screenshot("user-sequence-after-capture")
-        compose.runOnIdle { assertTrue("Capture must save the authored point",state().teachPoints.containsKey("Mi posición")) }
-        compose.onNodeWithTag("sequence-capture-name").assertIsNotFocused()
+        var capturedName = ""
+        compose.runOnIdle {
+            capturedName = mx.youteachtk.epsonrasimulator.ui.visual.training.UserSequenceController(session().bundle.runtime).nextPointName
+        }
+        click("jog-save-point")
+        compose.runOnIdle { assertTrue(state().teachPoints.containsKey(capturedName)) }
         sequenceStage("position-saved")
-        click("sequence-kind-move")
-        enterSequenceText("sequence-duration", "1000", replace = true)
-        click("sequence-add")
-        click("sequence-kind-close"); click("sequence-add")
-        click("sequence-kind-open"); click("sequence-add")
-        click("sequence-kind-wait")
-        enterSequenceText("sequence-duration", "10000", replace = true)
-        click("sequence-add")
-        click("sequence-step-3"); click("sequence-up"); click("sequence-down")
-        enterSequenceText("sequence-duration", "0", replace = true)
-        click("sequence-add")
-        compose.runOnIdle { assertEquals("The extra wait must be added before testing deletion",5,state().userSequence.steps.size) }
-        click("sequence-step-4"); click("sequence-remove")
+        click("jog-close")
+        click("jog-open")
+        click("sequence-add-wait")
+        click("sequence-step-3")
+        reveal("sequence-duration").performTextReplacement("10000"); frame()
+        click("sequence-save-step")
+        click("sequence-up-3"); click("sequence-down-2")
+        click("sequence-add-wait")
+        compose.runOnIdle { assertEquals(5,state().userSequence.steps.size) }
+        click("sequence-remove-4")
         compose.runOnIdle {
             assertEquals(4,state().userSequence.steps.size)
-            assertTrue(state().teachPoints.containsKey("Mi posición"))
-            assertFalse(state().clockState.running)
+            assertTrue(state().teachPoints.containsKey(capturedName))
         }
         sequenceStage("steps-edited")
         click("sequence-start")
@@ -464,13 +469,13 @@ class TrainingPickPlaceAcceptanceTest {
             runtime.dispatch(RuntimeCommand.SetJointValue(0,15.0))
             assertEquals("robot:J4",runtime.state.collisionStop!!.firstId)
             assertEquals("training-source",runtime.state.collisionStop!!.secondId)
-            assertTrue(runtime.state.jointState[0] in 11.0..12.0)
+            assertEquals(10.4,runtime.state.jointState[0],1e-8)
             assertFalse(runtime.state.clockState.running)
         }
         frame()
-        compose.onNode(isDialog()).assertIsDisplayed()
+        compose.onNode(isDialog()).assertDoesNotExist()
         screenshot("reported-j4-manual-stop")
-        compose.onNodeWithTag("collision-stop").performClick();frame()
+        compose.mainClock.advanceTimeBy(400);frame()
         compose.runOnIdle {
             val runtime=session().bundle.runtime
             assertNull(runtime.state.collisionStop)
@@ -512,28 +517,14 @@ class TrainingPickPlaceAcceptanceTest {
             // ConfigureTrainingCell already loaded this task. The default transfer
             // from lift to approachPlace crosses the deliberately placed support.
         }
-        val contentBeforeStop = compose.onNodeWithText("New project").getUnclippedBoundsInRoot()
+        val contentBeforeStop = compose.onNodeWithTag("project-menu").getUnclippedBoundsInRoot()
         click("training-start")
         waitState { it.collisionStop != null }
-        // The ticker can publish the stop after the frame driven by waitState.
-        // With autoAdvance disabled, drive the frame that presents that update.
-        compose.waitUntil(10_000) {
-            frame()
-            try {
-                compose.onNodeWithTag("collision-message").assertIsDisplayed()
-                true
-            } catch (_: AssertionError) { false }
-        }
-        compose.onNode(isDialog()).assertIsDisplayed()
-        compose.onNodeWithTag("collision-message").assertIsDisplayed()
-        assertEquals("The dialog must not move the page",contentBeforeStop,
-            compose.onNodeWithText("New project").getUnclippedBoundsInRoot())
-        compose.runOnIdle {
-            assertFalse(state().clockState.running)
-            assertEquals(TaskStatus.PAUSED, state().taskState.tasks.getValue(TrainingSequence.TASK_ID).status)
-        }
+        compose.mainClock.advanceTimeBy(400);frame()
+        compose.onNode(isDialog()).assertDoesNotExist()
+        assertEquals("Collision feedback must not move the page",contentBeforeStop,
+            compose.onNodeWithTag("project-menu").getUnclippedBoundsInRoot())
         screenshot("training-collision-stopped")
-        compose.onNodeWithTag("collision-stop").performClick(); frame()
         compose.runOnIdle {
             assertNull(state().collisionStop)
             assertFalse(state().clockState.running)

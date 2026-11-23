@@ -156,7 +156,7 @@ class TrainingCollisionGuardTest {
         val before = runtime.state
         runtime.dispatch(RuntimeCommand.SetJointState(config.approachPlace.values))
         assertEquals(before.workcellState.attachments,runtime.state.workcellState.attachments)
-        assertNotEquals(before.workcellState,runtime.state.workcellState)
+        assertEquals(before.workcellState,runtime.state.workcellState)
         assertSafeManualPrefix(before,runtime.state)
         assertEquals("training-part", runtime.state.collisionStop!!.firstId)
         assertEquals("part-obstacle", runtime.state.collisionStop!!.secondId)
@@ -191,7 +191,7 @@ class TrainingCollisionGuardTest {
     }
 
     private fun assertSafeManualPrefix(before: SharedRuntimeState, after: SharedRuntimeState) {
-        assertNotEquals("A blocked manual command must retain its safe approach",before.jointState,after.jointState)
+        assertEquals("A blocked manual command must restore the previous safe frame",before.jointState,after.jointState)
         val start=SimulationDomainState(jointState=before.jointState,collisionGuardEnabled=true,
             workcellState=before.workcellState,toolState=before.toolState)
         assertNull(mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(

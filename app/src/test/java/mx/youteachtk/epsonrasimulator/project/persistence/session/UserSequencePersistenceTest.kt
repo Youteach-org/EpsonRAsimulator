@@ -30,21 +30,21 @@ class UserSequencePersistenceTest {
     }
     @Test fun legacyV3HasEmptyDraftAndVariableExtensionIsBounded() {
         val bytes=codec.encode(base)
-        val v3=bytes.copyOf(bytes.size-4)
+        val v3=bytes.copyOf(bytes.size-9)
         java.nio.ByteBuffer.wrap(v3).putInt(8,3)
         assertTrue(codec.decodeOrDefault(v3).userSequence.steps.isEmpty())
         val corrupt=bytes.clone()
-        java.nio.ByteBuffer.wrap(corrupt).putInt(corrupt.size-4,101)
+        java.nio.ByteBuffer.wrap(corrupt).putInt(corrupt.size-5,101)
         assertThrows(PersistenceException::class.java) { codec.decodeOrDefault(corrupt) }
     }
     @Test fun everyDraftTruncationAndUnknownActionTagIsRejected() {
         val bytes=codec.encode(base.copy(userSequence=draft))
-        val offset=codec.encode(base).size-4
+        val offset=codec.encode(base).size-9
         for(length in offset until bytes.size) {
             assertThrows("length=$length",PersistenceException::class.java) { codec.decodeOrDefault(bytes.copyOf(length)) }
         }
         val bad=bytes.clone()
-        bad[offset+4+4+1]=99
+        bad[offset+8+4+1]=99
         assertThrows(PersistenceException::class.java) { codec.decodeOrDefault(bad) }
     }
 }

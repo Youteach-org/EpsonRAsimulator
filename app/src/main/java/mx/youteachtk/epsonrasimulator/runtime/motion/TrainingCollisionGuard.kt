@@ -44,9 +44,12 @@ internal object TrainingCollisionGuard {
         }
         // Every pair visits the same interval endpoints and midpoints. Share
         // their FK/geometry within this query; never retain state across ticks.
+        val frameSamples=mutableMapOf<Double,List<Matrix4>>()
+        val relativeSamples=mutableMapOf<Pair<Int,Double>,List<WorldBox>>()
         val worldSamples = mutableMapOf<Double, Pair<List<WorldBox>, Matrix4>>()
         fun sample(t: Double): Pair<List<WorldBox>, Matrix4> = worldSamples.getOrPut(t) {
             val fk = C4Kinematics.forward(joints(t).values)
+            frameSamples[t]=fk.baseToJointFrames
             val flange = SimulationFrames.cadToSimulationTransform * fk.baseToTcp
             val aperture = opening(t)
             val tools = before.toolState.copy(mountPose = SimulationPoseTransforms.toPose(flange),
@@ -65,31 +68,42 @@ internal object TrainingCollisionGuard {
         val fixtureIds = before.workcellState.entities.values.filter { it.fixture != null && it.render != null }.map { it.id.value }
         val partIds = before.workcellState.entities.values.filter { it.graspable != null && it.render != null }.map { it.id.value }
         val pairs = (toolIds + partIds + robotIds).flatMap { a -> fixtureIds.map { b -> a to b } } +
-            toolIds.flatMap { a -> partIds.map { b -> a to b } }
+            toolIds.flatMap { a -> partIds.map { b -> a to b } } +
+            C4RobotCollisionGeometry.selfPairs(initial.first) +
+            toolIds.flatMap { a -> robotIds.filter { (C4RobotCollisionGeometry.jointCount(it) ?: 6) <= 4 }.map { b -> a to b } }
         val attached = before.workcellState.attachments.keys.map { it.value }.toSet()
         val chainReach = C4Kinematics.chain.joints.sumOf { it.parentToJoint.translation.length } + C4Kinematics.flangeOffsetMm
         val radius = initial.first.associate { box -> box.id to
             (chainReach + initial.second.inverseRigid().transformPoint(box.transform.translation).length + box.sizeMm.length / 2 + abs((endOpening ?: 0.0) - (beginOpening ?: 0.0)) / 2) }
-        fun angularBound(lo: Double, hi: Double, count: Int = 6): Double {
+        fun angularBound(lo: Double, hi: Double, count: Int = 6, shared: Int = 0): Double {
             val mid = joints((lo + hi) / 2).values
             return listOf(lo, hi).maxOf { t ->
-                joints(t).values.take(count).zip(mid).sumOf { (a, b) -> abs(a - b) } * Math.PI / 180.0
+                joints(t).values.take(count).zip(mid).drop(shared).sumOf { (a, b) -> abs(a - b) } * Math.PI / 180.0
             }
         }
         for (pair in pairs) {
             // Held part/tool move as one rigid body. Certify their relative aperture
             // in the flange frame; otherwise shared rotation needlessly consumes budget.
             val relative = pair.first in toolIds && pair.second in attached
+            fun chainCount(id: String) = C4RobotCollisionGeometry.jointCount(id) ?: if(id in toolIds) 6 else null
+            val firstCount=chainCount(pair.first)
+            val secondCount=chainCount(pair.second)
+            val shared=if(firstCount!=null && secondCount!=null) minOf(firstCount,secondCount) else 0
             val failure = SweptBoxGuard.checkWithSeparation({ t ->
                 val (boxes, flange) = sample(t)
-                if (!relative) boxes else boxes.map { it.copy(transform = flange.inverseRigid() * it.transform) }
+                val frame=if(relative) 7 else shared
+                if(frame==0) boxes else relativeSamples.getOrPut(frame to t) {
+                    val reference=if(relative) flange else SimulationFrames.cadToSimulationTransform*frameSamples.getValue(t)[shared-1]
+                    val inverse=reference.inverseRigid()
+                    boxes.map {it.copy(transform=inverse*it.transform)}
+                }
             }, listOf(pair), { id, lo, hi ->
                 val mid = (lo + hi) / 2
                 val mounted = id in toolIds || id in attached
                 val robotJoints = C4RobotCollisionGeometry.jointCount(id)
                 val rotation = when {
-                    robotJoints != null -> radius.getValue(id) * angularBound(lo, hi, robotJoints)
-                    mounted && !relative -> radius.getValue(id) * angularBound(lo, hi)
+                    robotJoints != null -> radius.getValue(id) * angularBound(lo, hi, robotJoints, shared)
+                    mounted && !relative -> radius.getValue(id) * angularBound(lo, hi, 6, shared)
                     else -> 0.0
                 }
                 val finger = if (id in toolIds && id.contains(":finger:")) {
@@ -102,7 +116,7 @@ internal object TrainingCollisionGuard {
                     maxOf(abs((actuatorPosition(entityId, lo) ?: center) - center), abs((actuatorPosition(entityId, hi) ?: center) - center))
                 } else 0.0
                 rotation + finger + translation
-            }, C4RobotCollisionGeometry::separation)
+            }, SchoolGripperCollision::separation)
             if (failure != null) return CollisionStop(failure.firstId, failure.secondId,
                 before.motionOwner?.let { before.taskState.tasks[it]?.actionIndex }, failure.uncertain)
         }

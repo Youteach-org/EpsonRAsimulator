@@ -7,6 +7,7 @@ import mx.youteachtk.epsonrasimulator.kinematics.SimulationPoseTransforms
 import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeState
 import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellRenderKind
 import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellState
+import mx.youteachtk.epsonrasimulator.runtime.training.SchoolGripper
 
 data class WorkcellSceneVector3(
     val x: Float,
@@ -19,7 +20,10 @@ data class WorkcellSceneBox(
     val centerMeters: WorkcellSceneVector3,
     val sizeMeters: WorkcellSceneVector3,
     val kind: WorkcellRenderKind,
-    val rotationDegrees: WorkcellSceneVector3 = WorkcellSceneVector3(0f, 0f, 0f)
+    val rotationDegrees: WorkcellSceneVector3 = WorkcellSceneVector3(0f, 0f, 0f),
+    val modelAsset: String? = null,
+    val modelScale: Float = 1f,
+    val modelOffsetMeters: WorkcellSceneVector3 = WorkcellSceneVector3(0f, 0f, 0f)
 )
 
 object WorkcellSceneProjection {
@@ -37,9 +41,24 @@ object WorkcellSceneProjection {
         val pose = SimulationPoseTransforms.toPose(
             SimulationFrames.cadToSimulationTransform.inverseRigid() * worldTransform
         )
+        if(id==mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolEnclosure.id.value) {
+            val enclosure=mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolEnclosure
+            return WorkcellSceneBox(id,Vector3(pose.x,pose.y,pose.z).toMeters(),sizeMm.toMeters(),kind,
+                WorkcellSceneVector3(pose.rx.toFloat(),pose.ry.toFloat(),pose.rz.toFloat()),
+                enclosure.MODEL,1f,(enclosure.center*(-1.0)).toMeters())
+        }
+        val part = SchoolGripper.part(id)
+        if(id.startsWith(mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolFuseSupply.PREFIX)) {
+            return WorkcellSceneBox(id,Vector3(pose.x,pose.y,pose.z).toMeters(),sizeMm.toMeters(),kind,
+                WorkcellSceneVector3(pose.rx.toFloat(),pose.ry.toFloat(),pose.rz.toFloat()),
+                mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolFuseSupply.modelFor(id))
+        }
+        val scale = part?.let { sizeMm.z/(it.maximum.z-it.minimum.z) } ?: 1.0
+        val offset = part?.let { (it.minimum+it.maximum)*(-0.5*scale) } ?: Vector3.ZERO
         return WorkcellSceneBox(
             id, Vector3(pose.x, pose.y, pose.z).toMeters(), sizeMm.toMeters(), kind,
-            WorkcellSceneVector3(pose.rx.toFloat(), pose.ry.toFloat(), pose.rz.toFloat())
+            WorkcellSceneVector3(pose.rx.toFloat(), pose.ry.toFloat(), pose.rz.toFloat()),
+            part?.let { "${SchoolGripper.MODEL}/${it.name}.glb" }, scale.toFloat(), offset.toMeters()
         )
     }
 

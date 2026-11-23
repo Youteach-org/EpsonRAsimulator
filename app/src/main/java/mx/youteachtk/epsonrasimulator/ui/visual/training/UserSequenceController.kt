@@ -8,6 +8,69 @@ import mx.youteachtk.epsonrasimulator.ui.visual.VisualLabPointController
 import mx.youteachtk.epsonrasimulator.ui.visual.VisualLabPointResult
 
 class UserSequenceController(private val runtime: SharedRuntime) {
+    fun saveHome(): Boolean = attempt {
+        require(editable && runtime.state.collisionStop==null) { "Detén y corrige el movimiento antes de guardar HOME" }
+        val result=VisualLabPointController(runtime).captureCurrent("HOME")
+        require(result==VisualLabPointResult.Applied) { (result as? VisualLabPointResult.Rejected)?.message ?: "No se pudo guardar HOME" }
+    }
+    fun setSpeed(percent: Int): Boolean = attempt {
+        runtime.dispatch(RuntimeCommand.SetUserSequence(runtime.state.userSequence.copy(speedPercent=percent)))
+    }
+    fun setOpening(mm: Double): Boolean = attempt { runtime.dispatch(RuntimeCommand.SetGripperOpening(mm)) }
+    fun recordOpening(): Boolean = attempt {
+        val s=runtime.state
+        val id=requireNotNull(s.toolState.activeToolId)
+        val g=s.toolState.gripperStates.getValue(id)
+        require(append(UserSequenceAction.Gripper(g.targetClosed ?: false,g.openingWidthMm))) { error ?: "No se pudo guardar la apertura" }
+    }
+    fun goHome(): Boolean = attempt { runtime.dispatch(RuntimeCommand.GoHome) }
+    fun teachCurrent(verticalTransport: Boolean = false): Boolean = attempt {
+        require(editable && runtime.state.collisionStop == null) { "Detén y corrige el movimiento antes de enseñar" }
+        if(verticalTransport) {
+            val s=runtime.state
+            val tool=s.toolState.definitions.getValue(requireNotNull(s.toolState.activeToolId)).tool.tcp
+            val pose=mx.youteachtk.epsonrasimulator.kinematics.C4Kinematics.forward(s.jointState.values).baseToTcp *
+                mx.youteachtk.epsonrasimulator.kinematics.SimulationPoseTransforms.fromPose(tool)
+            require(mx.youteachtk.epsonrasimulator.kinematics.DownwardToolOrientation.isDown(pose)) {"Espera a que la pinza quede vertical antes de guardar la posición XYZ"}
+        }
+        require(runtime.state.userSequence.steps.size < 100) { "Máximo 100 pasos" }
+        val name = nextPointName
+        require(capture(name)) { error ?: "No se pudo guardar la posición" }
+        val carrying=runtime.state.workcellState.attachments.values.any {it.toolId==runtime.state.toolState.activeToolId}
+        require(append(UserSequenceAction.Move(name,fixedOrientation=carrying || verticalTransport,fixedJ6Degrees=if(verticalTransport) runtime.state.jointState[5] else null))) { error ?: "No se pudo añadir la posición" }
+    }
+
+    fun teachGripper(closed: Boolean): Boolean = attempt {
+        require(editable && runtime.state.collisionStop == null) { "Detén y corrige el movimiento antes de accionar la pinza" }
+        require(runtime.state.userSequence.steps.size < 100) { "Máximo 100 pasos" }
+        val state = runtime.state
+        val id = requireNotNull(state.toolState.activeToolId) { "Selecciona la pinza" }
+        val gripper = requireNotNull(state.toolState.definitions.getValue(id).gripper) { "La herramienta no tiene pinza" }
+        runtime.dispatch(RuntimeCommand.SetDigitalOutput(gripper.closeOutput, closed))
+        runtime.dispatch(RuntimeCommand.SetGripperOpening(if(closed) gripper.minimumOpeningWidthMm else gripper.openWidthMm))
+        runtime.dispatch(RuntimeCommand.StartClock)
+        require(append(UserSequenceAction.Gripper(closed, if(closed) gripper.minimumOpeningWidthMm else gripper.openWidthMm))) { error ?: "No se pudo añadir la acción" }
+    }
+    val nextPointName: String get() = generateSequence(1) { it + 1 }
+        .map { "P$it" }.first { it !in runtime.state.teachPoints }
+
+    fun renamePoint(oldName: String, name: String): Boolean = attempt {
+        require(editable) { "Detén la ejecución antes de cambiar nombres" }
+        val newName = mx.youteachtk.epsonrasimulator.domain.validatedTeachPointName(name)
+        require(oldName != "HOME" && newName != "HOME") { "Usa Definir HOME para cambiar la postura de inicio" }
+        val point = requireNotNull(runtime.state.teachPoints[oldName]) { "La posición ya no existe" }
+        require(newName == oldName || newName !in runtime.state.teachPoints) { "Ya existe una posición con ese nombre" }
+        if (newName != oldName) {
+            val sequence = runtime.state.userSequence.copy(steps=runtime.state.userSequence.steps.map { step ->
+                val action = step.action
+                if (action is UserSequenceAction.Move && action.pointName == oldName)
+                    step.copy(action = action.copy(pointName = newName)) else step
+            })
+            runtime.dispatch(RuntimeCommand.SetUserSequence(sequence))
+            runtime.dispatch(RuntimeCommand.SaveTeachPoint(point.copy(name = newName)))
+            runtime.dispatch(RuntimeCommand.RemoveTeachPoint(oldName))
+        }
+    }
     var error: String? = null
         private set
     val editable: Boolean get() = runtime.state.motionOwner == null && taskStatus !in activeStatuses
@@ -50,9 +113,10 @@ class UserSequenceController(private val runtime: SharedRuntime) {
     fun start(): Boolean = attempt { runtime.dispatch(RuntimeCommand.StartUserSequence) }
     fun pause(): Boolean = attempt { runtime.dispatch(RuntimeCommand.PauseTask(UserTrainingSequence.TASK_ID)) }
     fun resume(): Boolean = attempt { runtime.dispatch(RuntimeCommand.ResumeTask(UserTrainingSequence.TASK_ID)) }
+    fun stopMotion(): Boolean = attempt { runtime.state.motionOwner?.let { runtime.dispatch(RuntimeCommand.StopTask(it)) } }
     fun stop(): Boolean = attempt { runtime.dispatch(RuntimeCommand.StopTask(UserTrainingSequence.TASK_ID)) }
     private fun edit(change: (List<UserSequenceStep>)->List<UserSequenceStep>): Boolean = attempt {
-        runtime.dispatch(RuntimeCommand.SetUserSequence(UserTrainingSequence(change(runtime.state.userSequence.steps))))
+        runtime.dispatch(RuntimeCommand.SetUserSequence(runtime.state.userSequence.copy(steps=change(runtime.state.userSequence.steps))))
     }
     private inline fun attempt(block: ()->Unit): Boolean = try { block();error=null;true }
         catch(failure: IllegalArgumentException) { error=failure.message ?: "No se pudo completar la acción";false }

@@ -3,6 +3,8 @@
     <application
         android:allowBackup="true"
         android:label="Epson RA Simulator"
+        android:icon="@mipmap/ic_ra"
+        android:roundIcon="@mipmap/ic_ra"
         android:supportsRtl="true"
         android:theme="@style/Theme.EpsonRASimulator">
 

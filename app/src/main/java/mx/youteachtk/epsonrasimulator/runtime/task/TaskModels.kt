@@ -37,14 +37,16 @@ sealed interface SimAction {
     data class WaitForGripper(
         val toolId: ToolRuntimeId,
         val closed: Boolean,
-        override val sourceRange: SourceRange? = null
+        override val sourceRange: SourceRange? = null,
+        val openingMm: Double? = null
     ) : SimAction
 
     /** Local joint interpolation; not a SPEL+ Go/Move instruction. */
     data class MoveJoints(
         val target: JointState,
         val durationMillis: Long,
-        override val sourceRange: SourceRange? = null
+        override val sourceRange: SourceRange? = null,
+        val cartesianContinuation: Boolean = false
     ) : SimAction
 
     data class WaitForInput(

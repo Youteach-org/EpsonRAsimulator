@@ -1,0 +1,92 @@
+{
+  "source": "User XVL Studio OBJ export",
+  "provisionalMmPerUnit": 1.0,
+  "materials": "Display colours assigned; OBJ did not contain materials",
+  "parts": [
+    {
+      "name": "bracket",
+      "triangles": 1560,
+      "note": "GLB omits zero-area triangles; original nonzero surfaces retained.",
+      "sourceSha256": "7e90213926f37f19377cd53f9b46f7d56e147f28b0056b4c34ff94136a3369a0",
+      "glbSha256": "1619699496280d44eda1d1bfcb9b5cefc252b8905b05fe502a5c79dad89cb892",
+      "minimumMm": [
+        -58.7495,
+        -22.6902,
+        44.8
+      ],
+      "maximumMm": [
+        -7.74946,
+        28.3098,
+        95.8
+      ]
+    },
+    {
+      "name": "body",
+      "triangles": 819,
+      "note": "GLB omits zero-area triangles; original nonzero surfaces retained.",
+      "sourceSha256": "92fd18c0ddf643eeca3ec31e19edc8a291afd69c342efc5c6257b81cef41f597",
+      "glbSha256": "7e3d49595e4c2fee8c4be8311393ca59775af9b7747f9312d34f43421f8ac490",
+      "minimumMm": [
+        -48.4995,
+        -16.4902,
+        58.0
+      ],
+      "maximumMm": [
+        -17.9995,
+        7.00981,
+        100.5
+      ]
+    },
+    {
+      "name": "jaw_right",
+      "triangles": 296,
+      "note": "GLB omits zero-area triangles; original nonzero surfaces retained.",
+      "sourceSha256": "5787920f197052ace081ffa260003a67fb877b3cb48bb45f12de79c24a1c9c79",
+      "glbSha256": "22eb13f48834791e2b071a0d9789e834ce35319d8a1c5fa34a04c4035cb9134b",
+      "minimumMm": [
+        -29.9369,
+        -10.5691,
+        103.8
+      ],
+      "maximumMm": [
+        -14.4869,
+        0.21879511,
+        147.9
+      ]
+    },
+    {
+      "name": "jaw_left",
+      "triangles": 300,
+      "note": "GLB omits zero-area triangles; original nonzero surfaces retained.",
+      "sourceSha256": "87c853492c0718e49452420c3803a24fa69ea89aaf0a620028d46d236e216aeb",
+      "glbSha256": "028dc01f7548926c2485996f24c11445eb2b786e10e2ff66c4ee55d033609338",
+      "minimumMm": [
+        -52.2234,
+        -10.18032901,
+        103.8
+      ],
+      "maximumMm": [
+        -36.58741501,
+        0.875547,
+        147.9
+      ]
+    },
+    {
+      "name": "plate",
+      "triangles": 78,
+      "note": "GLB omits zero-area triangles; original nonzero surfaces retained.",
+      "sourceSha256": "378ff026c2f7415f1970994e6d3f4de07c1a67c785147751ee71ea9c0a5a0dca",
+      "glbSha256": "f8b8f803c591a0454eb7bcf4e2420d46d9e8b891a00f09256bd7ee2e2f0f8254",
+      "minimumMm": [
+        -52.2495,
+        -16.4902,
+        100.5
+      ],
+      "maximumMm": [
+        -14.2495,
+        7.00981,
+        107.8
+      ]
+    }
+  ]
+}

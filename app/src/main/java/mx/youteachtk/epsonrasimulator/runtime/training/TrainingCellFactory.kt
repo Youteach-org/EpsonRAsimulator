@@ -29,21 +29,25 @@ object TrainingCellFactory {
             SimulationPoseTransforms.fromPose(tcpPose(joints, config.toolTcp)) *
                 // Fingers reach 15 mm beyond TCP. The default 20 mm part extends
                 // 18 mm: grasp above its centre to leave 3 mm over the plate.
-                Matrix4.translation(Vector3(0.0, 0.0, 8.0))
+                Matrix4.translation(Vector3(0.0, 0.0, 8.0 *
+                    if(config.presetId == SchoolGripper.PRESET) SchoolGripper.scale(config.toolTcp) else 1.0))
         )
 
     fun build(configuration: TrainingCellConfig): TrainingCellDefinition {
         val config = configuration.snapshot()
-        require(config.presetId == "c4-pick-place-v1") { "Unsupported training preset" }
+        require(config.presetId in setOf("c4-pick-place-v1", SchoolGripper.PRESET)) { "Unsupported training preset" }
         listOf(config.approachPick, config.pick, config.lift, config.approachPlace, config.place).forEach {
             JointMotion(TrainingSequence.TASK_ID, 0, it, it, config.segmentDurationMillis)
         }
         SimulationPoseTransforms.fromPose(config.toolTcp)
+        val toolScale = if(config.presetId == SchoolGripper.PRESET) SchoolGripper.scale(config.toolTcp) else 1.0
         val render = RenderPrimitiveComponent(WorkcellRenderKind.PART, config.partSizeMm)
         val gripper = TwoFingerGripperSpec(config.openWidthMm, config.closedWidthMm, config.speedMmPerSecond,
-            AxisAlignedBox(Vector3(config.toolTcp.x, config.toolTcp.y, config.toolTcp.z), Vector3(15.0, 15.0, 15.0)),
-            config.closeOutput)
-        val tool = FunctionalToolDefinition(TOOL_ID, ToolDefinition("training-gripper", "Training gripper", tcp = config.toolTcp), gripper = gripper)
+            AxisAlignedBox(Vector3(config.toolTcp.x, config.toolTcp.y, config.toolTcp.z), Vector3(15.0, 15.0, 15.0)*toolScale),
+            config.closeOutput, minimumOpeningWidthMm=if(config.presetId==SchoolGripper.PRESET) 0.0 else config.closedWidthMm)
+        val tool = FunctionalToolDefinition(TOOL_ID, ToolDefinition("training-gripper", "Training gripper",
+            modelAsset = if(config.presetId == SchoolGripper.PRESET) SchoolGripper.MODEL else null,
+            tcp = config.toolTcp), gripper = gripper)
         val pickPose = partPose(config.pick, config)
         val placePose = partPose(config.place, config)
         val part = WorkcellEntity(PART_ID, pickPose,

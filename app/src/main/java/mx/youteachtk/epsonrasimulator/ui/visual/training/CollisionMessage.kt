@@ -7,6 +7,7 @@ fun collisionMessage(stop: CollisionStop): String {
         id.startsWith("tool:") -> "pinza"
         id == "robot:base" -> "base del robot"
         id.startsWith("robot:J") -> "brazo (${id.substringAfter(':')})"
+        id == "school-enclosure:MK1" -> "enclosure real"
         id == "training-part" -> "pieza"
         id == "training-source" -> "base de recogida"
         id == "training-destination" -> "base de destino"

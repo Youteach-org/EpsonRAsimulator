@@ -198,7 +198,7 @@ object WorkcellRuntime {
         }
 
         val gripperState = toolState.gripperStates.getValue(activeToolId)
-        if (gripperState.openingWidthMm > gripper.closedWidthMm + 1e-9) {
+        if (gripperState.openingWidthMm > minOf(gripperState.targetOpeningMm ?: gripper.closedWidthMm, gripper.closedWidthMm) + 1e-9) {
             validateAttachments(nextState, toolState)
             return nextState
         }

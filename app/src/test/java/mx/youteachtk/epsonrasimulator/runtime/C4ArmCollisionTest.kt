@@ -102,7 +102,7 @@ class C4ArmCollisionTest {
         val runtime = runtime()
         val before = runtime.state
         runtime.dispatch(RuntimeCommand.SetJointState(end.values))
-        assertNotEquals("Keep the safe approach before the arm crosses the fixture",before.jointState,runtime.state.jointState)
+        assertEquals("Restore the previous safe frame",before.jointState,runtime.state.jointState)
         val start=SimulationDomainState(jointState=before.jointState,collisionGuardEnabled=true,
             workcellState=before.workcellState,toolState=before.toolState)
         assertNull(TrainingCollisionGuard.check(start,start.copy(jointState=runtime.state.jointState)))

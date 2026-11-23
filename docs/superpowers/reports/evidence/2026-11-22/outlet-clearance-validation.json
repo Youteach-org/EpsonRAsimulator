@@ -1,0 +1,39 @@
+{
+  "request": "Widen central fuse pickup opening",
+  "widthMm": 72.0,
+  "depthMm": 40.0,
+  "bottomMm": 25.0,
+  "topMm": 130.0,
+  "parts": [
+    {
+      "index": 196,
+      "beforeVolumeMm3": 970045.0049849893,
+      "afterVolumeMm3": 941912.0354204017
+    },
+    {
+      "index": 197,
+      "beforeVolumeMm3": 970045.0049849887,
+      "afterVolumeMm3": 941912.0354204038
+    },
+    {
+      "index": 198,
+      "beforeVolumeMm3": 970045.0049849893,
+      "afterVolumeMm3": 941912.0354204039
+    },
+    {
+      "index": 199,
+      "beforeVolumeMm3": 970045.0049849895,
+      "afterVolumeMm3": 941912.0354204016
+    },
+    {
+      "index": 216,
+      "beforeVolumeMm3": 970045.0049849893,
+      "afterVolumeMm3": 941912.0354204018
+    },
+    {
+      "index": 233,
+      "beforeVolumeMm3": 970045.0049849892,
+      "afterVolumeMm3": 941912.0354204042
+    }
+  ]
+}

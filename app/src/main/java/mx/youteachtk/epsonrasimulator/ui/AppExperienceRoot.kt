@@ -11,12 +11,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -40,26 +43,8 @@ fun AppExperienceRoot(
         if (selection != null) session.exportTreeSelected(selection)
     }
     BackHandler(enabled = session.activeExperience != null) { session.clearExperience() }
-    Column(modifier = modifier.fillMaxSize()) {
-        if (session.activeExperience != null) {
-            OutlinedButton(
-                onClick = session::clearExperience,
-                modifier = Modifier.padding(horizontal = 16.dp).testTag("experience-back")
-            ) {
-                Text("← Volver al inicio")
-            }
-        }
-        ProjectPersistenceBar(
-            state = session.persistenceState,
-            available = session.persistence != null,
-            onImport = { importLauncher.launch(Unit) },
-            onSave = session::saveProject,
-            onCreateLocal = session::createLocalProject,
-            onExport = { exportLauncher.launch(Unit) },
-            onDismissMessage = session::dismissPersistenceMessage,
-            onReplacement = session::resolveProjectReplacement
-        )
-        Box(modifier = Modifier.weight(1f).fillMaxSize()) {
+    Box(modifier = modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize()) {
             when (session.persistenceState.startup) {
                 PersistenceStartupStatus.LOADING -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 PersistenceStartupStatus.ERROR -> Text(
@@ -69,30 +54,31 @@ fun AppExperienceRoot(
                 PersistenceStartupStatus.READY -> ExperienceContent(session, Modifier.fillMaxSize())
             }
         }
+        ProjectPersistenceBar(
+            modifier = Modifier.align(Alignment.TopStart).padding(6.dp),
+            state = session.persistenceState,
+            available = session.persistence != null,
+            onImport = { importLauncher.launch(Unit) },
+            onSave = session::saveProject,
+            onCreateLocal = session::createLocalProject,
+            onExport = { exportLauncher.launch(Unit) },
+            onDismissMessage = session::dismissPersistenceMessage,
+            onReplacement = session::resolveProjectReplacement,
+            onBack = if(session.activeExperience!=null) session::clearExperience else null
+        )
     }
-    runtimeState.collisionStop?.let { collision ->
-        val acknowledgeStop = {
+    val buzzer=androidx.compose.runtime.remember {runCatching {android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC,65)}.getOrNull()}
+    var lastBuzz by androidx.compose.runtime.remember {androidx.compose.runtime.mutableStateOf(0L)}
+    androidx.compose.runtime.DisposableEffect(buzzer) {onDispose {buzzer?.release()}}
+    androidx.compose.runtime.LaunchedEffect(runtimeState.collisionStop) {
+        if(runtimeState.collisionStop!=null) {
+            val now=android.os.SystemClock.elapsedRealtime()
+            if(now-lastBuzz>1200) {buzzer?.startTone(android.media.ToneGenerator.TONE_PROP_NACK,140);lastBuzz=now}
+            // Release the manual controls, but abort the stopped task: never resume a sequence automatically.
+            kotlinx.coroutines.delay(180)
             session.bundle.runtime.dispatch(mx.youteachtk.epsonrasimulator.runtime.RuntimeCommand.StopTask(
                 runtimeState.motionOwner ?: mx.youteachtk.epsonrasimulator.runtime.training.TrainingSequence.TASK_ID))
-            Unit
         }
-        AlertDialog(
-            onDismissRequest = acknowledgeStop,
-            modifier = Modifier.testTag("collision-dialog"),
-            properties = DialogProperties(dismissOnClickOutside = false),
-            title = { Text("Simulación detenida") },
-            text = {
-                Text(
-                    mx.youteachtk.epsonrasimulator.ui.visual.training.collisionMessage(collision),
-                    modifier = Modifier.testTag("collision-message")
-                )
-            },
-            confirmButton = {
-                Button(onClick = acknowledgeStop, modifier = Modifier.testTag("collision-stop")) {
-                    Text("Detener")
-                }
-            }
-        )
     }
 }
 
@@ -159,6 +145,11 @@ private fun ExperienceChooser(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            androidx.compose.foundation.Image(
+                painter=androidx.compose.ui.res.painterResource(mx.youteachtk.epsonrasimulator.R.drawable.logo_ra_new),
+                contentDescription="Logo RA",
+                modifier=Modifier.size(144.dp)
+            )
             Text(
                 text = "Epson RA Simulator",
                 style = MaterialTheme.typography.headlineSmall,
@@ -173,4 +164,3 @@ private fun ExperienceChooser(
         }
     }
 }
-

@@ -30,7 +30,7 @@ enum class AppExperience {
 }
 
 class AppSessionViewModel(
-    initialBundle: AppRuntimeBundle = AppRuntimeFactory.createDefault(),
+    initialBundle: AppRuntimeBundle = AppRuntimeFactory.createDefault(mountSchoolGripper = true),
     val persistence: ProjectPersistenceController? = null
 ) : ViewModel() {
     val bundle: AppRuntimeBundle = initialBundle
@@ -170,4 +170,3 @@ class AppSessionViewModel(
         sessionPersistence?.notifyExternalSessionChange()
     }
 }
-

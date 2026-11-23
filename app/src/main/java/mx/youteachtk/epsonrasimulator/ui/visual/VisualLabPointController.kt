@@ -46,9 +46,11 @@ class VisualLabPointController(private val runtime: SharedRuntime) {
             it.trim().toDoubleOrNull()?.takeIf(Double::isFinite)
                 ?: return VisualLabPointResult.Rejected("All pose values must be finite numbers")
         }
-        runtime.dispatch(RuntimeCommand.SaveTeachPoint(TeachPoint(pointName,
-            CartesianPose(values[0], values[1], values[2], values[3], values[4], values[5]),
-            frame = runtime.state.teachPoints[pointName]?.frame ?: TeachPointFrame.UNSPECIFIED)))
+        val pose = CartesianPose(values[0], values[1], values[2], values[3], values[4], values[5])
+        val previous = runtime.state.teachPoints[pointName]
+        runtime.dispatch(RuntimeCommand.SaveTeachPoint(TeachPoint(pointName, pose,
+            preferredJointState = previous?.takeIf { it.pose == pose }?.preferredJointState,
+            frame = previous?.frame ?: TeachPointFrame.UNSPECIFIED)))
         return VisualLabPointResult.Applied
     }
 
