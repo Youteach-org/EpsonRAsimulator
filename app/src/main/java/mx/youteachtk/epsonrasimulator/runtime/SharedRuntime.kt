@@ -91,7 +91,7 @@ class SharedRuntime(
                 val spec=requireNotNull(current.toolState.definitions.getValue(id).gripper)
                 require(command.mm.isFinite() && command.mm in spec.minimumOpeningWidthMm..spec.openWidthMm)
                 val old=current.toolState.gripperStates.getValue(id)
-                val closing=command.mm<old.openingWidthMm || command.mm==old.openingWidthMm && old.targetClosed==true
+                val closing=command.closed ?: (command.mm<old.openingWidthMm || command.mm==old.openingWidthMm && old.targetClosed==true)
                 val tools=current.toolState.copy(gripperStates=current.toolState.gripperStates+
                     (id to mx.youteachtk.epsonrasimulator.runtime.tool.TwoFingerGripperState(command.mm,command.mm,closing)))
                 val attempted=current.copy(toolState=tools,ioState=IoRuntime.setOutput(current.ioState,spec.closeOutput,closing))

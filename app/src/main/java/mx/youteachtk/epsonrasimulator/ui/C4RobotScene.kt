@@ -109,6 +109,10 @@ fun C4RobotScene(
     val center = Position(0f, 0.3f, -0.15f)
     val camera = rememberCameraNode(engine) { position = eye; lookAt(center) }
     val manipulator = rememberCameraManipulator(orbitHomePosition = eye, targetPosition = center)
+    SideEffect {
+        (manipulator as? io.github.sceneview.gesture.CameraGestureDetector.DefaultCameraManipulator)
+            ?.minZoomDistanceFactor = 0.075f
+    }
 
     val base = rememberModelInstance(modelLoader, "$MODEL_ROOT/C4_BASE.glb")
     val j1 = rememberModelInstance(modelLoader, "$MODEL_ROOT/C4_J1.glb")

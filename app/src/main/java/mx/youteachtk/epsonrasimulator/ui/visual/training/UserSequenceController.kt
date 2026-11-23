@@ -46,10 +46,19 @@ class UserSequenceController(private val runtime: SharedRuntime) {
         val state = runtime.state
         val id = requireNotNull(state.toolState.activeToolId) { "Selecciona la pinza" }
         val gripper = requireNotNull(state.toolState.definitions.getValue(id).gripper) { "La herramienta no tiene pinza" }
-        runtime.dispatch(RuntimeCommand.SetDigitalOutput(gripper.closeOutput, closed))
-        runtime.dispatch(RuntimeCommand.SetGripperOpening(if(closed) gripper.minimumOpeningWidthMm else gripper.openWidthMm))
+        // A grasp closes onto a piece; the empty-jaw mechanical limit would
+        // drive the fingers through it. Use the same eligibility as the runtime.
+        val graspTools = state.toolState.copy(gripperStates = state.toolState.gripperStates +
+            (id to mx.youteachtk.epsonrasimulator.runtime.tool.TwoFingerGripperState(gripper.closedWidthMm)))
+        val graspState = mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellRuntime.reconcileGrasp(
+            state.workcellState, graspTools,
+            mx.youteachtk.epsonrasimulator.runtime.io.IoRuntime.setOutput(state.ioState, gripper.closeOutput, true))
+        val hasPart = graspState.attachments.values.any { it.toolId == id }
+        val opening = if (!closed) gripper.openWidthMm else if (hasPart) gripper.closedWidthMm else gripper.minimumOpeningWidthMm
+        runtime.dispatch(RuntimeCommand.SetGripperOpening(opening, closed))
+        require(runtime.state.collisionStop == null) { collisionMessage(requireNotNull(runtime.state.collisionStop)) }
         runtime.dispatch(RuntimeCommand.StartClock)
-        require(append(UserSequenceAction.Gripper(closed, if(closed) gripper.minimumOpeningWidthMm else gripper.openWidthMm))) { error ?: "No se pudo añadir la acción" }
+        require(append(UserSequenceAction.Gripper(closed, opening))) { error ?: "No se pudo añadir la acción" }
     }
     val nextPointName: String get() = generateSequence(1) { it + 1 }
         .map { "P$it" }.first { it !in runtime.state.teachPoints }

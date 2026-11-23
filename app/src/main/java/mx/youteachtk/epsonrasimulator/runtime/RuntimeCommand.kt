@@ -53,7 +53,7 @@ sealed interface RuntimeCommand {
     data object StartUserSequence : RuntimeCommand
     data class StartCartesianJog(val targets: List<mx.youteachtk.epsonrasimulator.domain.JointState>) : RuntimeCommand
     data object GoHome : RuntimeCommand
-    data class SetGripperOpening(val mm: Double) : RuntimeCommand
+    data class SetGripperOpening(val mm: Double, val closed: Boolean? = null) : RuntimeCommand
 
     data class LoadTask(val program: TaskProgram) : RuntimeCommand
     data class StartTask(val id: TaskId) : RuntimeCommand

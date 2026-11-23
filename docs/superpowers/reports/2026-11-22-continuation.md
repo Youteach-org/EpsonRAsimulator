@@ -1,5 +1,8 @@
 # Continuation checkpoint — 2026-11-22
 
+## Latest follow-up
+The user-reported close-button collision and zoom adjustment are implemented and validated in 2026-11-22-grasp-button-zoom.md. The new APK (c85f0eb2...) is installed; 752 JVM and 2 Android tests passed. This supersedes the earlier tablet-disconnection/pending-button state below.
+
 ## Current state
 Recovered work from the local training branch at e9c5980244f505cb14d3c8fc7c26aa407013b382. This checkpoint preserves the accumulated local changes since that commit, including source, assets, generation tools and tests. Keep PR #26 as draft; no merge.
 
