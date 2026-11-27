@@ -22,6 +22,8 @@ data class Vector3(
     operator fun minus(other: Vector3) =
         Vector3(x - other.x, y - other.y, z - other.z)
 
+    operator fun times(scale: Double) = Vector3(x * scale, y * scale, z * scale)
+
     companion object {
         val X = Vector3(1.0, 0.0, 0.0)
         val Y = Vector3(0.0, 1.0, 0.0)

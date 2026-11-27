@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
@@ -162,6 +163,9 @@ fun RcRobotManagerJogTeach(
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold
         )
+        if (!projection.jointJogEnabled) {
+            Text("Stop the training task in Visual Lab to jog joints.")
+        }
         projection.joints.forEach { joint ->
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -193,6 +197,8 @@ fun RcRobotManagerJogTeach(
                         Arrangement.spacedBy(8.dp)
                 ) {
                     OutlinedButton(
+                        enabled = projection.jointJogEnabled,
+                        modifier = Modifier.testTag("rc-jog-negative-${joint.index}"),
                         onClick = {
                             feedback = resultText(
                                 controller.nudgeJoint(
@@ -205,6 +211,8 @@ fun RcRobotManagerJogTeach(
                         Text("−")
                     }
                     OutlinedButton(
+                        enabled = projection.jointJogEnabled,
+                        modifier = Modifier.testTag("rc-jog-positive-${joint.index}"),
                         onClick = {
                             feedback = resultText(
                                 controller.nudgeJoint(

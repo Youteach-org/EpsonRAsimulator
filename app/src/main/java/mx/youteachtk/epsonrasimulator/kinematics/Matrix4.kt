@@ -42,6 +42,18 @@ class Matrix4 private constructor(
     val translation: Vector3
         get() = Vector3(this[0, 3], this[1, 3], this[2, 3])
 
+    /** Inverse of a validated rigid transform: transpose R and translate by -R^T t. */
+    fun inverseRigid(): Matrix4 {
+        SimulationPoseTransforms.toPose(this)
+        val out = DoubleArray(16)
+        for (row in 0..2) {
+            for (col in 0..2) out[row * 4 + col] = this[col, row]
+            out[row * 4 + 3] = -(0..2).sumOf { this[it, row] * this[it, 3] }
+        }
+        out[15] = 1.0
+        return Matrix4(out)
+    }
+
     fun approximatelyEquals(other: Matrix4, epsilon: Double = 1e-9): Boolean =
         m.indices.all { index -> kotlin.math.abs(m[index] - other.m[index]) <= epsilon }
 

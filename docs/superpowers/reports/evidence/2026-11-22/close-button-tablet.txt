@@ -1,0 +1,7 @@
+App install -r: Success
+Instrumentation APK install -r: Success
+Samsung SM-T970
+OutletJawPerformanceTest
+Time: 16.084
+OK (2 tests)
+APK SHA256: c85f0eb25fd7bb57b9f66c477587d6a9ad3f1f529527401b8298c87957ff6fb1

@@ -1,6 +1,8 @@
 package mx.youteachtk.epsonrasimulator.runtime.workcell
 
 import mx.youteachtk.epsonrasimulator.kinematics.Vector3
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationPoseTransforms
+import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import kotlin.math.abs
 
 data class AxisAlignedBox(
@@ -31,4 +33,12 @@ data class AxisAlignedBox(
         abs(center.x - other.center.x) <= halfExtents.x + other.halfExtents.x &&
             abs(center.y - other.center.y) <= halfExtents.y + other.halfExtents.y &&
             abs(center.z - other.center.z) <= halfExtents.z + other.halfExtents.z
+
+    /** Conservative world AABB of this local box after a full rigid transform. */
+    fun transformed(pose: CartesianPose): AxisAlignedBox {
+        val transform = SimulationPoseTransforms.fromPose(pose)
+        val extents = listOf(halfExtents.x, halfExtents.y, halfExtents.z)
+        fun extent(row: Int) = (0..2).sumOf { abs(transform[row, it]) * extents[it] }
+        return AxisAlignedBox(transform.transformPoint(center), Vector3(extent(0), extent(1), extent(2)))
+    }
 }

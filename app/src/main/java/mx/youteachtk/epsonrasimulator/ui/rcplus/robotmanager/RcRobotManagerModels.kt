@@ -53,5 +53,6 @@ data class RcRobotManagerProjectionModel(
     val activeRobotName: String,
     val pages: List<RcRobotManagerPageDescriptor>,
     val joints: List<RcRobotJointRow>,
-    val connectionMode: ConnectionMode
+    val connectionMode: ConnectionMode,
+    val jointJogEnabled: Boolean = true
 )

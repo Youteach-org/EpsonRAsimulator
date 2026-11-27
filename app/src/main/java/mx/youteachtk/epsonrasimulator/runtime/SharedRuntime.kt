@@ -1,6 +1,10 @@
 package mx.youteachtk.epsonrasimulator.runtime
 
 import mx.youteachtk.epsonrasimulator.domain.JointState
+import mx.youteachtk.epsonrasimulator.domain.EpsonRobotCatalog
+import mx.youteachtk.epsonrasimulator.kinematics.C4Kinematics
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationFrames
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationPoseTransforms
 import mx.youteachtk.epsonrasimulator.domain.RobotDefinition
 import mx.youteachtk.epsonrasimulator.domain.TeachPoint
 import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClockState
@@ -9,10 +13,16 @@ import mx.youteachtk.epsonrasimulator.runtime.task.TaskRuntimeState
 import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeState
 import mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellState
 import mx.youteachtk.epsonrasimulator.robot.RobotRegistry
+import mx.youteachtk.epsonrasimulator.runtime.training.*
+import mx.youteachtk.epsonrasimulator.runtime.task.TaskStatus
+import mx.youteachtk.epsonrasimulator.runtime.task.TaskRuntime
+import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntime
+import mx.youteachtk.epsonrasimulator.runtime.io.IoRuntime
 
 class SharedRuntime(
     private val robots: RobotRegistry,
-    initialState: SharedRuntimeState
+    initialState: SharedRuntimeState,
+    private val mountSchoolGripperOnRestore: Boolean = false
 ) {
     private val listeners = linkedSetOf<(SharedRuntimeState) -> Unit>()
 
@@ -31,7 +41,131 @@ class SharedRuntime(
 
     fun dispatch(command: RuntimeCommand): SharedRuntimeState {
         val current = state
-        val next = when (command) {
+        if (current.trainingCell != null && command is RuntimeCommand.SetToolMountPose) {
+            require(false) { "Training tool mount follows the robot flange" }
+        }
+        if (current.motionOwner == UserTrainingSequence.TASK_ID) {
+            require(command !is RuntimeCommand.SaveTeachPoint && command !is RuntimeCommand.RemoveTeachPoint) {
+                "Detén Mi secuencia antes de cambiar posiciones"
+            }
+        }
+        if (current.motionOwner != null) {
+            require(command !is RuntimeCommand.SetJointValue && command !is RuntimeCommand.SetJointState &&
+                command != RuntimeCommand.ResetJoints && command !is RuntimeCommand.SelectRobot &&
+                command !is RuntimeCommand.SelectFunctionalTool && command !is RuntimeCommand.SetToolMountPose &&
+                command !is RuntimeCommand.UpsertWorkcellEntity && command !is RuntimeCommand.RemoveWorkcellEntity &&
+                command !is RuntimeCommand.SetWorkcellEntityPose && command !is RuntimeCommand.SetSignalBindings &&
+                command != RuntimeCommand.ResetClock) { "A training task owns robot motion" }
+        }
+        var next = when (command) {
+            is RuntimeCommand.StartCartesianJog, RuntimeCommand.GoHome -> {
+                require(current.motionOwner == null && current.collisionStop == null) { "Detén el movimiento activo primero" }
+                require(current.activeRobotId == EpsonRobotCatalog.C4_A601S.id)
+                val targets=if(command is RuntimeCommand.StartCartesianJog) command.targets else listOf(
+                    current.teachPoints["HOME"]?.let { requireNotNull(it.preferredJointState) { "HOME no conserva valores J; define HOME de nuevo" } }
+                        ?: EpsonRobotCatalog.C4_A601S.zeroState())
+                require(targets.size in 1..8192)
+                require(current.taskState.tasks.values.none { it.status in setOf(TaskStatus.RUNNING,TaskStatus.WAITING,TaskStatus.PAUSED,TaskStatus.HALTED) })
+                var accepted=current
+                for(target in targets) {
+                    val validated=activeRobot().validatedState(target.values)
+                    var attempted=accepted.copy(jointState=validated)
+                    if(attempted.toolState.activeToolId!=null) attempted=attempted.withSimulation(
+                        SimulationCoordinator.setToolMountPose(attempted.simulationDomain(),SimulationPoseTransforms.toPose(
+                            SimulationFrames.cadToSimulationTransform*C4Kinematics.forward(validated.values).baseToTcp)))
+                    val collision=mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(
+                        accepted.simulationDomain(),attempted.simulationDomain())
+                    if(collision!=null) {
+                        accepted=accepted.withSimulation(SimulationCoordinator.collisionStoppedAfterManualApproach(
+                            accepted.simulationDomain(),attempted.simulationDomain(),collision))
+                        break
+                    }
+                    accepted=attempted
+                }
+                accepted
+            }
+            is RuntimeCommand.SetGripperOpening -> {
+                require(current.motionOwner==null && current.collisionStop==null)
+                require(current.taskState.tasks.values.none {it.status in setOf(TaskStatus.RUNNING,TaskStatus.WAITING,TaskStatus.PAUSED,TaskStatus.HALTED)})
+                val id=requireNotNull(current.toolState.activeToolId)
+                val spec=requireNotNull(current.toolState.definitions.getValue(id).gripper)
+                require(command.mm.isFinite() && command.mm in spec.minimumOpeningWidthMm..spec.openWidthMm)
+                val old=current.toolState.gripperStates.getValue(id)
+                val closing=command.closed ?: (command.mm<old.openingWidthMm || command.mm==old.openingWidthMm && old.targetClosed==true)
+                val tools=current.toolState.copy(gripperStates=current.toolState.gripperStates+
+                    (id to mx.youteachtk.epsonrasimulator.runtime.tool.TwoFingerGripperState(command.mm,command.mm,closing)))
+                val attempted=current.copy(toolState=tools,ioState=IoRuntime.setOutput(current.ioState,spec.closeOutput,closing))
+                val collision=mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(current.simulationDomain(),attempted.simulationDomain())
+                if(collision!=null) current.withSimulation(SimulationCoordinator.collisionStopped(current.simulationDomain(),collision))
+                else attempted.withSimulation(SimulationCoordinator.setToolMountPose(attempted.simulationDomain(),tools.mountPose))
+            }
+            is RuntimeCommand.SetUserSequence, RuntimeCommand.LoadUserSequenceExample -> {
+                require(current.motionOwner == null && current.taskState.tasks[UserTrainingSequence.TASK_ID]?.status !in
+                    setOf(TaskStatus.RUNNING, TaskStatus.WAITING, TaskStatus.PAUSED, TaskStatus.HALTED)) {
+                    "Detén la ejecución antes de editar Mi secuencia"
+                }
+                if (command is RuntimeCommand.SetUserSequence) current.copy(userSequence = command.sequence.snapshot()).withoutUserSequenceRun()
+                else {
+                    val (sequence, points) = UserSequenceExample.build(current)
+                    current.copy(userSequence = sequence, teachPoints = current.teachPoints + points).withoutUserSequenceRun()
+                }
+            }
+            RuntimeCommand.StartUserSequence -> {
+                require(current.motionOwner == null && current.collisionStop == null) { "Detén y corrige el movimiento bloqueado primero" }
+                require(current.taskState.tasks.values.none { it.status in setOf(TaskStatus.RUNNING, TaskStatus.WAITING, TaskStatus.PAUSED, TaskStatus.HALTED) }) {
+                    "Detén las tareas activas antes de ejecutar Mi secuencia"
+                }
+                val compiled = UserSequenceCompiler.compile(current.userSequence, current)
+                val id = UserTrainingSequence.TASK_ID
+                val tasks = current.taskState.copy(order = current.taskState.order.filter { it != id }, tasks = current.taskState.tasks - id)
+                val prepared = current.copy(taskState = TaskRuntime.load(tasks, compiled.program), userSequenceActionSteps = compiled.actionSteps)
+                val started = SimulationCoordinator.startTask(prepared.simulationDomain(), id)
+                prepared.withSimulation(if (started.motionOwner == id) SimulationCoordinator.startClock(started) else started)
+            }
+            RuntimeCommand.RemoveTrainingCell -> {
+                require(current.motionOwner == null) { "Detén el movimiento antes de quitar la demostración" }
+                val ids=setOf(TrainingCellFactory.PART_ID,
+                    mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntityId("training-source"),
+                    mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellEntityId("training-destination"))
+                val id=TrainingSequence.TASK_ID
+                current.copy(trainingCell=null,trainingGraspSucceeded=false,
+                    workcellState=current.workcellState.copy(
+                        order=current.workcellState.order.filterNot {it in ids},
+                        entities=current.workcellState.entities-ids,
+                        attachments=current.workcellState.attachments-ids),
+                    taskState=current.taskState.copy(order=current.taskState.order.filterNot {it==id},tasks=current.taskState.tasks-id))
+            }
+            is RuntimeCommand.ConfigureTrainingCell -> {
+                require(current.motionOwner == null && current.taskState.tasks.values.none {
+                    it.status in setOf(TaskStatus.RUNNING, TaskStatus.WAITING, TaskStatus.PAUSED, TaskStatus.HALTED)
+                }) { "Stop active tasks before replacing the training cell" }
+                require(current.activeRobotId == EpsonRobotCatalog.C4_A601S.id) { "Training cell requires C4" }
+                val definition = TrainingCellFactory.build(command.config)
+                require(current.workcellState.bindings.none {
+                    it is mx.youteachtk.epsonrasimulator.runtime.workcell.SignalBinding.OutputToActuator &&
+                        it.output == definition.config.closeOutput
+                }) { "Training gripper output is already bound to an actuator" }
+                val enclosure=current.workcellState.entities[mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolEnclosure.id]
+                val entities=definition.entities+listOfNotNull(enclosure)
+                val tools = ToolRuntime.select(ToolRuntime.register(ToolRuntimeState(), definition.tool), definition.tool.id)
+                current.copy(
+                    trainingCell = definition.config,
+                    trainingGraspSucceeded = false,
+                    collisionStop = null,
+                    clockState = SimulationClockState(),
+                    ioState = IoRuntime.setOutput(current.ioState, definition.config.closeOutput, false),
+                    toolState = tools.copy(mountPose = SimulationPoseTransforms.toPose(
+                        SimulationFrames.cadToSimulationTransform * C4Kinematics.forward(current.jointState.values).baseToTcp)),
+                    workcellState = WorkcellState(order = entities.map { it.id }, entities = entities.associateBy { it.id }),
+                    taskState = TaskRuntime.load(TaskRuntimeState(), definition.program),
+                    motion = null, motionOwner = null, motionSingleStep = false
+                ).also { configured ->
+                    require(mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(
+                        configured.simulationDomain(), configured.simulationDomain()) == null) {
+                        "Move the robot clear before setting up this training cell"
+                    }
+                }
+            }
             is RuntimeCommand.SelectRobot -> {
                 val robot = robots.require(command.robotId)
                 current.copy(
@@ -209,6 +343,8 @@ class SharedRuntime(
                     )
                 )
 
+            RuntimeCommand.RefillSchoolFuses -> current.copy(workcellState=mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolFuseSupply.refill(current))
+
             is RuntimeCommand.UpsertWorkcellEntity ->
                 current.withSimulation(
                     SimulationCoordinator.upsertWorkcellEntity(
@@ -220,7 +356,9 @@ class SharedRuntime(
             is RuntimeCommand.RemoveWorkcellEntity ->
                 current.withSimulation(
                     SimulationCoordinator.removeWorkcellEntity(
-                        current.simulationDomain(),
+                        if(command.id==mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolEnclosure.id)
+                            current.copy(workcellState=mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolFuseSupply.removeLoose(current.workcellState)).simulationDomain()
+                        else current.simulationDomain(),
                         command.id
                     )
                 )
@@ -254,7 +392,13 @@ class SharedRuntime(
                 current.withSimulation(
                     SimulationCoordinator.selectFunctionalTool(
                         current.simulationDomain(),
-                        command.id
+                        command.id,
+                        if (current.activeRobotId == EpsonRobotCatalog.C4_A601S.id) {
+                            SimulationPoseTransforms.toPose(
+                                SimulationFrames.cadToSimulationTransform *
+                                    C4Kinematics.forward(current.jointState.values).baseToTcp
+                            )
+                        } else null
                     )
                 )
 
@@ -267,6 +411,40 @@ class SharedRuntime(
                 )
         }
 
+        if (next.jointState != current.jointState &&
+            next.activeRobotId == EpsonRobotCatalog.C4_A601S.id &&
+            next.toolState.activeToolId != null
+        ) {
+            // Functional geometry is flange-local. The tool TCP offset is applied
+            // by its consumers, never a second time to the mounting transform.
+            val mount = SimulationPoseTransforms.toPose(
+                SimulationFrames.cadToSimulationTransform *
+                    C4Kinematics.forward(next.jointState.values).baseToTcp
+            )
+            if (next.toolState.mountPose != mount) {
+                next = next.withSimulation(
+                    SimulationCoordinator.setToolMountPose(next.simulationDomain(), mount)
+                )
+            }
+        }
+
+        if ((current.trainingCell != null || mountSchoolGripperOnRestore || mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolEnclosure.enabled(current.workcellState)) && current.activeRobotId == EpsonRobotCatalog.C4_A601S.id && next.activeRobotId == EpsonRobotCatalog.C4_A601S.id && command !is RuntimeCommand.AdvanceSimulation) {
+            val manualMotion = command is RuntimeCommand.SetJointValue || command is RuntimeCommand.SetJointState || command == RuntimeCommand.ResetJoints
+            val geometryEdit = command is RuntimeCommand.UpsertWorkcellEntity || command is RuntimeCommand.SetWorkcellEntityPose ||
+                command is RuntimeCommand.SelectFunctionalTool || command is RuntimeCommand.SelectRobot
+            if (manualMotion || geometryEdit) {
+                if (current.collisionStop != null) return current
+                val collision = mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(
+                    if (manualMotion) current.simulationDomain() else next.simulationDomain(), next.simulationDomain())
+                if (collision != null) next = current.withSimulation(
+                    SimulationCoordinator.collisionStopped(current.simulationDomain(),collision))
+            }
+        }
+
+        if (next.motionOwner == mx.youteachtk.epsonrasimulator.runtime.training.TrainingSequence.TASK_ID &&
+            TrainingCellFactory.PART_ID in next.workcellState.attachments) {
+            next = next.copy(trainingGraspSucceeded = true)
+        }
         if (next != current) {
             state = next
             listeners.toList().forEach { it(next) }
@@ -279,7 +457,26 @@ class SharedRuntime(
     fun restoreLocalPersistentSession(
         robotId: String,
         jointValues: List<Double>,
-        teachPoints: Map<String, TeachPoint>
+        teachPoints: Map<String, TeachPoint>,
+        trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null,
+        userSequence: UserTrainingSequence = UserTrainingSequence(),
+        enclosureEnabled: Boolean = false
+    ): SharedRuntimeState {
+        val next = prepareLocalPersistentSession(robotId, jointValues, teachPoints, trainingCell, userSequence, enclosureEnabled)
+        if (next != state) {
+            state = next
+            listeners.toList().forEach { it(next) }
+        }
+        return state
+    }
+
+    fun prepareLocalPersistentSession(
+        robotId: String,
+        jointValues: List<Double>,
+        teachPoints: Map<String, TeachPoint>,
+        trainingCell: mx.youteachtk.epsonrasimulator.runtime.training.TrainingCellConfig? = null,
+        userSequence: UserTrainingSequence = UserTrainingSequence(),
+        enclosureEnabled: Boolean = false
     ): SharedRuntimeState {
         val robot = robots.require(robotId)
         validatePersistentJointValues(robot, jointValues)
@@ -300,6 +497,18 @@ class SharedRuntime(
             )
         }
 
+        val definition = trainingCell?.let {
+            require(robot.id == EpsonRobotCatalog.C4_A601S.id) { "Training cell requires C4" }
+            TrainingCellFactory.build(it)
+        }
+        val restoredTools = definition?.let {
+            ToolRuntime.select(ToolRuntime.register(ToolRuntimeState(), it.tool), it.tool.id).copy(
+                mountPose = SimulationPoseTransforms.toPose(
+                    SimulationFrames.cadToSimulationTransform * C4Kinematics.forward(jointValues).baseToTcp))
+        } ?: if(mountSchoolGripperOnRestore && robot.id == EpsonRobotCatalog.C4_A601S.id)
+            SchoolGripper.mountedState(jointValues) else ToolRuntimeState()
+        require(!enclosureEnabled || robot.id == EpsonRobotCatalog.C4_A601S.id) { "Enclosure requires C4" }
+        val entities=definition?.entities.orEmpty()+if(enclosureEnabled) listOf(mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolEnclosure.entity()) else emptyList()
         val next = state.copy(
             activeRobotId = robot.id,
             jointState = JointState(jointValues.toList()),
@@ -307,16 +516,125 @@ class SharedRuntime(
             connectionMode = ConnectionMode.LOCAL_SIMULATION,
             clockState = SimulationClockState(),
             ioState = IoState(),
-            taskState = TaskRuntimeState(),
-            workcellState = WorkcellState(),
-            toolState = ToolRuntimeState()
+            taskState = definition?.let { TaskRuntime.load(TaskRuntimeState(), it.program) } ?: TaskRuntimeState(),
+            workcellState = WorkcellState(order = entities.map { it.id }, entities = entities.associateBy { it.id }),
+            toolState = restoredTools,
+            trainingCell = definition?.config,
+            userSequence = userSequence.snapshot(),
+            userSequenceActionSteps = emptyList(),
+            trainingGraspSucceeded = false,
+                    collisionStop = null,
+            motion = null,
+            motionOwner = null,
+            motionSingleStep = false
         )
 
-        if (next != state) {
-            state = next
-            listeners.toList().forEach { it(next) }
+        require(mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(
+            next.simulationDomain(), next.simulationDomain()) == null) {
+            "Saved training posture intersects a fixture or part; project was not restored"
         }
-        return state
+        return next
+    }
+
+    /** Immutable geometry is checked off the UI thread; playback only samples certified segments. */
+    class PreparedCartesianMotion internal constructor(
+        internal var expected: SharedRuntimeState,
+        internal val nodes: List<JointState>,
+        internal val ends: List<Double>,
+        internal val collision: mx.youteachtk.epsonrasimulator.runtime.motion.CollisionStop?,
+        internal var elapsed: Double = 0.0
+    ) {
+        val durationSeconds: Double get() = ends.lastOrNull() ?: 0.0
+    }
+
+    fun prepareCartesianMotion(baseline: SharedRuntimeState, targets: List<JointState>, checkCancelled: () -> Unit = {}): PreparedCartesianMotion {
+        require(baseline.motionOwner==null && baseline.collisionStop==null)
+        require(baseline.activeRobotId==EpsonRobotCatalog.C4_A601S.id)
+        require(baseline.taskState.tasks.values.none {it.status in setOf(TaskStatus.RUNNING,TaskStatus.WAITING,TaskStatus.PAUSED,TaskStatus.HALTED)})
+        require(targets.size in 1..8192)
+        var prior=baseline
+        val nodes=mutableListOf(baseline.jointState)
+        val ends=mutableListOf(0.0)
+        var stopped: mx.youteachtk.epsonrasimulator.runtime.motion.CollisionStop? = null
+        for(target in targets) {
+            checkCancelled()
+            val valid=EpsonRobotCatalog.C4_A601S.validatedState(target.values)
+            var next=cartesianPose(prior,valid)
+            val collision=mx.youteachtk.epsonrasimulator.runtime.motion.TrainingCollisionGuard.check(prior.simulationDomain(),next.simulationDomain())
+            if(collision!=null) {
+                next=prior.withSimulation(SimulationCoordinator.collisionStoppedAfterManualApproach(prior.simulationDomain(),next.simulationDomain(),collision))
+                stopped=next.collisionStop
+            }
+            val seconds=valid.values.indices.maxOf {j ->
+                kotlin.math.abs(next.jointState[j]-prior.jointState[j])/requireNotNull(EpsonRobotCatalog.C4_A601S.joints[j].maxSpeedDegPerSec)
+            }
+            nodes+=next.jointState
+            ends+=ends.last()+seconds.coerceAtLeast(0.000001)
+            prior=next
+            if(stopped!=null) break
+        }
+        return PreparedCartesianMotion(baseline,nodes.toList(),ends.toList(),stopped)
+    }
+
+    fun cartesianMotionEndState(plan: PreparedCartesianMotion): SharedRuntimeState {
+        var end=cartesianPose(plan.expected,plan.nodes.last())
+        if(plan.collision!=null) end=end.withSimulation(SimulationCoordinator.collisionStopped(end.simulationDomain(),plan.collision))
+        return end
+    }
+
+    /** A prefix of certified joint segments is certified too; no geometry is queried again. */
+    internal fun cartesianMotionPrefix(plan: PreparedCartesianMotion, upper: Int, fraction: Double): PreparedCartesianMotion {
+        require(plan.elapsed == 0.0 && upper in 1..plan.nodes.lastIndex)
+        require(fraction.isFinite() && fraction in 0.0..1.0)
+        require(state == plan.expected.copy(clockState=state.clockState)) { "Cambió el robot durante el ajuste." }
+        val last = JointState(plan.nodes[upper-1].values.zip(plan.nodes[upper].values).map { (a,b) -> a+(b-a)*fraction })
+        val endTime = plan.ends[upper-1]+(plan.ends[upper]-plan.ends[upper-1])*fraction
+        // The final node of a blocked plan is its verified safe approach, not the rejected posture.
+        return PreparedCartesianMotion(state,plan.nodes.take(upper)+last,plan.ends.take(upper)+endTime,null)
+    }
+
+    /** Manual teaching can seek either way on an already certified path. No timed playback queue. */
+    fun seekCartesianMotion(plan: PreparedCartesianMotion, upper: Int, fraction: Double) {
+        require(upper in 1..plan.nodes.lastIndex && fraction.isFinite() && fraction in 0.0..1.0)
+        require(state==plan.expected.copy(clockState=state.clockState)) { "Cambió el robot durante el ajuste." }
+        val joints=JointState(plan.nodes[upper-1].values.zip(plan.nodes[upper].values).map {(a,b)->a+(b-a)*fraction})
+        var next=cartesianPose(state,joints)
+        if(upper==plan.nodes.lastIndex && fraction==1.0 && plan.collision!=null)
+            next=next.withSimulation(SimulationCoordinator.collisionStopped(next.simulationDomain(),plan.collision))
+        if(next!=state) {
+            state=next
+            plan.expected=next
+            listeners.toList().forEach {it(next)}
+        }
+    }
+
+    fun applyCartesianFrame(plan: PreparedCartesianMotion, elapsedSeconds: Double): Boolean {
+        require(elapsedSeconds.isFinite() && elapsedSeconds>=plan.elapsed)
+        // Clock ticks alone are harmless; any external geometry, tool, IO or task change invalidates the certificate.
+        require(state==plan.expected.copy(clockState=state.clockState)) { "Cambió el robot durante el movimiento." }
+        val time=elapsedSeconds.coerceAtMost(plan.durationSeconds)
+        val upper=plan.ends.indexOfFirst {it>=time}.coerceAtLeast(0)
+        val joints=if(time>=plan.durationSeconds) plan.nodes.last() else if(upper==0) plan.nodes.first() else {
+            val t=(time-plan.ends[upper-1])/(plan.ends[upper]-plan.ends[upper-1])
+            JointState(plan.nodes[upper-1].values.zip(plan.nodes[upper].values).map {(a,b)->a+(b-a)*t})
+        }
+        var next=cartesianPose(state,joints)
+        val finished=time>=plan.durationSeconds
+        if(finished && plan.collision!=null) next=next.withSimulation(SimulationCoordinator.collisionStopped(next.simulationDomain(),plan.collision))
+        plan.elapsed=elapsedSeconds
+        if(next!=state) {
+            state=next
+            plan.expected=next
+            listeners.toList().forEach {it(next)}
+        }
+        return finished
+    }
+
+    internal fun cartesianPose(base: SharedRuntimeState, joints: JointState): SharedRuntimeState {
+        val tools=if(base.toolState.activeToolId==null) base.toolState else base.toolState.copy(
+            mountPose=SimulationPoseTransforms.toPose(SimulationFrames.cadToSimulationTransform*C4Kinematics.forward(joints.values).baseToTcp))
+        return base.copy(jointState=joints,toolState=tools,
+            workcellState=mx.youteachtk.epsonrasimulator.runtime.workcell.WorkcellRuntime.followAttachments(base.workcellState,tools))
     }
 
     fun subscribe(listener: (SharedRuntimeState) -> Unit): RuntimeSubscription {
@@ -325,13 +643,26 @@ class SharedRuntime(
         return RuntimeSubscription { listeners -= listener }
     }
 
+    private fun SharedRuntimeState.withoutUserSequenceRun(): SharedRuntimeState = copy(
+        taskState = taskState.copy(order = taskState.order.filter { it != UserTrainingSequence.TASK_ID },
+            tasks = taskState.tasks - UserTrainingSequence.TASK_ID),
+        userSequenceActionSteps = emptyList()
+    )
+
     private fun SharedRuntimeState.simulationDomain(): SimulationDomainState =
         SimulationDomainState(
             clockState = clockState,
             ioState = ioState,
             taskState = taskState,
             workcellState = workcellState,
-            toolState = toolState
+            toolState = toolState,
+            robotId = activeRobotId,
+            jointState = jointState,
+            motion = motion,
+            motionOwner = motionOwner,
+            motionSingleStep = motionSingleStep,
+            collisionGuardEnabled = activeRobotId == EpsonRobotCatalog.C4_A601S.id && (trainingCell != null || mountSchoolGripperOnRestore || mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolEnclosure.enabled(workcellState)),
+            collisionStop = collisionStop
         )
 
     private fun SharedRuntimeState.withSimulation(
@@ -342,7 +673,14 @@ class SharedRuntime(
             ioState = domain.ioState,
             taskState = domain.taskState,
             workcellState = domain.workcellState,
-            toolState = domain.toolState
+            toolState = domain.toolState,
+            jointState = domain.jointState,
+            motion = domain.motion,
+            motionOwner = domain.motionOwner,
+            motionSingleStep = domain.motionSingleStep,
+            collisionStop = if (motionOwner == UserTrainingSequence.TASK_ID && domain.collisionStop != collisionStop)
+                domain.collisionStop?.let { stop -> stop.copy(actionIndex = stop.actionIndex?.let { userSequenceActionSteps.getOrNull(it) }) }
+                else domain.collisionStop
         )
 
     private fun validateInitialJointState(

@@ -8,3 +8,9 @@
 .externalNativeBuild
 .cxx
 **/build/
+
+# Local runtime diagnostics and generated Python caches
+hs_err_pid*.log
+replay_pid*.log
+__pycache__/
+*.py[cod]

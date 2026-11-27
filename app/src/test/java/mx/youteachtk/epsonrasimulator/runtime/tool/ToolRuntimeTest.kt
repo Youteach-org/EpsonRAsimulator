@@ -16,6 +16,26 @@ import org.junit.Test
 
 class ToolRuntimeTest {
     @Test
+    fun rotatedMountTransformsCollisionAndGraspBoxes() {
+        val box = AxisAlignedBox(Vector3(4.0, 0.0, 0.0), Vector3(3.0, 1.0, 2.0))
+        val definition = FunctionalToolDefinition(
+            ToolRuntimeId("rotated"), ToolDefinition("rotated", "Rotated tool"),
+            collisionBoxes = listOf(box),
+            gripper = TwoFingerGripperSpec(60.0, 20.0, 40.0, box, DigitalIoAddress(0))
+        )
+        val tools = ToolRuntime.select(ToolRuntime.register(ToolRuntimeState(), definition), definition.id)
+            .copy(mountPose = CartesianPose(10.0, 20.0, 30.0, rz = 90.0))
+        listOf(ToolRuntime.activeCollisionBoxes(tools).single(), ToolRuntime.activeGraspBox(tools)!!).forEach {
+            assertEquals(10.0, it.center.x, 1e-9)
+            assertEquals(24.0, it.center.y, 1e-9)
+            assertEquals(30.0, it.center.z, 1e-9)
+            assertEquals(1.0, it.halfExtents.x, 1e-9)
+            assertEquals(3.0, it.halfExtents.y, 1e-9)
+            assertEquals(2.0, it.halfExtents.z, 1e-9)
+        }
+    }
+
+    @Test
     fun selectingFunctionalToolExposesItsExistingToolTcp() {
         val definition = gripperDefinition()
 

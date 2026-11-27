@@ -18,7 +18,7 @@ data class AppRuntimeBundle(
 )
 
 object AppRuntimeFactory {
-    fun createDefault(): AppRuntimeBundle {
+    fun createDefault(mountSchoolGripper: Boolean = false): AppRuntimeBundle {
         val robots = RobotRegistry(
             providers = listOf(EpsonRobotProvider)
         )
@@ -34,11 +34,15 @@ object AppRuntimeFactory {
 
         val runtime = SharedRuntime(
             robots = robots,
+            mountSchoolGripperOnRestore = mountSchoolGripper,
             initialState = SharedRuntimeState(
                 simulatorAdapterId = simulator.id,
                 trainingProfileId = simulator.defaultProfileId,
                 activeRobotId = robot.id,
                 jointState = robot.zeroState(),
+                toolState = if(mountSchoolGripper)
+                    mx.youteachtk.epsonrasimulator.runtime.training.SchoolGripper.mountedState(robot.zeroState().values)
+                    else mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeState(),
                 connectionMode = ConnectionMode.LOCAL_SIMULATION
             )
         )

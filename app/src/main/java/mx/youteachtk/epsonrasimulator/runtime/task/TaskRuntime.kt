@@ -1,6 +1,7 @@
 package mx.youteachtk.epsonrasimulator.runtime.task
 
 import mx.youteachtk.epsonrasimulator.runtime.clock.SimulationClock
+import mx.youteachtk.epsonrasimulator.domain.JointState
 import mx.youteachtk.epsonrasimulator.runtime.io.IoRuntime
 import mx.youteachtk.epsonrasimulator.runtime.io.IoState
 
@@ -25,6 +26,9 @@ class TaskRuntime(
         program: TaskProgram,
         breakpoints: Set<Int> = emptySet()
     ): TaskSnapshot {
+        require(program.actions.none { it is SimAction.MoveJoints || it is SimAction.WaitForGripper }) {
+            "Training motion requires the canonical simulation coordinator"
+        }
         require(id !in tasks) {
             "Task id already exists: ${id.value}"
         }
@@ -236,7 +240,14 @@ class TaskRuntime(
             return TaskRuntimeState(
                 order = state.order + program.id,
                 tasks = state.tasks + (
-                    program.id to SimTaskState(program = program)
+                    program.id to SimTaskState(program = program.copy(
+                        actions = program.actions.map { action ->
+                            if (action is SimAction.MoveJoints) {
+                                action.copy(target = JointState(action.target.values.toList()))
+                            } else action
+                        },
+                        legacyLocations = program.legacyLocations.toList()
+                    ))
                 )
             )
         }
@@ -368,7 +379,8 @@ class TaskRuntime(
                 TaskStatus.HALTED ->
                     task.copy(
                         status = TaskStatus.RUNNING,
-                        statusBeforePause = null
+                        statusBeforePause = null,
+                        suppressBreakpointOnce = task.actionIndex
                     )
 
                 else ->
@@ -520,6 +532,7 @@ class TaskRuntime(
                     ?: return true
 
             return when (action) {
+                is SimAction.MoveJoints, is SimAction.WaitForGripper -> false
                 is SimAction.WaitForInput ->
                     IoRuntime.input(
                         ioState,
@@ -555,6 +568,16 @@ class TaskRuntime(
             return when (
                 val action = task.program.actions[task.actionIndex]
             ) {
+                is SimAction.WaitForGripper -> task.copy(
+                    status = TaskStatus.WAITING,
+                    waitingReason = TaskWaitingReason.Gripper(action.toolId, action.closed),
+                    delayDeadlineMillis = null
+                ) to ioState
+                is SimAction.MoveJoints -> task.copy(
+                    status = TaskStatus.WAITING,
+                    waitingReason = TaskWaitingReason.Motion,
+                    delayDeadlineMillis = null
+                ) to ioState
                 is SimAction.SetOutput -> {
                     val nextIo = IoRuntime.setOutput(
                         ioState,
@@ -653,7 +676,8 @@ class TaskRuntime(
 
                 if (
                     current.status == TaskStatus.RUNNING &&
-                    current.actionIndex in current.breakpoints
+                    current.actionIndex in current.breakpoints &&
+                    current.suppressBreakpointOnce != current.actionIndex
                 ) {
                     current = current.copy(
                         status = TaskStatus.HALTED
@@ -661,10 +685,30 @@ class TaskRuntime(
                     break
                 }
 
+                if (current.suppressBreakpointOnce != null) {
+                    current = current.copy(suppressBreakpointOnce = null)
+                }
+
                 when (
                     val action =
                         current.program.actions[current.actionIndex]
                 ) {
+                    is SimAction.WaitForGripper -> {
+                        current = current.copy(
+                            status = TaskStatus.WAITING,
+                            waitingReason = TaskWaitingReason.Gripper(action.toolId, action.closed),
+                            delayDeadlineMillis = null
+                        )
+                        break
+                    }
+                    is SimAction.MoveJoints -> {
+                        current = current.copy(
+                            status = TaskStatus.WAITING,
+                            waitingReason = TaskWaitingReason.Motion,
+                            delayDeadlineMillis = null
+                        )
+                        break
+                    }
                     is SimAction.SetOutput -> {
                         currentIo = IoRuntime.setOutput(
                             currentIo,

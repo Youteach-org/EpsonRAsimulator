@@ -3,6 +3,7 @@ package mx.youteachtk.epsonrasimulator.ui
 import mx.youteachtk.epsonrasimulator.domain.CartesianPose
 import mx.youteachtk.epsonrasimulator.domain.ToolDefinition
 import mx.youteachtk.epsonrasimulator.kinematics.Vector3
+import mx.youteachtk.epsonrasimulator.kinematics.SimulationPoseTransforms
 import mx.youteachtk.epsonrasimulator.runtime.tool.FunctionalToolDefinition
 import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntime
 import mx.youteachtk.epsonrasimulator.runtime.tool.ToolRuntimeId
@@ -19,6 +20,36 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class WorkcellSceneProjectionTest {
+    @Test
+    fun rotatedToolRendersLocalGeometryInCadCoordinates() {
+        val definition = FunctionalToolDefinition(
+            ToolRuntimeId("rotated"), ToolDefinition("rotated", "Rotated"),
+            collisionBoxes = listOf(AxisAlignedBox(Vector3(4.0, 0.0, 0.0), Vector3(3.0, 1.0, 2.0)))
+        )
+        val tools = ToolRuntime.select(ToolRuntime.register(ToolRuntimeState(), definition), definition.id)
+            .copy(mountPose = CartesianPose(10.0, 20.0, 30.0, rz = 90.0))
+        val box = WorkcellSceneProjection.boxes(WorkcellState(), tools).single()
+        assertEquals(0.010f, box.centerMeters.x, 1e-6f)
+        assertEquals(0.030f, box.centerMeters.y, 1e-6f)
+        assertEquals(-0.024f, box.centerMeters.z, 1e-6f)
+        assertEquals(WorkcellSceneVector3(0.006f, 0.002f, 0.004f), box.sizeMeters)
+        val rotation = box.rotationDegrees
+        val basis = SimulationPoseTransforms.fromPose(CartesianPose(0.0, 0.0, 0.0,
+            rotation.x.toDouble(), rotation.y.toDouble(), rotation.z.toDouble()))
+        val xAxis = basis.transformPoint(Vector3.X)
+        val yAxis = basis.transformPoint(Vector3.Y)
+        val zAxis = basis.transformPoint(Vector3.Z)
+        assertEquals(0.0, xAxis.x, 1e-6)
+        assertEquals(0.0, xAxis.y, 1e-6)
+        assertEquals(-1.0, xAxis.z, 1e-6)
+        assertEquals(-1.0, yAxis.x, 1e-6)
+        assertEquals(0.0, yAxis.y, 1e-6)
+        assertEquals(0.0, yAxis.z, 1e-6)
+        assertEquals(0.0, zAxis.x, 1e-6)
+        assertEquals(1.0, zAxis.y, 1e-6)
+        assertEquals(0.0, zAxis.z, 1e-6)
+    }
+
     @Test
     fun workcellBoxProjectionConvertsMillimetresToMeters() {
         val id = WorkcellEntityId("part")
@@ -43,8 +74,8 @@ class WorkcellSceneProjectionTest {
         assertEquals("part", box.id)
         assertEquals(WorkcellRenderKind.PART, box.kind)
         assertEquals(1.0f, box.centerMeters.x, 0.0001f)
-        assertEquals(0.5f, box.centerMeters.y, 0.0001f)
-        assertEquals(-0.25f, box.centerMeters.z, 0.0001f)
+        assertEquals(-0.25f, box.centerMeters.y, 0.0001f)
+        assertEquals(-0.5f, box.centerMeters.z, 0.0001f)
         assertEquals(0.1f, box.sizeMeters.x, 0.0001f)
         assertEquals(0.2f, box.sizeMeters.y, 0.0001f)
         assertEquals(0.3f, box.sizeMeters.z, 0.0001f)
@@ -78,8 +109,8 @@ class WorkcellSceneProjectionTest {
         ).single()
 
         assertEquals(0.15f, box.centerMeters.x, 0.0001f)
-        assertEquals(0.2f, box.centerMeters.y, 0.0001f)
-        assertEquals(0.3f, box.centerMeters.z, 0.0001f)
+        assertEquals(0.3f, box.centerMeters.y, 0.0001f)
+        assertEquals(-0.2f, box.centerMeters.z, 0.0001f)
     }
 
     @Test
@@ -122,8 +153,8 @@ class WorkcellSceneProjectionTest {
         assertEquals("tool:second:collision:0", box.id)
         assertEquals(WorkcellRenderKind.BOX, box.kind)
         assertEquals(0.09f, box.centerMeters.x, 0.0001f)
-        assertEquals(0.2f, box.centerMeters.y, 0.0001f)
-        assertEquals(0.305f, box.centerMeters.z, 0.0001f)
+        assertEquals(0.305f, box.centerMeters.y, 0.0001f)
+        assertEquals(-0.2f, box.centerMeters.z, 0.0001f)
         assertEquals(0.02f, box.sizeMeters.x, 0.0001f)
         assertEquals(0.04f, box.sizeMeters.y, 0.0001f)
         assertEquals(0.06f, box.sizeMeters.z, 0.0001f)

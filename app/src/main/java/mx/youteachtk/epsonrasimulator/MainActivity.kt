@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 require(modelClass.isAssignableFrom(AppSessionViewModel::class.java))
-                val bundle = AppRuntimeFactory.createDefault()
+                val bundle = AppRuntimeFactory.createDefault(mountSchoolGripper = true)
                 val handler = Handler(Looper.getMainLooper())
                 val execution = ExecutorPersistenceExecution { block -> handler.post { block() } }
                 val coordinator = ProjectPersistenceCoordinator(
@@ -50,11 +50,21 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            MaterialTheme(colorScheme = mx.youteachtk.epsonrasimulator.ui.TrainerColors) {
                 Surface(modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
                     AppExperienceRoot(session = session)
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        session.setForeground(true)
+    }
+
+    override fun onStop() {
+        session.setForeground(false)
+        super.onStop()
     }
 }

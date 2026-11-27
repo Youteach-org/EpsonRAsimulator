@@ -2,7 +2,7 @@
 # Diagnostics belong to this fresh CI emulator, never to a user's device.
 set -u
 stage="${1:-core}"
-case "$stage" in core|tcp) ;; *) echo "Unknown acceptance stage: $stage" >&2; exit 2 ;; esac
+case "$stage" in core|tcp|training) ;; *) echo "Unknown acceptance stage: $stage" >&2; exit 2 ;; esac
 diagnostics=app/build/acceptance-diagnostics
 mkdir -p "$diagnostics"
 # Host-only observer: never reconnect, restart or kill the emulator.
@@ -99,6 +99,32 @@ if [ "$result" -eq 0 ] && [ "$stage" = tcp ]; then
   fi
   wait "$record_pid" || true
   adb pull /sdcard/tcp-preview.mp4 app/build/acceptance-diagnostics/tcp-preview.mp4 >/dev/null 2>&1 || true
+fi
+if [ "$result" -eq 0 ] && [ "$stage" = training ]; then
+  adb shell screenrecord --time-limit 180 /sdcard/training.mp4 > "$diagnostics/screenrecord.txt" 2>&1 &
+  record_pid=$!
+  boundary training-start
+  # Includes the original lifecycle/collision exercise and the authored editor flow.
+  timeout 360s adb shell am instrument -w -e class mx.youteachtk.epsonrasimulator.TrainingPickPlaceAcceptanceTest mx.youteachtk.epsonrasimulator.test/androidx.test.runner.AndroidJUnitRunner > "$diagnostics/training.txt" 2>&1
+  training_status=$?
+  timeout 10s adb shell screencap -p /sdcard/training-end.png >/dev/null 2>&1 || true
+  timeout 10s adb pull /sdcard/training-end.png "$diagnostics/training-end.png" >/dev/null 2>&1 || true
+  boundary training-finished "$training_status"
+  [ "$training_status" -eq 0 ] || result=1
+  sed '/EVIDENCE_PNG=/d' "$diagnostics/training.txt"
+  if ! grep -q 'OK (1 test)' "$diagnostics/training.txt" || ! grep -q 'TRAINING_UI_VERIFIED' "$diagnostics/training.txt"; then result=1; fi
+  wait "$record_pid" || true
+  adb pull /sdcard/training.mp4 "$diagnostics/training.mp4" >/dev/null 2>&1 || true
+  if [ "$result" -eq 0 ]; then
+    timeout 10s adb shell am force-stop mx.youteachtk.epsonrasimulator > "$diagnostics/force-stop.txt" 2>&1 || result=1
+    boundary training-restore-start
+    timeout 90s adb shell am instrument -w -e verifyTrainingRestore true -e class mx.youteachtk.epsonrasimulator.TrainingProcessRestoreTest mx.youteachtk.epsonrasimulator.test/androidx.test.runner.AndroidJUnitRunner > "$diagnostics/training-restore.txt" 2>&1
+    restore_status=$?
+    boundary training-restore-finished "$restore_status"
+    [ "$restore_status" -eq 0 ] || result=1
+    cat "$diagnostics/training-restore.txt"
+    if ! grep -q 'OK (1 test)' "$diagnostics/training-restore.txt" || ! grep -q 'TRAINING_PROCESS_RESTORE_VERIFIED' "$diagnostics/training-restore.txt"; then result=1; fi
+  fi
 fi
 # Reconstruct screenshots already delivered while the test process was alive.
 python3 .github/scripts/decode-acceptance-evidence.py app/build/acceptance-diagnostics || result=1

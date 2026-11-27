@@ -86,7 +86,10 @@ class AppProjectSessionPersistence(
                 robotManagerPage =
                     robotManagerSession.state.selectedPage.name,
                 robotManagerTrainingStepDegrees =
-                    robotManagerSession.state.trainingStepDegrees
+                    robotManagerSession.state.trainingStepDegrees,
+                trainingCell = runtime.trainingCell,
+                userSequence = runtime.userSequence.snapshot(),
+                enclosureEnabled = mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolEnclosure.enabled(runtime.workcellState)
             )
         )
     }
@@ -109,6 +112,9 @@ class AppProjectSessionPersistence(
             decoded.jointValues
         }
         validateJointValues(robot.id, joints)
+        if (decoded.trainingCell != null && robot.id != mx.youteachtk.epsonrasimulator.domain.EpsonRobotCatalog.C4_A601S.id) {
+            invalid("Training cell requires C4")
+        }
 
         val teachPoints = if (legacyEmpty) {
             emptyMap()
@@ -238,13 +244,22 @@ class AppProjectSessionPersistence(
         }
         val experience = if (legacyEmpty) null else decoded.activeExperience
 
+        // Validate physical geometry before the caller replaces any project data.
+        try {
+            bundle.runtime.prepareLocalPersistentSession(robot.id, joints, teachPoints, decoded.trainingCell, decoded.userSequence, decoded.enclosureEnabled)
+        } catch (failure: IllegalArgumentException) {
+            invalid(failure.message ?: "Invalid training geometry in saved project")
+        }
         return ProjectSessionRestorePlan {
             applyingRestore = true
             try {
                 bundle.runtime.restoreLocalPersistentSession(
                     robotId = robot.id,
                     jointValues = joints,
-                    teachPoints = teachPoints
+                    teachPoints = teachPoints,
+                    trainingCell = decoded.trainingCell,
+                    userSequence = decoded.userSequence,
+                    enclosureEnabled = decoded.enclosureEnabled
                 )
                 workspaceSession.restoreReconciled(workspace)
                 projectNavigationSession.restoreSelection(selection)
@@ -270,15 +285,24 @@ class AppProjectSessionPersistence(
         var durableRobotId = bundle.runtime.state.activeRobotId
         var durableJointState = bundle.runtime.state.jointState
         var durableTeachPoints = bundle.runtime.state.teachPoints
+        var durableTrainingCell = bundle.runtime.state.trainingCell
+        var durableUserSequence = bundle.runtime.state.userSequence
+        var durableEnclosure = mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolEnclosure.enabled(bundle.runtime.state.workcellState)
         val runtimeSubscription = bundle.runtime.subscribe { next ->
             val durableChanged =
                 next.activeRobotId != durableRobotId ||
                     next.jointState != durableJointState ||
-                    next.teachPoints != durableTeachPoints
+                    next.teachPoints != durableTeachPoints ||
+                    next.trainingCell != durableTrainingCell ||
+                    next.userSequence != durableUserSequence ||
+                    mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolEnclosure.enabled(next.workcellState) != durableEnclosure
 
             durableRobotId = next.activeRobotId
             durableJointState = next.jointState
             durableTeachPoints = next.teachPoints
+            durableTrainingCell = next.trainingCell
+            durableUserSequence = next.userSequence
+            durableEnclosure = mx.youteachtk.epsonrasimulator.runtime.workcell.SchoolEnclosure.enabled(next.workcellState)
 
             if (runtimeInitial) {
                 runtimeInitial = false

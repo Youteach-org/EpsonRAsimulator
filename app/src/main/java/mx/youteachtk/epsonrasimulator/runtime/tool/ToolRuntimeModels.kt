@@ -19,12 +19,14 @@ data class TwoFingerGripperSpec(
     val closedWidthMm: Double,
     val speedMmPerSecond: Double,
     val graspBox: AxisAlignedBox,
-    val closeOutput: DigitalIoAddress
+    val closeOutput: DigitalIoAddress,
+    val minimumOpeningWidthMm: Double = closedWidthMm
 ) {
     init {
         require(openWidthMm.isFinite() && closedWidthMm.isFinite()) {
             "Gripper widths must be finite"
         }
+        require(minimumOpeningWidthMm.isFinite() && minimumOpeningWidthMm in 0.0..closedWidthMm)
         require(closedWidthMm >= 0.0 && openWidthMm > closedWidthMm) {
             "Gripper open width must be greater than a non-negative closed width"
         }
@@ -35,9 +37,12 @@ data class TwoFingerGripperSpec(
 }
 
 data class TwoFingerGripperState(
-    val openingWidthMm: Double
+    val openingWidthMm: Double,
+    val targetOpeningMm: Double? = null,
+    val targetClosed: Boolean? = null
 ) {
     init {
+        require(targetOpeningMm == null || targetOpeningMm.isFinite() && targetOpeningMm >= 0.0)
         require(openingWidthMm.isFinite() && openingWidthMm >= 0.0) {
             "Gripper opening width must be finite and non-negative"
         }
@@ -114,9 +119,10 @@ class ToolRuntimeState(
         }
         this.gripperStates.forEach { (id, gripperState) ->
             val spec = this.definitions.getValue(id).gripper!!
+            require(gripperState.targetOpeningMm == null || gripperState.targetOpeningMm in spec.minimumOpeningWidthMm..spec.openWidthMm)
             require(
                 gripperState.openingWidthMm in
-                    spec.closedWidthMm..spec.openWidthMm
+                    spec.minimumOpeningWidthMm..spec.openWidthMm
             ) {
                 "Gripper opening width must be inside its configured range"
             }

@@ -25,8 +25,15 @@ object FixtureComponent
 data class GraspAttachment(
     val partId: WorkcellEntityId,
     val toolId: ToolRuntimeId,
-    val offsetFromToolMm: Vector3
-)
+    val offsetFromToolMm: Vector3,
+    val rotationFromToolDegrees: Vector3 = Vector3.ZERO
+) {
+    init {
+        require(listOf(rotationFromToolDegrees.x, rotationFromToolDegrees.y, rotationFromToolDegrees.z).all(Double::isFinite)) {
+            "Attachment relative rotation must be finite"
+        }
+    }
+}
 
 data class PresenceSensorComponent(
     val detectionBox: AxisAlignedBox

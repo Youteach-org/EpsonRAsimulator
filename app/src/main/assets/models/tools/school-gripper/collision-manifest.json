@@ -1,0 +1,37 @@
+[
+  {
+    "part": "body",
+    "sourceSha256": "7e3d49595e4c2fee8c4be8311393ca59775af9b7747f9312d34f43421f8ac490",
+    "cellMm": 1.0,
+    "grid": 64,
+    "occupied": 32416
+  },
+  {
+    "part": "bracket",
+    "sourceSha256": "1619699496280d44eda1d1bfcb9b5cefc252b8905b05fe502a5c79dad89cb892",
+    "cellMm": 1.0,
+    "grid": 64,
+    "occupied": 33736
+  },
+  {
+    "part": "jaw_left",
+    "sourceSha256": "028dc01f7548926c2485996f24c11445eb2b786e10e2ff66c4ee55d033609338",
+    "cellMm": 1.0,
+    "grid": 64,
+    "occupied": 5690
+  },
+  {
+    "part": "jaw_right",
+    "sourceSha256": "22eb13f48834791e2b071a0d9789e834ce35319d8a1c5fa34a04c4035cb9134b",
+    "cellMm": 1.0,
+    "grid": 64,
+    "occupied": 5442
+  },
+  {
+    "part": "plate",
+    "sourceSha256": "f8b8f803c591a0454eb7bcf4e2420d46d9e8b891a00f09256bd7ee2e2f0f8254",
+    "cellMm": 1.0,
+    "grid": 64,
+    "occupied": 6396
+  }
+]

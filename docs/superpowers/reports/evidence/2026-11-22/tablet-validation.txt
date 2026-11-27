@@ -1,0 +1,7 @@
+Device: Samsung SM-T970 (ADB device detected after server restart)
+App install -r: Success
+Instrumentation APK install -r: Success
+OutletJawPerformanceTest:
+Time: 15.536
+OK (2 tests)
+After instrumentation: device not found on performance-log collection and app relaunch. Visual check remains pending.

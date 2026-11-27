@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.EpsonRASimulator" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.EpsonRASimulator" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">#060E18</item>
+        <item name="android:navigationBarColor">#060E18</item>
+        <item name="android:windowBackground">#060E18</item>
     </style>
 </resources>

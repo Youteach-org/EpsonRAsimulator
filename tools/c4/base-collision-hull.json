@@ -1,0 +1,17 @@
+{
+  "source": "C4_BASE.glb",
+  "sourceSha256": "dd2a3d6b95aeca63902321c3b5d70f01f6bcdbbd5c32295d5d033ae7a6718218",
+  "cellMm": 2.0,
+  "origin": [
+    -96.0,
+    -4.0,
+    -96.0
+  ],
+  "gridSize": 256,
+  "occupiedCells": 207397,
+  "surfaceCells": 121720,
+  "treeBytes": 158993,
+  "compressedBytes": 10002,
+  "maxSurfaceExpansionMm": 3.4641016151377544,
+  "treeSha256": "0d8aa275c92c643013d2404ac0104a60635108955f585d95e4fb8da21406e40c"
+}
