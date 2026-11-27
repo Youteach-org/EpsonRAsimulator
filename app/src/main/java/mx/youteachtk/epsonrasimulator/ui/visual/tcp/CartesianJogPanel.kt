@@ -33,6 +33,7 @@ fun CartesianJogPanel(runtime: SharedRuntime,state: SharedRuntimeState,
     var stepGeneration by remember {mutableIntStateOf(0)}
     var axisTouched by remember {mutableStateOf(false)}
     var moving by remember {mutableStateOf(false)}
+    val stepScope=rememberCoroutineScope()
     var gesture by remember {mutableIntStateOf(0)}
     var axis by remember {mutableIntStateOf(0)}
     var showGuide by remember {mutableStateOf(false)}
@@ -187,9 +188,35 @@ fun CartesianJogPanel(runtime: SharedRuntime,state: SharedRuntimeState,
             val displayLow=geometricRanges[index]?.minimum ?: components[index]
             val displayHigh=geometricRanges[index]?.maximum ?: components[index]
             val value=if((held || moving) && axis==index) requested ?: components[index] else components[index]
-            val canStep=available && range!=null && baselineMatches && !moving && (!held || stepping && axis==index)
+            val canStep=available && !moving && (!held || stepping && axis==index)
             fun fineStep(sign: Double) {
-                if(!canStep || certificate==null) return
+                if(!canStep) return
+                val target=components[index]+sign*.1
+                // A partial/full-axis calculation must not block a small, independently checked jog.
+                if(certificate==null || !baselineMatches || target !in low..high) {
+                    val baseline=runtime.state
+                    moving=true;held=false;stepping=false;drag=null;requested=null;axis=index
+                    stepScope.launch {
+                        try {
+                            val plan=withContext(Dispatchers.Default) {
+                                val context=currentCoroutineContext()
+                                val delta=when(index) {
+                                    0->Vector3(sign*.1,0.0,0.0)
+                                    1->Vector3(0.0,sign*.1,0.0)
+                                    else->Vector3(0.0,0.0,sign*.1)
+                                }
+                                val path=CartesianJogPath.plan(baseline.jointState,toolPose,delta,true,fixedJ6Degrees=baseline.jointState[5])
+                                runtime.prepareCartesianMotion(baseline,path) {context.ensureActive()}
+                            }
+                            ensureActive()
+                            require(runtime.cartesianMotionEndState(plan).collisionStop==null) {"Ese paso toca un obstáculo. Prueba la dirección contraria."}
+                            if(runtime.state==baseline.copy(clockState=runtime.state.clockState)) runtime.applyCartesianFrame(plan,plan.durationSeconds)
+                        } catch(cancelled: CancellationException) {throw cancelled}
+                        catch(failure: IllegalArgumentException) {error=failure.message}
+                        finally {moving=false}
+                    }
+                    return
+                }
                 try {
                     val active=drag?.takeIf {stepping && axis==index && it.matches(runtime.state)} ?: certificate.beginDrag(runtime)
                     axis=index;drag=active;held=true;stepping=true;showGuide=true
@@ -204,7 +231,7 @@ fun CartesianJogPanel(runtime: SharedRuntime,state: SharedRuntimeState,
                     Text(String.format("%+.1f mm",components[index]))
                 }
                 Row(verticalAlignment=androidx.compose.ui.Alignment.CenterVertically) {
-                TextButton(onClick={fineStep(-1.0)},enabled=canStep && components[index]>low+.001,
+                TextButton(onClick={fineStep(-1.0)},enabled=canStep,
                     modifier=Modifier.width(48.dp).height(40.dp).testTag("xyz-minus-$label")) {Text("−$label")}
                 Slider(value=value.toFloat().coerceIn(displayLow.toFloat(),maxOf(displayHigh,displayLow+0.01).toFloat()),
                     onValueChange={v->
@@ -231,7 +258,7 @@ fun CartesianJogPanel(runtime: SharedRuntime,state: SharedRuntimeState,
                             }
                         }
                     })
-                TextButton(onClick={fineStep(1.0)},enabled=canStep && components[index]<high-.001,
+                TextButton(onClick={fineStep(1.0)},enabled=canStep,
                     modifier=Modifier.width(48.dp).height(40.dp).testTag("xyz-plus-$label")) {Text("+$label")}
                 }
                 Text(if(range==null) if(geometricRanges[index]!=null) "Gris: alcance provisional · comprobando obstáculos…" else "Calculando extremos…" else String.format("%.1f … %.1f mm",low,high),style=MaterialTheme.typography.bodySmall,maxLines=1)

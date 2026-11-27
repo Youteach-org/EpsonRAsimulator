@@ -25,6 +25,9 @@ fun JogTeachPanel(state: SharedRuntimeState, controller: UserSequenceController,
         }
 
         val toolId=state.toolState.activeToolId
+        val holdingPart=toolId!=null && state.workcellState.attachments.values.any {it.toolId==toolId}
+        Text(if(holdingPart) "Pieza sujeta" else "Pinza sin pieza",style=MaterialTheme.typography.bodySmall,
+            modifier=Modifier.testTag("jog-grasp-status"))
         val spec=toolId?.let {state.toolState.definitions.getValue(it).gripper}
         val opening=toolId?.let {state.toolState.gripperStates[it]?.openingWidthMm}
         if(spec!=null && opening!=null) {
