@@ -12,4 +12,4 @@ Fresh validation: Gradle `testDebugUnitTest`, `assembleDebug`, and `assembleDebu
 
 APK SHA-256: `589b7de3d473f9035823b434ae9aed49cf86e78ed804bac596562b358e112ff6`.
 
-The post-change tablet test and installation remain pending: ADB disconnected during the build and returned offline after restarting its server. No successful device validation of this change is claimed yet.
+After the user reconnected USB, both APK installations succeeded using `adb install -r`, preserving app data. The same SM-T970 Compose test passed in 9.044 seconds (`OK (1 test)`): actual close button, attached status, +Z available within the two-second wait, fuse height increased by more than 0.08 mm, attachment retained, and no collision stop. Evidence: `evidence/2026-11-26/tablet-green.log`. The app was reopened after the test. The original lost posture still cannot be claimed as reproduced.
